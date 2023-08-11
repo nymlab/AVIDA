@@ -1,0 +1,26 @@
+[package]
+name = "avida-anoncreds-verifier"
+description = "Provides AnonCreds verification with revocation checks supported by resources on cheqd via IBC"
+version = { workspace = true }
+edition = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+
+[dependencies]
+ssi = { path = "../../packages/ssi"} 
+cosmwasm-std = { workspace = true }
+cosmwasm-schema = { workspace = true }
+serde = { workspace = true }
+cw2 = { workspace = true }
+thiserror = { workspace = true }
+sylvia = { workspace = true }
+sylvia-derive = { workspace = true }

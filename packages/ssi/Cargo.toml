@@ -1,0 +1,15 @@
+[package]
+name = "ssi"
+description = "Package for plugin"
+version = { workspace = true }
+edition = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+
+[dependencies]
+cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
+sylvia = { workspace = true }
+sylvia-derive = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }

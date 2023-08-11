@@ -1,0 +1,2 @@
+[alias]
+cw-wasm = "build --release --target wasm32-unknown-unknown --package example-plugin"
