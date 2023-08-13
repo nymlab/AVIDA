@@ -2,13 +2,16 @@ use crate::{
     consts::IBC_APP_VERSION,
     contract::AnonCredsVerifier,
     error::ContractError,
-    helpers::ibc::{check_order, check_version},
+    helpers::{
+        events::new_event,
+        ibc::{check_app_port, check_order, check_version, get_timeout_timestamp},
+    },
 };
 
 use cosmwasm_std::{
-    entry_point, DepsMut, Env, Event, Ibc3ChannelOpenResponse, IbcBasicResponse,
-    IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcChannelOpenResponse,
-    MessageInfo, Response, StdResult,
+    from_binary, to_binary, CosmosMsg, DepsMut, Env, Ibc3ChannelOpenResponse, IbcBasicResponse,
+    IbcChannelConnectMsg, IbcChannelOpenMsg, IbcChannelOpenResponse, IbcPacketAckMsg, IbcTimeout,
+    Response, StdError, StdResult, SubMsg,
 };
 
 use sylvia::{
@@ -16,54 +19,68 @@ use sylvia::{
     types::{ExecCtx, QueryCtx},
 };
 
-use ssi::traits::{
-    resource_over_ibc_interface,
-    resource_over_ibc_interface::{ResourceOverIbcError, ResourceOverIbcInterface},
+use ssi::{
+    traits::{resource_over_ibc_interface, resource_over_ibc_interface::ResourceOverIbcInterface},
+    types::{ResourceReqPacket, ResourceWithMetadata, StdAck},
 };
 
 #[contract(module=crate::contract)]
 #[messages(resource_over_ibc_interface as ResourceOverIbcInterface)]
-impl ResourceOverIbcInterface for AnonCredsVerifier {
+impl<'a> ResourceOverIbcInterface for AnonCredsVerifier<'a> {
     type Error = ContractError;
 
     #[msg(exec)]
     fn update_state(
         &self,
         ctx: ExecCtx,
-        state: String,
         resource_id: String,
         collection_id: String,
     ) -> Result<Response, Self::Error> {
-        Ok(Response::new())
+        let ibc_msg = SubMsg::new(CosmosMsg::Ibc(cosmwasm_std::IbcMsg::SendPacket {
+            channel_id: self.channel.load(ctx.deps.storage)?.endpoint.channel_id,
+            data: to_binary(&ResourceReqPacket {
+                resource_id,
+                collection_id,
+            })?,
+            timeout: IbcTimeout::with_timestamp(get_timeout_timestamp(&ctx.env)),
+        }));
+        Ok(Response::new().add_submessage(ibc_msg))
     }
 
     #[msg(query)]
     fn query_state(
         &self,
         ctx: QueryCtx,
-        state: String,
         resource_id: String,
         collection_id: String,
-    ) -> Result<String, Self::Error> {
-        Ok(String::new())
+    ) -> Result<Option<ResourceWithMetadata>, Self::Error> {
+        let res = self
+            .resources
+            .may_load(ctx.deps.storage, (&resource_id, &collection_id))?;
+        Ok(res)
     }
 }
 
-#[entry_point]
-/// enforces ordering and versioing constraints
-pub fn ibc_channel_open(
-    _deps: DepsMut,
-    _env: Env,
+/// Handler for channel opening,
+/// enforces ordering and versioning constraints
+pub fn ibc_channel_open_handler(
     msg: IbcChannelOpenMsg,
 ) -> Result<IbcChannelOpenResponse, ContractError> {
     let channel = msg.channel();
 
+    // check ordering
     check_order(&channel.order)?;
+
     // In ibcv3 we don't check the version string passed in the message
     // and only check the counterparty version.
+    // This contract is targetd to connect with cheqd resource module
+    // ibc_app_version = cheqd-resource-v3
     if let Some(counter_version) = msg.counterparty_version() {
         check_version(counter_version)?;
     }
+
+    // Counterparty info cannot be trusted, but we are adding this check anyway
+    check_app_port(msg.channel())?;
 
     // We return the version we need (which could be different than the counterparty version)
     Ok(Some(Ibc3ChannelOpenResponse {
@@ -71,43 +88,65 @@ pub fn ibc_channel_open(
     }))
 }
 
-#[entry_point]
-/// On connect, we do not do anything other than just logging the information
-pub fn ibc_channel_connect(
-    _deps: DepsMut,
-    _env: Env,
+/// We expect a one channel connection with cheqd.
+/// We do not allow channels to be closed.
+/// On initial deployment of this contract we will create one channel and store that.
+/// In the future we can make this updatable.
+pub fn ibc_channel_connect_handler(
+    deps: DepsMut,
     msg: IbcChannelConnectMsg,
 ) -> StdResult<IbcBasicResponse> {
-    // We do not use channel here because the channels can be closed permisionlessly
-    // connection_id: this is the id for the light client on the counterparty chain
-    // port_id: this is the counterparty module / wasm smart contract
+    let contract = AnonCredsVerifier::new();
+    if let Some(_) = contract.channel.may_load(deps.storage)? {
+        Err(StdError::generic_err("Channel already exist"))
+    } else {
+        contract.channel.save(deps.storage, &msg.channel())?;
 
-    Ok(IbcBasicResponse::new()
-        .add_attribute("action", "ibc channel connect")
-        .add_attribute("counterparty client id", &msg.channel().connection_id)
-        .add_attribute(
-            "counterparty port",
-            &msg.channel().counterparty_endpoint.port_id,
-        )
-        .add_attribute("current channel", &msg.channel().endpoint.channel_id)
-        .add_event(Event::new("ibc").add_attribute("channel", "connect")))
+        let event = new_event()
+            .add_attribute("action", "ibc channel connection")
+            .add_attribute("channel_id", &msg.channel().endpoint.channel_id);
+
+        Ok(IbcBasicResponse::new().add_event(event))
+    }
 }
 
-#[entry_point]
-/// On closed channel, we do not need to do anything other than logging the channel id being
-/// closed.
-pub fn ibc_channel_close(
-    _deps: DepsMut,
+/// This handles the storing of resources
+pub fn ibc_packet_ack_handler(
+    deps: DepsMut,
     _env: Env,
-    msg: IbcChannelCloseMsg,
+    msg: IbcPacketAckMsg,
 ) -> StdResult<IbcBasicResponse> {
-    Ok(IbcBasicResponse::new()
-        .add_attribute("action", "ibc channel close ")
-        .add_attribute("counterparty client id", &msg.channel().connection_id)
-        .add_attribute(
-            "counterparty port",
-            &msg.channel().counterparty_endpoint.port_id,
-        )
-        .add_attribute("current channel", &msg.channel().endpoint.channel_id)
-        .add_event(Event::new("ibc").add_attribute("channel", "close")))
+    let ack: StdAck = from_binary(&msg.acknowledgement.data)?;
+    match ack {
+        StdAck::Result(binary) => {
+            let resource: ResourceWithMetadata = from_binary(&binary)?;
+            let original_packet: ResourceReqPacket = from_binary(&msg.original_packet.data)?;
+
+            if original_packet.resource_id != resource.linked_resource_metadata.resource_id {
+                Err(StdError::generic_err("Ack Returned Unmatched resource_id"))
+            } else if original_packet.collection_id
+                != resource.linked_resource_metadata.resource_collection_id
+            {
+                Err(StdError::generic_err(
+                    "Ack Returned Unmatched collection_id",
+                ))
+            } else {
+                let contract = AnonCredsVerifier::new();
+
+                contract.resources.save(
+                    deps.storage,
+                    (&original_packet.resource_id, &original_packet.collection_id),
+                    &resource,
+                )?;
+                let event = new_event()
+                    .add_attribute("action", "Ack")
+                    .add_attribute("resource_id", original_packet.resource_id)
+                    .add_attribute("collection_id", original_packet.collection_id);
+
+                Ok(IbcBasicResponse::new().add_event(event))
+            }
+        }
+        StdAck::Error(err) => Err(StdError::generic_err(format!("Ack Returned Err: {}", err))),
+    }
+    // First we check cheqd returned the requested data
 }

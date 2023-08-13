@@ -1,5 +1,5 @@
 mod consts;
-mod contract;
+pub mod contract;
 mod error;
 mod helpers;
 mod ibc;

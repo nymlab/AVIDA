@@ -1,5 +1,5 @@
-pub use crate::consts::{APP_ORDER, IBC_APP_VERSION};
-use cosmwasm_std::IbcOrder;
+pub use crate::consts::{APP_ORDER, CHEQD_APP_PORT_ID, IBC_APP_VERSION, PACKET_LIFETIME};
+use cosmwasm_std::{Env, IbcChannel, IbcOrder, Timestamp};
 
 use thiserror::Error;
 
@@ -10,6 +10,9 @@ pub enum ChannelError {
 
     #[error("Counterparty version must be '{0}'")]
     InvalidChannelVersion(&'static str),
+
+    #[error("Only supports cheqd port")]
+    InvalidPort,
 }
 
 pub fn check_order(order: &IbcOrder) -> Result<(), ChannelError> {
@@ -26,4 +29,16 @@ pub fn check_version(version: &str) -> Result<(), ChannelError> {
     } else {
         Ok(())
     }
+}
+
+pub fn check_app_port(ibc_channel: &IbcChannel) -> Result<(), ChannelError> {
+    if ibc_channel.counterparty_endpoint.port_id != CHEQD_APP_PORT_ID {
+        Err(ChannelError::InvalidPort)
+    } else {
+        Ok(())
+    }
+}
+
+pub fn get_timeout_timestamp(env: &Env) -> Timestamp {
+    env.block.time.plus_seconds(PACKET_LIFETIME)
 }
