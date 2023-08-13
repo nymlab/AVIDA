@@ -5,7 +5,6 @@ edition = "2021"
 version = { workspace = true }
 repository = { workspace = true }
 keywords = { workspace = true }
-licence-file = "LICENSE" 
 
 [dependencies]
 cosmwasm-schema = { workspace = true }
