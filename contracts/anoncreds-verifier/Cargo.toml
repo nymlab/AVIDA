@@ -1,10 +1,11 @@
 [package]
-name = "avida-anoncreds-verifier"
-description = "Provides AnonCreds verification with revocation checks supported by resources on cheqd via IBC"
+name = "vectis-anoncreds-verifier"
+description = "Part of the AVIDA protocol - provides AnonCreds verification with revocation checks supported by resources on cheqd via IBC"
 edition = "2021"
 version = { workspace = true }
 repository = { workspace = true }
 keywords = { workspace = true }
+licence-file = "LICENSE" 
 
 [lib]
 crate-type = ["cdylib", "rlib"]

@@ -2,10 +2,9 @@
 members = ["contracts/*", "packages/*"]
 
 [workspace.package]
-name = "vectis-ssi"
 version = "0.1.0"
 edition = "2021"
-repository = "https://github.com/nymlab/vectis-plugins-template"
+repository = "https://github.com/nymlab/vectis-ssi"
 keywords = [ "Vectis", "CosmWasm", "zkp", "verifiableCredential" ]
 
 [workspace.dependencies]
