@@ -37,6 +37,6 @@ pub mod resource_over_ibc_interface {
             ctx: QueryCtx,
             resource_id: String,
             collection_id: String,
-        ) -> Result<Option<ResourceWithMetadata>, Self::Error>;
+        ) -> Result<ResourceWithMetadata, Self::Error>;
     }
 }

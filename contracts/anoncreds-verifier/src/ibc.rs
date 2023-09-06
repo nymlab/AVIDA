@@ -53,10 +53,10 @@ impl<'a> ResourceOverIbcInterface for AnonCredsVerifier<'a> {
         ctx: QueryCtx,
         resource_id: String,
         collection_id: String,
-    ) -> Result<Option<ResourceWithMetadata>, Self::Error> {
+    ) -> Result<ResourceWithMetadata, Self::Error> {
         let res = self
             .resources
-            .may_load(ctx.deps.storage, (&resource_id, &collection_id))?;
+            .load(ctx.deps.storage, (&resource_id, &collection_id))?;
         Ok(res)
     }
 }

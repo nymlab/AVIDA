@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Nullable_IbcChannel",
+  "anyOf": [
+    {
+      "$ref": "#/definitions/IbcChannel"
+    },
+    {
+      "type": "null"
+    }
+  ],
+  "definitions": {
+    "IbcChannel": {
+      "description": "IbcChannel defines all information on a channel. This is generally used in the hand-shake process, but can be queried directly.",
+      "type": "object",
+      "required": [
+        "connection_id",
+        "counterparty_endpoint",
+        "endpoint",
+        "order",
+        "version"
+      ],
+      "properties": {
+        "connection_id": {
+          "description": "The connection upon which this channel was created. If this is a multi-hop channel, we only expose the first hop.",
+          "type": "string"
+        },
+        "counterparty_endpoint": {
+          "$ref": "#/definitions/IbcEndpoint"
+        },
+        "endpoint": {
+          "$ref": "#/definitions/IbcEndpoint"
+        },
+        "order": {
+          "$ref": "#/definitions/IbcOrder"
+        },
+        "version": {
+          "description": "Note: in ibcv3 this may be \"\", in the IbcOpenChannel handshake messages",
+          "type": "string"
+        }
+      }
+    },
+    "IbcEndpoint": {
+      "type": "object",
+      "required": [
+        "channel_id",
+        "port_id"
+      ],
+      "properties": {
+        "channel_id": {
+          "type": "string"
+        },
+        "port_id": {
+          "type": "string"
+        }
+      }
+    },
+    "IbcOrder": {
+      "description": "IbcOrder defines if a channel is ORDERED or UNORDERED Values come from https://github.com/cosmos/cosmos-sdk/blob/v0.40.0/proto/ibc/core/channel/v1/channel.proto#L69-L80 Naming comes from the protobuf files and go translations.",
+      "type": "string",
+      "enum": [
+        "ORDER_UNORDERED",
+        "ORDER_ORDERED"
+      ]
+    }
+  }
+}

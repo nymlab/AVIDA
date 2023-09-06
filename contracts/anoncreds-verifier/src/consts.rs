@@ -4,7 +4,7 @@ use cosmwasm_std::IbcOrder;
 /// This is the same as the cheqd resource module IBC version
 pub const IBC_APP_VERSION: &str = "cheqd-resource-v3";
 pub const APP_ORDER: IbcOrder = IbcOrder::Unordered;
-pub const CHEQD_APP_PORT_ID: &str = "cheqd-resource";
+pub const CHEQD_APP_PORT_ID: &str = "cheqdresource";
 pub const PACKET_LIFETIME: u64 = 60 * 60; // in seconds
 
 // Contract info

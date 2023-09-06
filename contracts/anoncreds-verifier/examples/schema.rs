@@ -1,11 +1,11 @@
 use cosmwasm_schema::write_api;
 
-use plugin_package::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use vectis_anoncreds_verifier::contract::{ExecMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {
         instantiate: InstantiateMsg,
         query: QueryMsg,
-        execute: ExecuteMsg,
+        execute: ExecMsg,
     }
 }

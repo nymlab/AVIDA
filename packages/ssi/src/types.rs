@@ -83,17 +83,17 @@ pub struct LinkedResourceMetadata {
     #[serde(rename = "media_type")]
     pub media_type: Option<String>,
     pub created: String,
-    pub checksum: String,
-    #[serde(rename = "media_type")]
+    pub checksum: Option<String>,
+    #[serde(rename = "previous_version_id")]
     pub previous_version_id: Option<String>,
-    #[serde(rename = "media_type")]
+    #[serde(rename = "next_version_id")]
     pub next_version_id: Option<String>,
 }
 
 #[cw_serde]
 pub struct AlternativeUri {
-    pub uri: String,
-    pub description: String,
+    pub uri: Option<String>,
+    pub description: Option<String>,
 }
 
 /// This is a generic ICS acknowledgement format.
