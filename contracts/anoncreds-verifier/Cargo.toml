@@ -1,5 +1,5 @@
 [package]
-name = "vectis-anoncreds-verifier"
+name = "avida-anoncreds-verifier"
 description = "Part of the AVIDA protocol - provides AnonCreds verification with revocation checks supported by resources on cheqd via IBC"
 edition = "2021"
 version = { workspace = true }
@@ -16,7 +16,8 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-ssi = { path = "../../packages/ssi"} 
+avida-anoncreds= { path = "../../packages/anoncreds"}
+avida-cheqd= { path = "../../packages/cheqd"}
 cosmwasm-std = { workspace = true }
 cosmwasm-schema = { workspace = true }
 cw-storage-plus = { workspace = true }

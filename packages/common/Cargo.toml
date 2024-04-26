@@ -1,6 +1,6 @@
 [package]
-name = "ssi"
-description = "Useful libraries for contracts with SSI functions"
+name = "avida-common"
+description = "Useful common types and traits for AVIDA verifiers"
 edition = "2021"
 version = { workspace = true }
 repository = { workspace = true }
@@ -9,13 +9,13 @@ keywords = { workspace = true }
 [dependencies]
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }
+cw-storage-plus = { workspace = true }
 sylvia = { workspace = true }
 sylvia-derive = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
-ursa = { workspace = true }
 schemars = { workspace = true }
+serde_json = "1.0"
 
 [dev-dependencies]
 serde-json-wasm = { workspace = true }
-

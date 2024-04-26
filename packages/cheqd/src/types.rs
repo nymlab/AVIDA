@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{to_binary, Binary};
+use cosmwasm_std::{to_json_binary, Binary};
 
 #[cw_serde]
 #[serde(rename_all = "camelCase")]
@@ -22,7 +22,7 @@ pub struct LinkedResource {
     pub data: Binary,
 }
 
-//// Metadata stores the metadata of a DID-Linked Resource
+// Metadata stores the metadata of a DID-Linked Resource
 //type Metadata struct {
 //	// collection_id is the ID of the collection that the Resource belongs to. Defined client-side.
 //	// This field is the unique identifier of the DID linked to this Resource
@@ -69,7 +69,6 @@ pub struct LinkedResource {
 //	// Format: <uuid>
 //	NextVersionId string `protobuf:"bytes,11,opt,name=next_version_id,json=nextVersionId,proto3" json:"next_version_id,omitempty"`
 //}
-
 // https://github.com/cheqd/cheqd-node/blob/f8d41e68f437b9aa5cf10ff275fbd6365b6541ec/x/resource/types/resource.pb.go#L77
 #[cw_serde]
 #[serde(rename_all = "camelCase")]
@@ -112,7 +111,7 @@ impl StdAck {
     }
 
     pub fn ack(&self) -> Binary {
-        to_binary(self).unwrap()
+        to_json_binary(self).unwrap()
     }
 
     #[cfg(test)]

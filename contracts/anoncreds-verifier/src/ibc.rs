@@ -19,7 +19,7 @@ use sylvia::{
     types::{ExecCtx, QueryCtx},
 };
 
-use ssi::{
+use avida_interfaces::anoncreds::{
     traits::{resource_over_ibc_interface, resource_over_ibc_interface::ResourceOverIbcInterface},
     types::{ResourceReqPacket, ResourceWithMetadata, StdAck},
 };

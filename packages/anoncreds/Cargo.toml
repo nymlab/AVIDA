@@ -1,0 +1,22 @@
+[package]
+name = "avida-anoncreds"
+description = "Useful libraries for anoncred verifier contracts with SSI functions"
+edition = "2021"
+version = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+
+[dependencies]
+cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
+sylvia = { workspace = true }
+sylvia-derive = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+ursa = { workspace = true }
+schemars = { workspace = true }
+ursa = { git = "https://github.com/whalelephant/ursa", default-features = false, features = ["cl_onchain", "serde"], version = "0.3.7", rev = "7cdccf35fb1a0"}
+
+
+[dev-dependencies]
+serde-json-wasm = { workspace = true }

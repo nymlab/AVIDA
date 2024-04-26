@@ -1,0 +1,205 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "anyOf": [
+    {
+      "$ref": "#/definitions/AvidaVerifierTraitExecMsg"
+    },
+    {
+      "$ref": "#/definitions/ExecMsg"
+    }
+  ],
+  "definitions": {
+    "AvidaVerifierTraitExecMsg": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "register"
+          ],
+          "properties": {
+            "register": {
+              "type": "object",
+              "required": [
+                "app_addr",
+                "route_criteria"
+              ],
+              "properties": {
+                "app_addr": {
+                  "type": "string"
+                },
+                "route_criteria": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": [
+                      {
+                        "type": "integer",
+                        "format": "uint64",
+                        "minimum": 0.0
+                      },
+                      {
+                        "$ref": "#/definitions/RouteVerificationRequirements"
+                      }
+                    ],
+                    "maxItems": 2,
+                    "minItems": 2
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "verify"
+          ],
+          "properties": {
+            "verify": {
+              "type": "object",
+              "required": [
+                "presentation",
+                "route_id"
+              ],
+              "properties": {
+                "app_addr": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "presentation": {
+                  "$ref": "#/definitions/Binary"
+                },
+                "route_id": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "update"
+          ],
+          "properties": {
+            "update": {
+              "type": "object",
+              "required": [
+                "app_addr",
+                "route_id"
+              ],
+              "properties": {
+                "app_addr": {
+                  "type": "string"
+                },
+                "route_criteria": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/RouteVerificationRequirements"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "route_id": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "deregister"
+          ],
+          "properties": {
+            "deregister": {
+              "type": "object",
+              "required": [
+                "app_addr"
+              ],
+              "properties": {
+                "app_addr": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Binary": {
+      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+      "type": "string"
+    },
+    "ExecMsg": {
+      "type": "string",
+      "enum": []
+    },
+    "RouteVerificationRequirements": {
+      "description": "Specific verification requirements for the route, by `route_id`",
+      "type": "object",
+      "required": [
+        "presentation_request",
+        "verification_source"
+      ],
+      "properties": {
+        "presentation_request": {
+          "$ref": "#/definitions/Binary"
+        },
+        "verification_source": {
+          "$ref": "#/definitions/VerificationSource"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TrustRegistry": {
+      "type": "string",
+      "enum": [
+        "cheqd"
+      ]
+    },
+    "VerificationSource": {
+      "description": "Location to obtain the verification data from",
+      "type": "object",
+      "required": [
+        "data_or_location"
+      ],
+      "properties": {
+        "data_or_location": {
+          "description": "The data or location of the verification data at the trust registry For TrustRegistry::Cheqd, it is the `ResourceReqPacket` in avida-cheqd For data, the contracts should have the expected type",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Binary"
+            }
+          ]
+        },
+        "source": {
+          "description": "If `None`, this means data is directly provided",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TrustRegistry"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

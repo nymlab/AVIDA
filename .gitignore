@@ -3,6 +3,3 @@
 
 # Built wasm files
 artifacts/
-
-# Downloaded vectis core files for testing
-vectis-wasm/

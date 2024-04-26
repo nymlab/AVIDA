@@ -1,0 +1,11 @@
+[package]
+name = "avida-cheqd"
+description = "Useful utils for interfacing with cheqd"
+edition = "2021"
+version = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+
+[dependencies]
+cosmwasm-schema = { workspace = true }
+cosmwasm-std = { workspace = true }
