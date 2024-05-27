@@ -37,3 +37,12 @@ pub struct VerificationSource {
     /// For data, the contracts should have the expected type
     pub data_or_location: Binary,
 }
+
+#[cw_serde]
+pub enum AvidaVerifierSudoMsg {
+    Verify {
+        route_id: RouteId,
+        presentation: Binary,
+        app_addr: String,
+    },
+}

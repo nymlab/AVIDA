@@ -1,12 +1,12 @@
 use crate::{
     errors::SdjwtVerifierError,
-    types::{validate, PresentationReq, SudoMsg, VerificationReq},
+    types::{validate, PresentationReq, VerificationReq},
 };
 use avida_common::{
     traits::{avida_verifier_trait, AvidaVerifierTrait},
     types::{
-        MaxPresentationLen, RouteId, RouteVerificationRequirements, TrustRegistry,
-        VerfiablePresentation, VerificationSource, MAX_PRESENTATION_LEN,
+        AvidaVerifierSudoMsg, MaxPresentationLen, RouteId, RouteVerificationRequirements,
+        TrustRegistry, VerfiablePresentation, VerificationSource, MAX_PRESENTATION_LEN,
     },
 };
 
@@ -19,7 +19,7 @@ use cw_storage_plus::Map;
 use std::collections::HashMap;
 use sylvia::{
     contract, entry_points, schemars,
-    types::{ExecCtx, InstantiateCtx, QueryCtx},
+    types::{ExecCtx, InstantiateCtx, QueryCtx, SudoCtx},
 };
 
 use jsonwebtoken::{
@@ -27,14 +27,6 @@ use jsonwebtoken::{
     DecodingKey,
 };
 use sd_jwt_rs::{utils::jwt_payload_decode, SDJWTSerializationFormat, SDJWTVerifier};
-
-pub(crate) fn b64_decode<T: AsRef<[u8]>>(input: T) -> Result<Vec<u8>, SdjwtVerifierError> {
-    use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-
-    URL_SAFE_NO_PAD
-        .decode(input)
-        .map_err(|_| SdjwtVerifierError::Base64DecodeError)
-}
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -50,26 +42,10 @@ pub struct SdjwtVerifier<'a> {
     pub app_admins: Map<'a, &'a str, Addr>,
 }
 
-#[entry_point]
-pub fn sudo(deps: DepsMut, _env: Env, msg: SudoMsg) -> Result<Response, SdjwtVerifierError> {
-    match msg {
-        SudoMsg::Verify {
-            route_id,
-            app_addr,
-            presentation,
-        } => {
-            // In `Sudo`, the app address may be the `moduleAccount`
-            // https://github.com/cosmos/cosmos-sdk/blob/b795646c9b2a5098e774f1726f8eac114ad79b13/x/auth/proto/cosmos/auth/v1beta1/auth.proto#L30
-            SdjwtVerifier::new()._verify(deps, presentation, route_id, &app_addr)
-        }
-    }
-}
-
 #[cfg_attr(not(feature = "library"), entry_points)]
 #[contract]
-#[error(SdjwtVerifierError)]
-#[messages(avida_verifier_trait as AvidaVerifierTrait)]
-#[sv::override_entry_point(sudo=crate::contract::sudo(SudoMsg))]
+#[sv::error(SdjwtVerifierError)]
+#[sv::messages(avida_verifier_trait as AvidaVerifierTrait)]
 impl SdjwtVerifier<'_> {
     pub fn new() -> Self {
         Self {
@@ -81,31 +57,64 @@ impl SdjwtVerifier<'_> {
     }
 
     /// Instantiates sdjwt verifier
-    #[msg(instantiate)]
+    #[sv::msg(instantiate)]
     fn instantiate(
         &self,
         ctx: InstantiateCtx,
         max_presentation_len: usize,
+        // Vec of app_addr to their routes and requirements
+        init_registrations: Vec<(
+            String, // Admin
+            String, // App Addr
+            Vec<(RouteId, RouteVerificationRequirements)>,
+        )>,
     ) -> Result<Response, SdjwtVerifierError> {
-        set_contract_version(ctx.deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+        let InstantiateCtx { deps, env, .. } = ctx;
+        set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
         self.max_presentation_len
-            .save(ctx.deps.storage, &max_presentation_len)?;
+            .save(deps.storage, &max_presentation_len)?;
+
+        for app in init_registrations {
+            let admin = deps.api.addr_validate(&app.0)?;
+            let app_addr = deps.api.addr_validate(&app.1)?;
+            self._register(deps.storage, &admin, app_addr.as_str(), app.2)?;
+        }
+
         Ok(Response::default())
     }
 }
 
 mod verifier {
 
+    use cosmwasm_std::Storage;
+
     use super::*;
 
     #[contract(module=crate::contract)]
-    #[messages(avida_verifier_trait as AvidaVerifierTrait)]
+    #[sv::messages(avida_verifier_trait as AvidaVerifierTrait)]
     impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         type Error = SdjwtVerifierError;
 
+        #[sv::msg(sudo)]
+        fn sudo(&self, ctx: SudoCtx, msg: AvidaVerifierSudoMsg) -> Result<Response, Self::Error> {
+            let SudoCtx { deps, env } = ctx;
+            match msg {
+                AvidaVerifierSudoMsg::Verify {
+                    app_addr,
+                    route_id,
+                    presentation,
+                } => {
+                    // In `Sudo`, the app address may be the `moduleAccount`
+                    // https://github.com/cosmos/cosmos-sdk/blob/b795646c9b2a5098e774f1726f8eac114ad79b13/x/auth/proto/cosmos/auth/v1beta1/auth.proto#L30
+                    SdjwtVerifier::new()._verify(deps, presentation, route_id, &app_addr)
+                }
+            }
+        }
+
         /// Application registration
         /// The caller will be the "admin" of the dApp to update requirements
-        #[msg(exec)]
+        #[sv::msg(exec)]
         fn register(
             &self,
             ctx: ExecCtx,
@@ -114,70 +123,16 @@ mod verifier {
         ) -> Result<Response, Self::Error> {
             let ExecCtx { deps, env, info } = ctx;
             let app_addr = deps.api.addr_validate(&app_addr)?;
-
-            if self
-                .app_trust_data_source
-                .has(deps.storage, app_addr.as_str())
-                || self
-                    .app_routes_requirements
-                    .has(deps.storage, app_addr.as_str())
-            {
-                return Err(SdjwtVerifierError::AppAlreadyRegistered);
-            }
-
-            let mut requirements: HashMap<u64, VerificationReq> = HashMap::new();
-            let mut data_sources: HashMap<u64, VerificationSource> = HashMap::new();
-
-            for (route_id, route_criteria) in route_criteria {
-                data_sources.insert(route_id, route_criteria.verification_source.clone());
-                // On registration we check if the dApp has request for IBC data
-                // FIXME: add IBC submessages
-                let verif_req = match route_criteria.verification_source.source {
-                    Some(registry) => {
-                        match registry {
-                            TrustRegistry::Cheqd => {
-                                // For Cheqd, the data is in the ResourceReqPacket
-                                VerificationReq {
-                                    presentation_required: from_json(
-                                        route_criteria.presentation_request,
-                                    )?,
-                                    issuer_pubkey: None,
-                                }
-                            }
-                        }
-                    }
-                    None => {
-                        let issuer_pubkey: Jwk = serde_json_wasm::from_slice(
-                            &route_criteria.verification_source.data_or_location,
-                        )?;
-
-                        if let Some(KeyAlgorithm::EdDSA) = issuer_pubkey.common.key_algorithm {
-                            VerificationReq {
-                                presentation_required: from_json(
-                                    route_criteria.presentation_request,
-                                )?,
-                                issuer_pubkey: Some(issuer_pubkey),
-                            }
-                        } else {
-                            return Err(SdjwtVerifierError::UnsupportedKeyType);
-                        }
-                    }
-                };
-                requirements.insert(route_id, verif_req);
-            }
-
-            self.app_trust_data_source
-                .save(deps.storage, app_addr.as_str(), &data_sources)?;
-            self.app_routes_requirements
-                .save(deps.storage, app_addr.as_str(), &requirements)?;
-            self.app_admins
-                .save(deps.storage, app_addr.as_str(), &info.sender)?;
-
-            Ok(Response::default())
+            self._register(
+                deps.storage,
+                &info.sender,
+                app_addr.as_str(),
+                route_criteria,
+            )
         }
 
         /// Verifiable Presentation Verifier for dApp contracts
-        #[msg(exec)]
+        #[sv::msg(exec)]
         fn verify(
             &self,
             ctx: ExecCtx,
@@ -194,7 +149,7 @@ mod verifier {
         }
 
         // For dApp to update their criteria verification criteria
-        #[msg(exec)]
+        #[sv::msg(exec)]
         fn update(
             &self,
             ctx: ExecCtx,
@@ -213,19 +168,19 @@ mod verifier {
         }
 
         //For dApp contracts to deregister
-        #[msg(exec)]
+        #[sv::msg(exec)]
         fn deregister(&self, ctx: ExecCtx, app_addr: String) -> Result<Response, Self::Error> {
             unimplemented!()
         }
 
         // Query available routes for a dApp contract
-        #[msg(query)]
+        #[sv::msg(query)]
         fn get_routes(&self, ctx: QueryCtx, app_addr: String) -> Result<Vec<RouteId>, Self::Error> {
             unimplemented!()
         }
 
         // Query requirements of a route for a dApp contract
-        #[msg(query)]
+        #[sv::msg(query)]
         fn get_route_requirements(
             &self,
             ctx: QueryCtx,
@@ -278,6 +233,69 @@ mod verifier {
             } else {
                 Err(SdjwtVerifierError::RequiredClaimsNotSatisfied)
             }
+        }
+
+        pub fn _register(
+            &self,
+            storage: &mut dyn Storage,
+            admin: &Addr,
+            app_addr: &str,
+            route_criteria: Vec<(RouteId, RouteVerificationRequirements)>,
+        ) -> Result<Response, SdjwtVerifierError> {
+            if self.app_trust_data_source.has(storage, app_addr)
+                || self.app_routes_requirements.has(storage, app_addr)
+            {
+                return Err(SdjwtVerifierError::AppAlreadyRegistered);
+            }
+
+            let mut requirements: HashMap<u64, VerificationReq> = HashMap::new();
+            let mut data_sources: HashMap<u64, VerificationSource> = HashMap::new();
+
+            for (route_id, route_criteria) in route_criteria {
+                data_sources.insert(route_id, route_criteria.verification_source.clone());
+                // On registration we check if the dApp has request for IBC data
+                // FIXME: add IBC submessages
+                let verif_req = match route_criteria.verification_source.source {
+                    Some(registry) => {
+                        match registry {
+                            TrustRegistry::Cheqd => {
+                                // For Cheqd, the data is in the ResourceReqPacket
+                                VerificationReq {
+                                    presentation_required: from_json(
+                                        route_criteria.presentation_request,
+                                    )?,
+                                    issuer_pubkey: None,
+                                }
+                            }
+                        }
+                    }
+                    None => {
+                        let issuer_pubkey: Jwk = serde_json_wasm::from_slice(
+                            &route_criteria.verification_source.data_or_location,
+                        )?;
+
+                        if let Some(KeyAlgorithm::EdDSA) = issuer_pubkey.common.key_algorithm {
+                            VerificationReq {
+                                presentation_required: from_json(
+                                    route_criteria.presentation_request,
+                                )?,
+                                issuer_pubkey: Some(issuer_pubkey),
+                            }
+                        } else {
+                            return Err(SdjwtVerifierError::UnsupportedKeyType);
+                        }
+                    }
+                };
+                requirements.insert(route_id, verif_req);
+            }
+
+            self.app_trust_data_source
+                .save(storage, app_addr, &data_sources)?;
+            self.app_routes_requirements
+                .save(storage, app_addr, &requirements)?;
+            self.app_admins.save(storage, app_addr, admin)?;
+
+            Ok(Response::default())
         }
     }
 }
