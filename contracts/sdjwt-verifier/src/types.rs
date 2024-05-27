@@ -5,15 +5,6 @@ use cosmwasm_std::Binary;
 use jsonwebtoken::jwk::Jwk;
 use serde::{Deserialize, Serialize};
 
-#[cw_serde]
-pub enum SudoMsg {
-    Verify {
-        route_id: RouteId,
-        presentation: Binary,
-        app_addr: String,
-    },
-}
-
 pub type PresentationReq = Vec<(CriterionKey, Criterion)>;
 
 /// Verification requirements
