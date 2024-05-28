@@ -1,5 +1,5 @@
 [workspace]
-members = ["packages/cheqd", "packages/common", "contracts/sdjwt-verifier"]
+members = ["packages/cheqd", "packages/common", "contracts/sdjwt-verifier", "packages/avida_test_utils"]
 resolver = "2"
 
 [workspace.package]
@@ -23,9 +23,6 @@ anyhow = { version = "1.0.51"}
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 serde-json-wasm = "0.5.1"
 schemars = "0.8.1"
-
-cw-multi-test = "0.20"
-
 
 [profile.release]
 codegen-units = 1

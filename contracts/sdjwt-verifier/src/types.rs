@@ -7,10 +7,14 @@ use serde::{Deserialize, Serialize};
 
 pub type PresentationReq = Vec<(CriterionKey, Criterion)>;
 
-/// Verification requirements
+/// Verification requirements are provided on registration on a route
+/// The presentation request
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct VerificationReq {
+    /// This is the required presentation criteria,
+    /// it is sent from presentation_request in the `RouteVerificationRequirements`
     pub presentation_required: PresentationReq,
+    /// Usig this type as it is ser/deserializable
     pub issuer_pubkey: Option<Jwk>,
 }
 

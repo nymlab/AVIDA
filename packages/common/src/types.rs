@@ -18,7 +18,11 @@ pub type RouteId = u64;
 /// Specific verification requirements for the route, by `route_id`
 #[cw_serde]
 pub struct RouteVerificationRequirements {
+    /// This defines where the source data for verification is
     pub verification_source: VerificationSource,
+    /// The presentation request is the criteria required for the presentation,
+    /// for example required certains claims to be disclosed
+    /// This value is stored as `VerificationReq.presentation_required` on sdjwtVerifier
     pub presentation_request: Binary,
 }
 
@@ -35,6 +39,7 @@ pub struct VerificationSource {
     /// The data or location of the verification data at the trust registry
     /// For TrustRegistry::Cheqd, it is the `ResourceReqPacket` in avida-cheqd
     /// For data, the contracts should have the expected type
+    /// In Sdjwt-Verifier, this is expected to be jwk
     pub data_or_location: Binary,
 }
 
