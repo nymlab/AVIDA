@@ -88,6 +88,10 @@ impl SdjwtVerifier<'_> {
 mod verifier {
 
     use cosmwasm_std::Storage;
+    use jsonwebtoken::jwk::{
+        AlgorithmParameters, EllipticCurve, EllipticCurveKeyParameters, OctetKeyPairParameters,
+        OctetKeyParameters,
+    };
 
     use super::*;
 
@@ -251,18 +255,18 @@ mod verifier {
             let mut requirements: HashMap<u64, VerificationReq> = HashMap::new();
             let mut data_sources: HashMap<u64, VerificationSource> = HashMap::new();
 
-            for (route_id, route_criteria) in route_criteria {
-                data_sources.insert(route_id, route_criteria.verification_source.clone());
+            for (route_id, route_requirements) in route_criteria {
+                data_sources.insert(route_id, route_requirements.verification_source.clone());
                 // On registration we check if the dApp has request for IBC data
                 // FIXME: add IBC submessages
-                let verif_req = match route_criteria.verification_source.source {
+                let verif_req = match route_requirements.verification_source.source {
                     Some(registry) => {
                         match registry {
                             TrustRegistry::Cheqd => {
                                 // For Cheqd, the data is in the ResourceReqPacket
                                 VerificationReq {
                                     presentation_required: from_json(
-                                        route_criteria.presentation_request,
+                                        route_requirements.presentation_request,
                                     )?,
                                     issuer_pubkey: None,
                                 }
@@ -271,13 +275,19 @@ mod verifier {
                     }
                     None => {
                         let issuer_pubkey: Jwk = serde_json_wasm::from_slice(
-                            &route_criteria.verification_source.data_or_location,
+                            &route_requirements.verification_source.data_or_location,
                         )?;
 
-                        if let Some(KeyAlgorithm::EdDSA) = issuer_pubkey.common.key_algorithm {
+                        println!("issuer_pubkey: {:?}", issuer_pubkey);
+
+                        if let AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
+                            curve: EllipticCurve::Ed25519,
+                            ..
+                        }) = issuer_pubkey.algorithm
+                        {
                             VerificationReq {
                                 presentation_required: from_json(
-                                    route_criteria.presentation_request,
+                                    route_requirements.presentation_request,
                                 )?,
                                 issuer_pubkey: Some(issuer_pubkey),
                             }
