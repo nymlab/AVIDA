@@ -1,9 +1,9 @@
-use jsonwebtoken::{jwk::Jwk, DecodingKey, EncodingKey};
-use sd_jwt_rs::{issuer::ClaimsForSelectiveDisclosureStrategy, SDJWTIssuer};
+use jsonwebtoken::{EncodingKey};
+use sd_jwt_rs::{SDJWTIssuer};
 use serde_json::Value;
 use std::{fs, path::PathBuf};
 
-// Keys generations
+// Keys generation
 // ```sh
 // # for Ed25519
 // openssl genpkey -algorithm ED25519 -out private.pem

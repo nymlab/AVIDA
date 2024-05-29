@@ -1,9 +1,15 @@
 use super::errors::SdjwtVerifierError;
-use avida_common::types::RouteId;
+
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Binary;
+
 use jsonwebtoken::jwk::Jwk;
 use serde::{Deserialize, Serialize};
+
+#[cw_serde]
+pub struct PendingRoute {
+    pub route_id: u64,
+    pub app_addr: String,
+}
 
 pub type PresentationReq = Vec<(CriterionKey, Criterion)>;
 

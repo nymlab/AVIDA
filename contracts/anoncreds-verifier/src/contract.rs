@@ -61,7 +61,6 @@ impl<'a> AnonCredsVerifier<'a> {
 
 #[entry_point]
 /// The entry point for opening a channel
-// NOTE: to be moved when implemented by sylvia
 pub fn ibc_channel_open(
     _deps: DepsMut,
     _env: Env,
@@ -71,7 +70,6 @@ pub fn ibc_channel_open(
 }
 #[entry_point]
 /// The entry point for connecting a channel
-// NOTE: to be moved when implemented by sylvia
 pub fn ibc_channel_connect(
     deps: DepsMut,
     _env: Env,

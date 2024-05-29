@@ -1,11 +1,22 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{to_json_binary, Binary};
+use cosmwasm_std::{to_json_binary, Binary, IbcChannel};
+use cw_storage_plus::Item;
+
+/// This is set for the verifier to prevent the presentation from being too large
+pub type Channel<'a> = Item<'a, IbcChannel>;
+pub const CHANNEL: Channel = Item::new("mpl");
 
 #[cw_serde]
 #[serde(rename_all = "camelCase")]
 pub struct ResourceReqPacket {
     pub resource_id: String,
     pub collection_id: String,
+}
+
+impl std::string::ToString for ResourceReqPacket {
+    fn to_string(&self) -> String {
+        format!("{}:{}", self.collection_id, self.resource_id)
+    }
 }
 
 #[cw_serde]
