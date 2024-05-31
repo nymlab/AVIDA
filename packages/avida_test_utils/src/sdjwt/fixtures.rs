@@ -1,5 +1,5 @@
-use jsonwebtoken::{EncodingKey};
-use sd_jwt_rs::{SDJWTIssuer};
+use jsonwebtoken::EncodingKey;
+use sd_jwt_rs::SDJWTIssuer;
 use serde_json::Value;
 use std::{fs, path::PathBuf};
 
@@ -22,7 +22,8 @@ pub fn issuer_jwk() -> josekit::jwk::Jwk {
     let mut key_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     key_path = key_path.join("fixtures/test_ed25519_private.pem");
     let encoding_key_pem = fs::read(key_path).unwrap();
-    let key_pair = josekit::jwk::alg::ed::EdKeyPair::from_pem(&encoding_key_pem).unwrap();
+    let key_pair = josekit::jwk::alg::ed::EdKeyPair::from_pem(encoding_key_pem).unwrap();
+    println!("key_pair: {:#?}", key_pair);
     key_pair.to_jwk_public_key()
 }
 

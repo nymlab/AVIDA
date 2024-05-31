@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     errors::SdjwtVerifierError,
-    types::{PendingRoute, VerificationReq},
+    types::{InitRegistration, PendingRoute, VerificationReq},
 };
 
 // AVIDA specific
@@ -12,10 +12,7 @@ use avida_cheqd::{
 };
 use avida_common::{
     traits::avida_verifier_trait,
-    types::{
-        MaxPresentationLen, RouteId, RouteVerificationRequirements, VerificationSource,
-        MAX_PRESENTATION_LEN,
-    },
+    types::{MaxPresentationLen, RouteId, VerificationSource, MAX_PRESENTATION_LEN},
 };
 
 //  CosmWasm / Sylvia lib
@@ -80,11 +77,7 @@ impl SdjwtVerifier<'_> {
         ctx: InstantiateCtx,
         max_presentation_len: usize,
         // Vec of app_addr to their routes and requirements
-        init_registrations: Vec<(
-            String, // Admin
-            String, // App Addr
-            Vec<(RouteId, RouteVerificationRequirements)>,
-        )>,
+        init_registrations: Vec<InitRegistration>,
     ) -> Result<Response, SdjwtVerifierError> {
         let InstantiateCtx { deps, env, .. } = ctx;
         set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -93,9 +86,9 @@ impl SdjwtVerifier<'_> {
             .save(deps.storage, &max_presentation_len)?;
 
         for app in init_registrations {
-            let admin = deps.api.addr_validate(&app.0)?;
-            let app_addr = deps.api.addr_validate(&app.1)?;
-            self._register(deps.storage, &env, &admin, app_addr.as_str(), app.2)?;
+            let admin = deps.api.addr_validate(&app.app_admin)?;
+            let app_addr = deps.api.addr_validate(&app.app_addr)?;
+            self._register(deps.storage, &env, &admin, app_addr.as_str(), app.routes)?;
         }
 
         Ok(Response::default())
@@ -140,10 +133,10 @@ pub fn ibc_channel_connect(
     msg: IbcChannelConnectMsg,
 ) -> StdResult<IbcBasicResponse> {
     let contract = SdjwtVerifier::new();
-    if let Some(_) = contract.channel.may_load(deps.storage)? {
+    if contract.channel.may_load(deps.storage)?.is_some() {
         Err(StdError::generic_err("Channel already exist"))
     } else {
-        contract.channel.save(deps.storage, &msg.channel())?;
+        contract.channel.save(deps.storage, msg.channel())?;
 
         Ok(IbcBasicResponse::new())
     }
@@ -167,7 +160,7 @@ pub fn ibc_packet_receive(
     _env: Env,
     _msg: IbcPacketReceiveMsg,
 ) -> Result<IbcReceiveResponse, SdjwtVerifierError> {
-    (|| Ok(IbcReceiveResponse::new().set_ack(StdAck::error(format!("No packet handling")))))()
+    Ok(IbcReceiveResponse::new().set_ack(StdAck::error("No packet handling".to_string())))
 }
 
 #[entry_point]
@@ -200,6 +193,10 @@ pub fn ibc_packet_ack(
         .ok_or(SdjwtVerifierError::RequiredClaimsNotSatisfied)?;
 
     r.issuer_pubkey = Some(pubkey);
+
+    contract
+        .app_routes_requirements
+        .save(deps.storage, &pending_route.app_addr, &req)?;
 
     Ok(IbcBasicResponse::new())
 }

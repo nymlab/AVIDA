@@ -15,6 +15,13 @@ pub type VerificationRequirements<'a> = Map<'a, RouteId, RouteVerificationRequir
 
 pub type RouteId = u64;
 
+/// Routes Requiments used in Registration (and Initiation)
+#[cw_serde]
+pub struct InputRoutesRequirements {
+    pub route_id: RouteId,
+    pub requirements: RouteVerificationRequirements,
+}
+
 /// Specific verification requirements for the route, by `route_id`
 #[cw_serde]
 pub struct RouteVerificationRequirements {

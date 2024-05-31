@@ -4,11 +4,11 @@ use sylvia::multitest::App;
 
 use avida_common::{
     traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy,
-    types::{RouteVerificationRequirements, VerificationSource},
+    types::{InputRoutesRequirements, RouteVerificationRequirements, VerificationSource},
 };
 use avida_sdjwt_verifier::{
     contract::sv::mt::{CodeId, SdjwtVerifierProxy},
-    types::{Criterion, MathsOperator, PresentationReq},
+    types::{Criterion, InitRegistration, MathsOperator, PresentationReq},
 };
 use serde::{Deserialize, Serialize};
 
@@ -66,11 +66,14 @@ fn basic() {
     // String, // App Addr
     // Vec<(RouteId, RouteVerificationRequirements)>,
     let max_presentation_len = 3000usize;
-    let init_registrations = vec![(
-        caller_app.to_string(), // app_admin
-        caller_app.to_string(), // app_addr
-        vec![(fx_route_id, fx_route_verification_req.clone())],
-    )];
+    let init_registrations = vec![InitRegistration {
+        app_admin: caller_app.to_string(),
+        app_addr: caller_app.to_string(),
+        routes: vec![InputRoutesRequirements {
+            route_id: fx_route_id,
+            requirements: fx_route_verification_req.clone(),
+        }],
+    }];
     let contract = code_id
         .instantiate(max_presentation_len, init_registrations)
         .with_label("Verifier Contract")

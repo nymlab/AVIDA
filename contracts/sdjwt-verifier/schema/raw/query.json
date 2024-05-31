@@ -61,8 +61,34 @@
       ]
     },
     "QueryMsg": {
-      "type": "string",
-      "enum": []
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "get_route_verification_key"
+          ],
+          "properties": {
+            "get_route_verification_key": {
+              "type": "object",
+              "required": [
+                "app_addr",
+                "route_id"
+              ],
+              "properties": {
+                "app_addr": {
+                  "type": "string"
+                },
+                "route_id": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
     }
   }
 }

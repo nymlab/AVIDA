@@ -1,5 +1,6 @@
 use crate::types::{
-    AvidaVerifierSudoMsg, RouteId, RouteVerificationRequirements, VerfiablePresentation,
+    AvidaVerifierSudoMsg, InputRoutesRequirements, RouteId, RouteVerificationRequirements,
+    VerfiablePresentation,
 };
 use cosmwasm_std::{Response, StdError};
 use sylvia::types::{ExecCtx, QueryCtx, SudoCtx};
@@ -22,7 +23,7 @@ pub mod avida_verifier_trait {
             &self,
             ctx: ExecCtx,
             app_addr: String,
-            route_criteria: Vec<(RouteId, RouteVerificationRequirements)>,
+            route_criteria: Vec<InputRoutesRequirements>,
         ) -> Result<Response, Self::Error>;
 
         /// Verifiable Presentation Verifier for dApp contracts

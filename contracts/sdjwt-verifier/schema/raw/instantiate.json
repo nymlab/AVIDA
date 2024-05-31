@@ -3,13 +3,130 @@
   "title": "InstantiateMsg",
   "type": "object",
   "required": [
+    "init_registrations",
     "max_presentation_len"
   ],
   "properties": {
+    "init_registrations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/InitRegistration"
+      }
+    },
     "max_presentation_len": {
       "type": "integer",
       "format": "uint",
       "minimum": 0.0
+    }
+  },
+  "definitions": {
+    "Binary": {
+      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+      "type": "string"
+    },
+    "InitRegistration": {
+      "type": "object",
+      "required": [
+        "app_addr",
+        "app_admin",
+        "routes"
+      ],
+      "properties": {
+        "app_addr": {
+          "type": "string"
+        },
+        "app_admin": {
+          "type": "string"
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InputRoutesRequirements"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "InputRoutesRequirements": {
+      "description": "Routes Requiments used in Registration (and Initiation)",
+      "type": "object",
+      "required": [
+        "requirements",
+        "route_id"
+      ],
+      "properties": {
+        "requirements": {
+          "$ref": "#/definitions/RouteVerificationRequirements"
+        },
+        "route_id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "RouteVerificationRequirements": {
+      "description": "Specific verification requirements for the route, by `route_id`",
+      "type": "object",
+      "required": [
+        "presentation_request",
+        "verification_source"
+      ],
+      "properties": {
+        "presentation_request": {
+          "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationReq.presentation_required` on sdjwtVerifier",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Binary"
+            }
+          ]
+        },
+        "verification_source": {
+          "description": "This defines where the source data for verification is",
+          "allOf": [
+            {
+              "$ref": "#/definitions/VerificationSource"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "TrustRegistry": {
+      "type": "string",
+      "enum": [
+        "cheqd"
+      ]
+    },
+    "VerificationSource": {
+      "description": "Location to obtain the verification data from",
+      "type": "object",
+      "required": [
+        "data_or_location"
+      ],
+      "properties": {
+        "data_or_location": {
+          "description": "The data or location of the verification data at the trust registry For TrustRegistry::Cheqd, it is the `ResourceReqPacket` in avida-cheqd For data, the contracts should have the expected type In Sdjwt-Verifier, this is expected to be jwk",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Binary"
+            }
+          ]
+        },
+        "source": {
+          "description": "If `None`, this means data is directly provided",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TrustRegistry"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
     }
   }
 }
