@@ -1,9 +1,16 @@
 use super::errors::SdjwtVerifierError;
 
+use avida_common::types::InputRoutesRequirements;
 use cosmwasm_schema::cw_serde;
-
 use jsonwebtoken::jwk::Jwk;
 use serde::{Deserialize, Serialize};
+
+#[cw_serde]
+pub struct InitRegistration {
+    pub app_addr: String,
+    pub app_admin: String,
+    pub routes: Vec<InputRoutesRequirements>,
+}
 
 #[cw_serde]
 pub struct PendingRoute {

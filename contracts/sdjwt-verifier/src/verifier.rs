@@ -15,8 +15,8 @@ use avida_cheqd::ibc::{get_timeout_timestamp, HOUR_PACKET_LIFETIME};
 use avida_common::{
     traits::AvidaVerifierTrait,
     types::{
-        AvidaVerifierSudoMsg, RouteId, RouteVerificationRequirements, TrustRegistry,
-        VerfiablePresentation, VerificationSource,
+        AvidaVerifierSudoMsg, InputRoutesRequirements, RouteId, RouteVerificationRequirements,
+        TrustRegistry, VerfiablePresentation, VerificationSource,
     },
 };
 
@@ -61,7 +61,7 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         &self,
         ctx: ExecCtx,
         app_addr: String,
-        route_criteria: Vec<(RouteId, RouteVerificationRequirements)>,
+        route_criteria: Vec<InputRoutesRequirements>,
     ) -> Result<Response, Self::Error> {
         let ExecCtx { deps, env, info } = ctx;
         let app_addr = deps.api.addr_validate(&app_addr)?;
@@ -205,7 +205,7 @@ impl SdjwtVerifier<'_> {
         env: &Env,
         admin: &Addr,
         app_addr: &str,
-        route_criteria: Vec<(RouteId, RouteVerificationRequirements)>,
+        route_criteria: Vec<InputRoutesRequirements>,
     ) -> Result<Response, SdjwtVerifierError> {
         if self.app_trust_data_source.has(storage, app_addr)
             || self.app_routes_requirements.has(storage, app_addr)
@@ -213,23 +213,26 @@ impl SdjwtVerifier<'_> {
             return Err(SdjwtVerifierError::AppAlreadyRegistered);
         }
 
-        let mut requirements: HashMap<u64, VerificationReq> = HashMap::new();
+        let mut req_map: HashMap<u64, VerificationReq> = HashMap::new();
         let mut data_sources: HashMap<u64, VerificationSource> = HashMap::new();
 
         let mut response = Response::default();
 
-        for (route_id, route_requirements) in route_criteria {
-            data_sources.insert(route_id, route_requirements.verification_source.clone());
+        for InputRoutesRequirements {
+            route_id,
+            requirements,
+        } in route_criteria
+        {
+            data_sources.insert(route_id, requirements.verification_source.clone());
             // On registration we check if the dApp has request for IBC data
             // FIXME: add IBC submessages
-            let verif_req = match route_requirements.verification_source.source {
+            let verif_req = match requirements.verification_source.source {
                 Some(registry) => {
                     match registry {
                         TrustRegistry::Cheqd => {
                             // For Cheqd, the data is in the ResourceReqPacket
-                            let resource_req_packat: ResourceReqPacket = from_json(
-                                &route_requirements.verification_source.data_or_location,
-                            )?;
+                            let resource_req_packat: ResourceReqPacket =
+                                from_json(&requirements.verification_source.data_or_location)?;
 
                             let ibc_msg =
                                 SubMsg::new(CosmosMsg::Ibc(cosmwasm_std::IbcMsg::SendPacket {
@@ -254,7 +257,7 @@ impl SdjwtVerifier<'_> {
 
                             VerificationReq {
                                 presentation_required: from_json(
-                                    route_requirements.presentation_request,
+                                    requirements.presentation_request,
                                 )?,
                                 issuer_pubkey: None,
                             }
@@ -263,7 +266,7 @@ impl SdjwtVerifier<'_> {
                 }
                 None => {
                     let issuer_pubkey: Jwk = serde_json_wasm::from_slice(
-                        &route_requirements.verification_source.data_or_location,
+                        &requirements.verification_source.data_or_location,
                     )?;
 
                     println!("issuer_pubkey: {:?}", issuer_pubkey);
@@ -274,9 +277,7 @@ impl SdjwtVerifier<'_> {
                     }) = issuer_pubkey.algorithm
                     {
                         VerificationReq {
-                            presentation_required: from_json(
-                                route_requirements.presentation_request,
-                            )?,
+                            presentation_required: from_json(requirements.presentation_request)?,
                             issuer_pubkey: Some(issuer_pubkey),
                         }
                     } else {
@@ -284,13 +285,13 @@ impl SdjwtVerifier<'_> {
                     }
                 }
             };
-            requirements.insert(route_id, verif_req);
+            req_map.insert(route_id, verif_req);
         }
 
         self.app_trust_data_source
             .save(storage, app_addr, &data_sources)?;
         self.app_routes_requirements
-            .save(storage, app_addr, &requirements)?;
+            .save(storage, app_addr, &req_map)?;
         self.app_admins.save(storage, app_addr, admin)?;
 
         Ok(response)
