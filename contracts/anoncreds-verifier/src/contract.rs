@@ -57,6 +57,13 @@ impl<'a> AnonCredsVerifier<'a> {
     fn channel(&self, ctx: QueryCtx) -> Result<Option<IbcChannel>, StdError> {
         self.channel.may_load(ctx.deps.storage)
     }
+
+    fn ibc_channel_connect(
+        &self,
+        deps: DepsMut,
+        msg: IbcChannelConnectMsg,
+    ) -> Result<, ContractError> {
+    }
 }
 
 #[entry_point]

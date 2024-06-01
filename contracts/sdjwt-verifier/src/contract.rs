@@ -1,36 +1,31 @@
-use std::collections::HashMap;
-
 use crate::{
     errors::SdjwtVerifierError,
     types::{InitRegistration, PendingRoute, VerificationReq},
 };
 
 // AVIDA specific
-use avida_cheqd::{
-    ibc::{ibc_channel_close_handler, ibc_channel_open_handler, ibc_packet_ack_resource_extractor},
-    types::{Channel, CHANNEL},
+use avida_cheqd::ibc::{
+    ibc_channel_close_handler, ibc_channel_open_handler, ibc_packet_ack_resource_extractor,
 };
 use avida_common::{
     traits::avida_verifier_trait,
     types::{MaxPresentationLen, RouteId, VerificationSource, MAX_PRESENTATION_LEN},
 };
-
 //  CosmWasm / Sylvia lib
 use cosmwasm_std::{
     entry_point, from_json, Addr, DepsMut, Env, IbcBasicResponse, IbcChannelCloseMsg,
     IbcChannelConnectMsg, IbcChannelOpenMsg, IbcChannelOpenResponse, IbcPacketAckMsg,
-    IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, Response, StdAck, StdError,
-    StdResult,
+    IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, Response, StdAck, StdResult,
 };
 use cw2::set_contract_version;
-use cw_storage_plus::Map;
+use cw_storage_plus::{Item, Map};
 use sylvia::{
     contract, entry_points, schemars,
     types::{InstantiateCtx, QueryCtx},
 };
 
-// sd-jwt specific dependencies
 use jsonwebtoken::jwk::Jwk;
+use std::collections::HashMap;
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -45,7 +40,7 @@ pub struct SdjwtVerifier<'a> {
     /// Registered Smart Contract addrs and their admins
     pub app_admins: Map<'a, &'a str, Addr>,
     /// The IBC channel connecting with cheqd resource
-    pub channel: Channel<'a>,
+    pub channel_id: Item<'a, String>,
     /// Temp storage pending IBC packet Ack
     /// ibc_channel_ack: the original packet is a ResourceReqPacket which should fill the `VerificationReq`
     /// for a app and its route.
@@ -65,7 +60,7 @@ impl SdjwtVerifier<'_> {
             app_trust_data_source: Map::new("data_sources"),
             app_routes_requirements: Map::new("routes_requirements"),
             app_admins: Map::new("admins"),
-            channel: CHANNEL,
+            channel_id: Item::new("channel_id"),
             pending_verification_req_requests: Map::new("pending_verification_req_requests"),
         }
     }
@@ -112,6 +107,78 @@ impl SdjwtVerifier<'_> {
             .as_ref()
             .map(|jwk| serde_json_wasm::to_string(jwk).unwrap()))
     }
+
+    // Functions in the `impl` block has access to the state of the contract
+    fn ibc_channel_connect(
+        &self,
+        deps: DepsMut,
+        msg: IbcChannelConnectMsg,
+    ) -> Result<IbcBasicResponse, SdjwtVerifierError> {
+        if self.channel_id.may_load(deps.storage)?.is_some() {
+            Err(SdjwtVerifierError::ChannelAlreadyExists)
+        } else {
+            self.channel_id
+                .save(deps.storage, &msg.channel().endpoint.channel_id)?;
+
+            Ok(IbcBasicResponse::new())
+        }
+    }
+
+    fn ibc_packet_ack(
+        &self,
+        deps: DepsMut,
+        msg: IbcPacketAckMsg,
+    ) -> Result<IbcBasicResponse, SdjwtVerifierError> {
+        let (resource_req_packet, resource) = ibc_packet_ack_resource_extractor(msg)?;
+
+        // Checks that this was a packet that we requested
+        let contract = SdjwtVerifier::new();
+        let pending_route = contract
+            .pending_verification_req_requests
+            .load(deps.storage, &resource_req_packet.to_string())?;
+        contract
+            .pending_verification_req_requests
+            .remove(deps.storage, &resource_req_packet.to_string());
+
+        // Checks the return data is the expected format
+        let pubkey: Jwk = from_json(resource.linked_resource.data)
+            .map_err(|e| SdjwtVerifierError::ReturnedResourceFormat(e.to_string()))?;
+
+        let mut req = contract
+            .app_routes_requirements
+            .load(deps.storage, &pending_route.app_addr)?;
+
+        let r = req
+            .get_mut(&pending_route.route_id)
+            .ok_or(SdjwtVerifierError::RequiredClaimsNotSatisfied)?;
+
+        r.issuer_pubkey = Some(pubkey);
+
+        contract
+            .app_routes_requirements
+            .save(deps.storage, &pending_route.app_addr, &req)?;
+
+        Ok(IbcBasicResponse::new())
+    }
+}
+
+#[entry_point]
+/// The entry point for connecting a channel
+pub fn ibc_channel_connect(
+    deps: DepsMut,
+    _env: Env,
+    msg: IbcChannelConnectMsg,
+) -> StdResult<IbcBasicResponse> {
+    Ok(SdjwtVerifier::new().ibc_channel_connect(deps, msg)?)
+}
+
+#[entry_point]
+pub fn ibc_packet_ack(
+    deps: DepsMut,
+    _env: Env,
+    msg: IbcPacketAckMsg,
+) -> StdResult<IbcBasicResponse> {
+    Ok(SdjwtVerifier::new().ibc_packet_ack(deps, msg)?)
 }
 
 #[entry_point]
@@ -123,23 +190,6 @@ pub fn ibc_channel_open(
     msg: IbcChannelOpenMsg,
 ) -> Result<IbcChannelOpenResponse, SdjwtVerifierError> {
     Ok(ibc_channel_open_handler(msg)?)
-}
-
-#[entry_point]
-/// The entry point for connecting a channel
-pub fn ibc_channel_connect(
-    deps: DepsMut,
-    _env: Env,
-    msg: IbcChannelConnectMsg,
-) -> StdResult<IbcBasicResponse> {
-    let contract = SdjwtVerifier::new();
-    if contract.channel.may_load(deps.storage)?.is_some() {
-        Err(StdError::generic_err("Channel already exist"))
-    } else {
-        contract.channel.save(deps.storage, msg.channel())?;
-
-        Ok(IbcBasicResponse::new())
-    }
 }
 
 #[entry_point]
@@ -161,44 +211,6 @@ pub fn ibc_packet_receive(
     _msg: IbcPacketReceiveMsg,
 ) -> Result<IbcReceiveResponse, SdjwtVerifierError> {
     Ok(IbcReceiveResponse::new().set_ack(StdAck::error("No packet handling".to_string())))
-}
-
-#[entry_point]
-pub fn ibc_packet_ack(
-    deps: DepsMut,
-    _env: Env,
-    msg: IbcPacketAckMsg,
-) -> StdResult<IbcBasicResponse> {
-    let (resource_req_packet, resource) = ibc_packet_ack_resource_extractor(msg)?;
-
-    // Checks that this was a packet that we requested
-    let contract = SdjwtVerifier::new();
-    let pending_route = contract
-        .pending_verification_req_requests
-        .load(deps.storage, &resource_req_packet.to_string())?;
-    contract
-        .pending_verification_req_requests
-        .remove(deps.storage, &resource_req_packet.to_string());
-
-    // Checks the return data is the expected format
-    let pubkey: Jwk = from_json(resource.linked_resource.data)
-        .map_err(|e| SdjwtVerifierError::ReturnedResourceFormat(e.to_string()))?;
-
-    let mut req = contract
-        .app_routes_requirements
-        .load(deps.storage, &pending_route.app_addr)?;
-
-    let r = req
-        .get_mut(&pending_route.route_id)
-        .ok_or(SdjwtVerifierError::RequiredClaimsNotSatisfied)?;
-
-    r.issuer_pubkey = Some(pubkey);
-
-    contract
-        .app_routes_requirements
-        .save(deps.storage, &pending_route.app_addr, &req)?;
-
-    Ok(IbcBasicResponse::new())
 }
 
 #[entry_point]
