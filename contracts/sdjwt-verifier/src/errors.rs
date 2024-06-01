@@ -7,6 +7,8 @@ use thiserror::Error;
 pub enum SdjwtVerifierError {
     #[error("IBC returned resource format unexpected {0}")]
     ReturnedResourceFormat(String),
+    #[error("IBC channel already exists")]
+    ChannelAlreadyExists,
     #[error("sdjwt {0}")]
     SdJwt(String),
     #[error("String Conversion {0}")]

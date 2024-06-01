@@ -1,6 +1,5 @@
 use avida_cheqd::types::ResourceReqPacket;
 use cosmwasm_std::Storage;
-use jsonwebtoken::jwk::{AlgorithmParameters, EllipticCurve, OctetKeyPairParameters};
 
 use std::collections::HashMap;
 
@@ -31,7 +30,10 @@ use sylvia::{
 };
 
 // sd-jwt specific dependencies
-use jsonwebtoken::{jwk::Jwk, DecodingKey};
+use jsonwebtoken::{
+    jwk::{AlgorithmParameters, EllipticCurve, Jwk, OctetKeyPairParameters},
+    DecodingKey,
+};
 use sd_jwt_rs::{SDJWTSerializationFormat, SDJWTVerifier};
 
 #[contract(module=crate::contract)]
@@ -236,7 +238,7 @@ impl SdjwtVerifier<'_> {
 
                             let ibc_msg =
                                 SubMsg::new(CosmosMsg::Ibc(cosmwasm_std::IbcMsg::SendPacket {
-                                    channel_id: self.channel.load(storage)?.endpoint.channel_id,
+                                    channel_id: self.channel_id.load(storage)?,
                                     data: to_json_binary(&resource_req_packat)?,
                                     timeout: IbcTimeout::with_timestamp(get_timeout_timestamp(
                                         env,
