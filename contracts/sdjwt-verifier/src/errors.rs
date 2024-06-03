@@ -35,6 +35,8 @@ pub enum SdjwtVerifierError {
     DisclosedClaimNotFound(String),
     #[error("App Already Registered")]
     AppAlreadyRegistered,
+    #[error("App Is Not Registered")]
+    AppIsNotRegistered,
     #[error("Unauthorised")]
     Unauthorised,
     #[error("Unsupported Key Type")]

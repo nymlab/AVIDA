@@ -99,8 +99,8 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         &self,
         ctx: ExecCtx,
         app_addr: String,
-        _route_id: RouteId,
-        _route_criteria: Option<RouteVerificationRequirements>,
+        route_id: RouteId,
+        route_criteria: Option<RouteVerificationRequirements>,
     ) -> Result<Response, Self::Error> {
         let ExecCtx { deps, env: _, info } = ctx;
         let app_addr = deps.api.addr_validate(&app_addr)?;
@@ -109,13 +109,28 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         if app_admin != info.sender {
             return Err(SdjwtVerifierError::Unauthorised);
         }
-        unimplemented!()
+        self._update(deps.storage, app_addr.as_str(), route_id, route_criteria)
     }
 
     //For dApp contracts to deregister
     #[sv::msg(exec)]
-    fn deregister(&self, _ctx: ExecCtx, _app_addr: String) -> Result<Response, Self::Error> {
-        unimplemented!()
+    fn deregister(&self, ctx: ExecCtx, app_addr: String) -> Result<Response, Self::Error> {
+        let ExecCtx { deps, env, info } = ctx;
+
+        if !self.app_trust_data_source.has(deps.storage, &app_addr)
+            || !self.app_routes_requirements.has(deps.storage, &app_addr)
+        {
+            return Err(SdjwtVerifierError::AppIsNotRegistered);
+        }
+
+        let app_addr = deps.api.addr_validate(&app_addr)?;
+        let app_admin = self.app_admins.load(deps.storage, app_addr.as_str())?;
+
+        if app_admin != &info.sender {
+            return Err(SdjwtVerifierError::Unauthorised);
+        }
+
+        self._deregister(deps.storage, app_addr.as_str())
     }
 
     // Query available routes for a dApp contract
@@ -297,5 +312,115 @@ impl SdjwtVerifier<'_> {
         self.app_admins.save(storage, app_addr, admin)?;
 
         Ok(response)
+    }
+
+    fn _deregister(
+        &self,
+        storage: &mut dyn Storage,
+        app_addr: &str,
+    ) -> Result<Response, SdjwtVerifierError> {
+        self.app_trust_data_source.remove(storage, app_addr);
+        self.app_routes_requirements.remove(storage, app_addr);
+        self.app_admins.remove(storage, app_addr);
+
+        Ok(Response::default())
+    }
+
+    fn _update(
+        &self,
+        storage: &mut dyn Storage,
+        app_addr: &str,
+        route_id: RouteId,
+        route_criteria: Option<RouteVerificationRequirements>,
+    ) -> Result<Response, SdjwtVerifierError> {
+        let mut req_map = self.app_routes_requirements.load(storage, app_addr)?;
+        let mut data_sources = self.app_trust_data_source.load(storage, app_addr)?;
+
+        let mut response = Response::default();
+
+         // On registration we check if the dApp has request for IBC data
+            // FIXME: add IBC submessages
+            if let Some (route_criteria) = route_criteria {
+                if let Some(registry) = route_criteria.verification_source.source {
+                    match registry {
+                        TrustRegistry::Cheqd => {
+                            // For Cheqd, the data is in the ResourceReqPacket
+                            let resource_req_packat: ResourceReqPacket =
+                                from_json(&route_criteria.verification_source.data_or_location)?;
+
+                            let ibc_msg =
+                                SubMsg::new(CosmosMsg::Ibc(cosmwasm_std::IbcMsg::SendPacket {
+                                    channel_id: self.channel_id.load(storage)?,
+                                    data: to_json_binary(&resource_req_packat)?,
+                                    timeout: IbcTimeout::with_timestamp(get_timeout_timestamp(
+                                        env,
+                                        HOUR_PACKET_LIFETIME,
+                                    )),
+                                }));
+
+                            self.pending_verification_req_requests.save(
+                                storage,
+                                &resource_req_packat.to_string(),
+                                &PendingRoute {
+                                    app_addr: app_addr.to_string(),
+                                    route_id,
+                                },
+                            )?;
+
+                            response = response.add_submessage(ibc_msg);
+
+                            VerificationReq {
+                                presentation_required: from_json(
+                                    route_criteria.presentation_request,
+                                )?,
+                                issuer_pubkey: None,
+                            }
+                        }
+                    }
+                } else {
+                    let issuer_pubkey: Jwk = serde_json_wasm::from_slice(
+                        &requirements.verification_source.data_or_location,
+                    )?;
+
+                    println!("issuer_pubkey: {:?}", issuer_pubkey);
+
+                    if let AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
+                        curve: EllipticCurve::Ed25519,
+                        ..
+                    }) = issuer_pubkey.algorithm
+                    {
+                        VerificationReq {
+                            presentation_required: from_json(requirements.presentation_request)?,
+                            issuer_pubkey: Some(issuer_pubkey),
+                        }
+                    } else {
+                        return Err(SdjwtVerifierError::UnsupportedKeyType);
+                    }
+                }
+            } else {
+                data_sources.remove(&route_id);
+                req_map.remove(&route_id);
+            }
+            
+        // if let Some(route_criteria) = route_criteria {
+        //     data_sources.insert(route_id, route_criteria.verification_source.clone());
+        //     req_map.insert(
+        //         route_id,
+        //         VerificationReq {
+        //             presentation_required: from_json(route_criteria.presentation_request)?,
+        //             issuer_pubkey: None,
+        //         },
+        //     );
+        // } else {
+        //     data_sources.remove(&route_id);
+        //     req_map.remove(&route_id);
+        // }
+
+        self.app_trust_data_source
+            .save(storage, app_addr, &data_sources)?;
+        self.app_routes_requirements
+            .save(storage, app_addr, &req_map)?;
+
+        Ok(Response::default())
     }
 }

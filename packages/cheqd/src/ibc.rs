@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    from_json, Env, Ibc3ChannelOpenResponse, IbcBasicResponse, IbcChannel, IbcChannelOpenMsg, IbcChannelOpenResponse, IbcOrder, IbcPacketAckMsg,
-    StdAck, StdError, StdResult, Timestamp,
+    from_json, Env, Ibc3ChannelOpenResponse, IbcBasicResponse, IbcChannel, IbcChannelOpenMsg,
+    IbcChannelOpenResponse, IbcOrder, IbcPacketAckMsg, StdAck, StdError, StdResult, Timestamp,
 };
 
 use crate::types::{ResourceReqPacket, ResourceWithMetadata};
