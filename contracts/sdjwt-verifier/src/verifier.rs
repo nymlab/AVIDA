@@ -121,7 +121,7 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
     //For dApp contracts to deregister
     #[sv::msg(exec)]
     fn deregister(&self, ctx: ExecCtx, app_addr: String) -> Result<Response, Self::Error> {
-        let ExecCtx { deps, env, info } = ctx;
+        let ExecCtx { deps, info, .. } = ctx;
 
         if !self.app_trust_data_source.has(deps.storage, &app_addr)
             || !self.app_routes_requirements.has(deps.storage, &app_addr)

@@ -15,7 +15,7 @@ cosmwasm-std = { workspace = true }
 cw-storage-plus = { workspace = true }
 cw-utils = { workspace = true }
 cw-multi-test = "0.20"
-sylvia = { workspace = true }
+sylvia = { workspace = true,  features = ["mt"] }
 sylvia-derive = { workspace = true }
 
 serde = { workspace = true }
