@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use crate::{
     contract::SdjwtVerifier,
     errors::SdjwtVerifierError,
-    types::{validate, PendingRoute, VerificationReq},
+    types::{validate, PendingRoute, VerificationReq, VerificationRequest},
 };
 
 // AVIDA specific
@@ -102,14 +102,20 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         route_id: RouteId,
         route_criteria: Option<RouteVerificationRequirements>,
     ) -> Result<Response, Self::Error> {
-        let ExecCtx { deps, env: _, info } = ctx;
+        let ExecCtx { deps, env, info } = ctx;
         let app_addr = deps.api.addr_validate(&app_addr)?;
 
         let app_admin = self.app_admins.load(deps.storage, app_addr.as_str())?;
         if app_admin != info.sender {
             return Err(SdjwtVerifierError::Unauthorised);
         }
-        self._update(deps.storage, app_addr.as_str(), route_id, route_criteria)
+        self._update(
+            deps.storage,
+            &env,
+            app_addr.as_str(),
+            route_id,
+            route_criteria,
+        )
     }
 
     //For dApp contracts to deregister
@@ -243,66 +249,16 @@ impl SdjwtVerifier<'_> {
             data_sources.insert(route_id, requirements.verification_source.clone());
             // On registration we check if the dApp has request for IBC data
             // FIXME: add IBC submessages
-            let verif_req = match requirements.verification_source.source {
-                Some(registry) => {
-                    match registry {
-                        TrustRegistry::Cheqd => {
-                            // For Cheqd, the data is in the ResourceReqPacket
-                            let resource_req_packat: ResourceReqPacket =
-                                from_json(&requirements.verification_source.data_or_location)?;
+            let VerificationRequest {
+                verification_request,
+                sub_msg,
+            } = self.make_verification_request(storage, env, app_addr, route_id, requirements)?;
 
-                            let ibc_msg =
-                                SubMsg::new(CosmosMsg::Ibc(cosmwasm_std::IbcMsg::SendPacket {
-                                    channel_id: self.channel_id.load(storage)?,
-                                    data: to_json_binary(&resource_req_packat)?,
-                                    timeout: IbcTimeout::with_timestamp(get_timeout_timestamp(
-                                        env,
-                                        HOUR_PACKET_LIFETIME,
-                                    )),
-                                }));
+            req_map.insert(route_id, verification_request);
 
-                            self.pending_verification_req_requests.save(
-                                storage,
-                                &resource_req_packat.to_string(),
-                                &PendingRoute {
-                                    app_addr: app_addr.to_string(),
-                                    route_id,
-                                },
-                            )?;
-
-                            response = response.add_submessage(ibc_msg);
-
-                            VerificationReq {
-                                presentation_required: from_json(
-                                    requirements.presentation_request,
-                                )?,
-                                issuer_pubkey: None,
-                            }
-                        }
-                    }
-                }
-                None => {
-                    let issuer_pubkey: Jwk = serde_json_wasm::from_slice(
-                        &requirements.verification_source.data_or_location,
-                    )?;
-
-                    println!("issuer_pubkey: {:?}", issuer_pubkey);
-
-                    if let AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
-                        curve: EllipticCurve::Ed25519,
-                        ..
-                    }) = issuer_pubkey.algorithm
-                    {
-                        VerificationReq {
-                            presentation_required: from_json(requirements.presentation_request)?,
-                            issuer_pubkey: Some(issuer_pubkey),
-                        }
-                    } else {
-                        return Err(SdjwtVerifierError::UnsupportedKeyType);
-                    }
-                }
-            };
-            req_map.insert(route_id, verif_req);
+            if let Some(sub_msg) = sub_msg {
+                response = response.add_submessage(sub_msg);
+            }
         }
 
         self.app_trust_data_source
@@ -329,6 +285,7 @@ impl SdjwtVerifier<'_> {
     fn _update(
         &self,
         storage: &mut dyn Storage,
+        env: &Env,
         app_addr: &str,
         route_id: RouteId,
         route_criteria: Option<RouteVerificationRequirements>,
@@ -336,91 +293,92 @@ impl SdjwtVerifier<'_> {
         let mut req_map = self.app_routes_requirements.load(storage, app_addr)?;
         let mut data_sources = self.app_trust_data_source.load(storage, app_addr)?;
 
-        let mut response = Response::default();
+        let mut response: Response = Response::default();
 
-         // On registration we check if the dApp has request for IBC data
-            // FIXME: add IBC submessages
-            if let Some (route_criteria) = route_criteria {
-                if let Some(registry) = route_criteria.verification_source.source {
-                    match registry {
-                        TrustRegistry::Cheqd => {
-                            // For Cheqd, the data is in the ResourceReqPacket
-                            let resource_req_packat: ResourceReqPacket =
-                                from_json(&route_criteria.verification_source.data_or_location)?;
+        // On registration we check if the dApp has request for IBC data
+        // FIXME: add IBC submessages
+        if let Some(route_criteria) = route_criteria {
+            data_sources.insert(route_id, route_criteria.verification_source.clone());
 
-                            let ibc_msg =
-                                SubMsg::new(CosmosMsg::Ibc(cosmwasm_std::IbcMsg::SendPacket {
-                                    channel_id: self.channel_id.load(storage)?,
-                                    data: to_json_binary(&resource_req_packat)?,
-                                    timeout: IbcTimeout::with_timestamp(get_timeout_timestamp(
-                                        env,
-                                        HOUR_PACKET_LIFETIME,
-                                    )),
-                                }));
+            let VerificationRequest {
+                verification_request,
+                sub_msg,
+            } = self.make_verification_request(storage, env, app_addr, route_id, route_criteria)?;
 
-                            self.pending_verification_req_requests.save(
-                                storage,
-                                &resource_req_packat.to_string(),
-                                &PendingRoute {
-                                    app_addr: app_addr.to_string(),
-                                    route_id,
-                                },
-                            )?;
+            req_map.insert(route_id, verification_request);
 
-                            response = response.add_submessage(ibc_msg);
-
-                            VerificationReq {
-                                presentation_required: from_json(
-                                    route_criteria.presentation_request,
-                                )?,
-                                issuer_pubkey: None,
-                            }
-                        }
-                    }
-                } else {
-                    let issuer_pubkey: Jwk = serde_json_wasm::from_slice(
-                        &requirements.verification_source.data_or_location,
-                    )?;
-
-                    println!("issuer_pubkey: {:?}", issuer_pubkey);
-
-                    if let AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
-                        curve: EllipticCurve::Ed25519,
-                        ..
-                    }) = issuer_pubkey.algorithm
-                    {
-                        VerificationReq {
-                            presentation_required: from_json(requirements.presentation_request)?,
-                            issuer_pubkey: Some(issuer_pubkey),
-                        }
-                    } else {
-                        return Err(SdjwtVerifierError::UnsupportedKeyType);
-                    }
-                }
-            } else {
-                data_sources.remove(&route_id);
-                req_map.remove(&route_id);
+            if let Some(sub_msg) = sub_msg {
+                response = response.add_submessage(sub_msg);
             }
-            
-        // if let Some(route_criteria) = route_criteria {
-        //     data_sources.insert(route_id, route_criteria.verification_source.clone());
-        //     req_map.insert(
-        //         route_id,
-        //         VerificationReq {
-        //             presentation_required: from_json(route_criteria.presentation_request)?,
-        //             issuer_pubkey: None,
-        //         },
-        //     );
-        // } else {
-        //     data_sources.remove(&route_id);
-        //     req_map.remove(&route_id);
-        // }
+        } else {
+            data_sources.remove(&route_id);
+            req_map.remove(&route_id);
+        }
 
         self.app_trust_data_source
             .save(storage, app_addr, &data_sources)?;
         self.app_routes_requirements
             .save(storage, app_addr, &req_map)?;
 
-        Ok(Response::default())
+        Ok(response)
+    }
+
+    fn make_verification_request(
+        &self,
+        storage: &mut dyn Storage,
+        env: &Env,
+        app_addr: &str,
+        route_id: RouteId,
+        route_criteria: RouteVerificationRequirements,
+    ) -> Result<VerificationRequest, SdjwtVerifierError> {
+        if let Some(registry) = route_criteria.verification_source.source {
+            match registry {
+                TrustRegistry::Cheqd => {
+                    // For Cheqd, the data is in the ResourceReqPacket
+                    let resource_req_packat: ResourceReqPacket =
+                        from_json(&route_criteria.verification_source.data_or_location)?;
+
+                    let ibc_msg = SubMsg::new(CosmosMsg::Ibc(cosmwasm_std::IbcMsg::SendPacket {
+                        channel_id: self.channel_id.load(storage)?,
+                        data: to_json_binary(&resource_req_packat)?,
+                        timeout: IbcTimeout::with_timestamp(get_timeout_timestamp(
+                            env,
+                            HOUR_PACKET_LIFETIME,
+                        )),
+                    }));
+
+                    self.pending_verification_req_requests.save(
+                        storage,
+                        &resource_req_packat.to_string(),
+                        &PendingRoute {
+                            app_addr: app_addr.to_string(),
+                            route_id,
+                        },
+                    )?;
+
+                    let verification_req: VerificationReq =
+                        VerificationReq::new(route_criteria.presentation_request, None)?;
+                    Ok(VerificationRequest::new(verification_req, Some(ibc_msg)))
+                }
+            }
+        } else {
+            let issuer_pubkey: Jwk =
+                serde_json_wasm::from_slice(&route_criteria.verification_source.data_or_location)?;
+
+            println!("issuer_pubkey: {:?}", issuer_pubkey);
+
+            if let AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
+                curve: EllipticCurve::Ed25519,
+                ..
+            }) = issuer_pubkey.algorithm
+            {
+                let verification_req: VerificationReq =
+                    VerificationReq::new(route_criteria.presentation_request, Some(issuer_pubkey))?;
+
+                Ok(VerificationRequest::new(verification_req, None))
+            } else {
+                return Err(SdjwtVerifierError::UnsupportedKeyType);
+            }
+        }
     }
 }
