@@ -148,5 +148,5 @@ fn basic() {
 #[test]
 fn test_register_success()  {
     let app: App<_> = App::default();
-    let contract = instantiate_contract(&app);
+    let contract = instantiate_verifier_contract(&app);
 }
