@@ -3,7 +3,6 @@ use sd_jwt_rs::SDJWTIssuer;
 use serde_json::Value;
 use std::{fs, path::PathBuf};
 
-
 use cosmwasm_std::Binary;
 
 use sylvia::multitest::{App, Proxy};
@@ -21,14 +20,15 @@ use serde::{Deserialize, Serialize};
 
 use josekit::{self};
 
+use cw_multi_test::App as MtApp;
 use sd_jwt_rs::issuer;
 use sd_jwt_rs::{SDJWTHolder, SDJWTSerializationFormat};
-use cw_multi_test::App as MtApp;
 
 pub const OWNER_ADDR: &str = "addr0001";
 pub const CALLER_APP_ADDR: &str = "addr0002";
 pub const VERIFIER_CONTRACT_LABEL: &str = "Verifier Contract";
-pub const FX_ROUTE_ID: u64 = 1u64;
+pub const FX_ROUTE_ID: u64 = 1;
+pub const MAX_PRESENTATION_LEN: usize = 3000;
 
 // Keys generation
 // ```sh
@@ -65,14 +65,15 @@ pub fn claims(name: &str, age: u8, active: bool, joined_at: u16) -> Value {
     })
 }
 
-pub fn instantiate_verifier_contract<'a>(app: &'a App<MtApp>) -> Proxy<'a, MtApp, SdjwtVerifier<'a>> {
+pub fn get_example_route_verification_requirements() -> RouteVerificationRequirements {
     let presentation_req: PresentationReq = vec![
         (
             "age".to_string(),
             Criterion::Number(30, MathsOperator::EqualTo),
         ),
         ("active".to_string(), Criterion::Boolean(true)),
-        (            "joined_at".to_string(),
+        (
+            "joined_at".to_string(),
             Criterion::Number(2020, MathsOperator::GreaterThan),
         ),
     ];
@@ -83,20 +84,27 @@ pub fn instantiate_verifier_contract<'a>(app: &'a App<MtApp>) -> Proxy<'a, MtApp
     println!("fx_jwk: {:#?}", fx_jwk);
 
     // Add some default criteria as presentation request
-    let fx_route_verification_req: RouteVerificationRequirements = RouteVerificationRequirements {
+    RouteVerificationRequirements {
         verification_source: VerificationSource {
             source: None,
             data_or_location: Binary::from(fx_jwk.as_bytes()),
         },
         presentation_request: Binary::from(re.as_bytes()),
-    };
+    }
+}
 
+pub fn instantiate_verifier_contract<'a>(
+    app: &'a App<MtApp>,
+) -> (
+    Proxy<'a, MtApp, SdjwtVerifier<'a>>,
+    RouteVerificationRequirements,
+) {
+    let fx_route_verification_req = get_example_route_verification_requirements();
     let code_id = CodeId::store_code(app);
 
     // String, // Admin
     // String, // App Addr
     // Vec<(RouteId, RouteVerificationRequirements)>,
-    let max_presentation_len = 3000usize;
     let init_registrations = vec![InitRegistration {
         app_admin: CALLER_APP_ADDR.to_string(),
         app_addr: CALLER_APP_ADDR.to_string(),
@@ -106,9 +114,12 @@ pub fn instantiate_verifier_contract<'a>(app: &'a App<MtApp>) -> Proxy<'a, MtApp
         }],
     }];
 
-    code_id
-        .instantiate(max_presentation_len, init_registrations)
-        .with_label(VERIFIER_CONTRACT_LABEL)
-        .call(OWNER_ADDR)
-        .unwrap()
+    (
+        code_id
+            .instantiate(MAX_PRESENTATION_LEN, init_registrations)
+            .with_label(VERIFIER_CONTRACT_LABEL)
+            .call(OWNER_ADDR)
+            .unwrap(),
+        fx_route_verification_req,
+    )
 }
