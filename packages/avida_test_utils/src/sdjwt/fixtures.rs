@@ -25,6 +25,11 @@ use sd_jwt_rs::issuer;
 use sd_jwt_rs::{SDJWTHolder, SDJWTSerializationFormat};
 use cw_multi_test::App as MtApp;
 
+pub const OWNER_ADDR: &str = "addr0001";
+pub const CALLER_APP_ADDR: &str = "addr0002";
+pub const VERIFIER_CONTRACT_LABEL: &str = "Verifier Contract";
+pub const FX_ROUTE_ID: u64 = 1u64;
+
 // Keys generation
 // ```sh
 // # for Ed25519
@@ -60,19 +65,14 @@ pub fn claims(name: &str, age: u8, active: bool, joined_at: u16) -> Value {
     })
 }
 
-pub fn instantiate_contract<'a>(app: &'a App<MtApp>) -> Proxy<'a, MtApp, SdjwtVerifier<'a>> {
-    let owner = "addr0001";
-    let caller_app = "addr0002";
-    let fx_route_id = 1u64;
-
+pub fn instantiate_verifier_contract<'a>(app: &'a App<MtApp>) -> Proxy<'a, MtApp, SdjwtVerifier<'a>> {
     let presentation_req: PresentationReq = vec![
         (
             "age".to_string(),
             Criterion::Number(30, MathsOperator::EqualTo),
         ),
         ("active".to_string(), Criterion::Boolean(true)),
-        (
-            "joined_at".to_string(),
+        (            "joined_at".to_string(),
             Criterion::Number(2020, MathsOperator::GreaterThan),
         ),
     ];
@@ -98,17 +98,17 @@ pub fn instantiate_contract<'a>(app: &'a App<MtApp>) -> Proxy<'a, MtApp, SdjwtVe
     // Vec<(RouteId, RouteVerificationRequirements)>,
     let max_presentation_len = 3000usize;
     let init_registrations = vec![InitRegistration {
-        app_admin: caller_app.to_string(),
-        app_addr: caller_app.to_string(),
+        app_admin: CALLER_APP_ADDR.to_string(),
+        app_addr: CALLER_APP_ADDR.to_string(),
         routes: vec![InputRoutesRequirements {
-            route_id: fx_route_id,
+            route_id: FX_ROUTE_ID,
             requirements: fx_route_verification_req.clone(),
         }],
     }];
 
     code_id
         .instantiate(max_presentation_len, init_registrations)
-        .with_label("Verifier Contract")
-        .call(owner)
+        .with_label(VERIFIER_CONTRACT_LABEL)
+        .call(OWNER_ADDR)
         .unwrap()
 }
