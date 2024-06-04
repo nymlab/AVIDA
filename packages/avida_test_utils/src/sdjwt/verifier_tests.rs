@@ -17,7 +17,7 @@ use josekit::{self, Value};
 use sd_jwt_rs::issuer;
 use sd_jwt_rs::{SDJWTHolder, SDJWTSerializationFormat};
 
-use super::fixtures::{claims, issuer, issuer_jwk};
+use super::fixtures::{claims, issuer, issuer_jwk, instantiate_contract};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -142,4 +142,11 @@ fn basic() {
         .unwrap();
 
     println!("resp: {:?}", resp);
+}
+
+/// Test the registration of a route with a presentation request
+#[test]
+fn test_register_success()  {
+    let app: App<_> = App::default();
+    let contract = instantiate_contract(&app);
 }
