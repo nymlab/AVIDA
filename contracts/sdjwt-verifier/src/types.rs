@@ -2,6 +2,9 @@ use super::errors::SdjwtVerifierError;
 
 use avida_common::types::InputRoutesRequirements;
 use cosmwasm_schema::cw_serde;
+use cosmwasm_std::from_json;
+use cosmwasm_std::Binary;
+use cosmwasm_std::SubMsg;
 use jsonwebtoken::jwk::Jwk;
 use serde::{Deserialize, Serialize};
 
@@ -18,6 +21,20 @@ pub struct PendingRoute {
     pub app_addr: String,
 }
 
+pub struct VerificationRequest {
+    pub verification_request: VerificationReq,
+    pub sub_msg: Option<SubMsg>,
+}
+
+impl VerificationRequest {
+    pub fn new(verification_request: VerificationReq, sub_msg: Option<SubMsg>) -> Self {
+        VerificationRequest {
+            verification_request,
+            sub_msg,
+        }
+    }
+}
+
 pub type PresentationReq = Vec<(CriterionKey, Criterion)>;
 
 /// Verification requirements are provided on registration on a route
@@ -29,6 +46,18 @@ pub struct VerificationReq {
     pub presentation_required: PresentationReq,
     /// Usig this type as it is ser/deserializable
     pub issuer_pubkey: Option<Jwk>,
+}
+
+impl VerificationReq {
+    pub fn new(
+        presentation_request: Binary,
+        issuer_pubkey: Option<Jwk>,
+    ) -> Result<Self, SdjwtVerifierError> {
+        Ok(VerificationReq {
+            presentation_required: from_json(presentation_request)?,
+            issuer_pubkey,
+        })
+    }
 }
 
 /// The json key for the disclosed claims
