@@ -20,9 +20,9 @@ use josekit::{self, Value};
 use sd_jwt_rs::issuer;
 use sd_jwt_rs::{SDJWTHolder, SDJWTSerializationFormat};
 
-use crate::sdjwt::fixtures::{CALLER_APP_ADDR, FX_ROUTE_ID};
+use crate::sdjwt::fixtures::{FIRST_CALLER_APP_ADDR, SECOND_CALLER_APP_ADDR, FX_ROUTE_ID, OWNER_ADDR};
 
-use super::fixtures::{claims, instantiate_verifier_contract, issuer, issuer_jwk};
+use super::fixtures::{claims, instantiate_verifier_contract, get_two_input_routes_requirements, issuer, issuer_jwk};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -37,13 +37,13 @@ fn basic() {
     let (contract, fx_route_verification_req) = instantiate_verifier_contract(&app);
     let mut fx_issuer = issuer();
 
-    let registered_routes = contract.get_routes(CALLER_APP_ADDR.to_string()).unwrap();
+    let registered_routes = contract.get_routes(FIRST_CALLER_APP_ADDR.to_string()).unwrap();
 
     assert_eq!(registered_routes.len(), 1);
     assert_eq!(registered_routes.first().unwrap(), &FX_ROUTE_ID);
 
     let registered_req = contract
-        .get_route_requirements(CALLER_APP_ADDR.to_string(), FX_ROUTE_ID)
+        .get_route_requirements(FIRST_CALLER_APP_ADDR.to_string(), FX_ROUTE_ID)
         .unwrap();
 
     assert_eq!(
@@ -57,7 +57,7 @@ fn basic() {
     );
 
     let route_verification_key = contract
-        .get_route_verification_key(CALLER_APP_ADDR.to_string(), FX_ROUTE_ID)
+        .get_route_verification_key(FIRST_CALLER_APP_ADDR.to_string(), FX_ROUTE_ID)
         .unwrap()
         .unwrap();
 
@@ -93,9 +93,9 @@ fn basic() {
         .verify(
             Binary::from(presentation.as_bytes()),
             FX_ROUTE_ID,
-            Some(CALLER_APP_ADDR.to_string()),
+            Some(FIRST_CALLER_APP_ADDR.to_string()),
         )
-        .call(CALLER_APP_ADDR)
+        .call(FIRST_CALLER_APP_ADDR)
         .unwrap();
 
     println!("resp: {:?}", resp);
@@ -105,7 +105,15 @@ fn basic() {
 #[test]
 fn test_register_success() {
     let app: App<_> = App::default();
+
     let (contract, _) = instantiate_verifier_contract(&app);
 
-    // contract.register(app_addr, route_criteria)
+    let two_routes_verification_req = get_two_input_routes_requirements();
+
+    // Register the app with the two routes
+    contract.register(SECOND_CALLER_APP_ADDR.to_string(), two_routes_verification_req).call(OWNER_ADDR).unwrap();
+
+    let registered_routes = contract.get_routes(SECOND_CALLER_APP_ADDR.to_string()).unwrap();
+
+    assert_eq!(registered_routes.len(), 2);
 }
