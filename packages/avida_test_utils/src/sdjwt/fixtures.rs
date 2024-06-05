@@ -25,9 +25,15 @@ use sd_jwt_rs::issuer;
 use sd_jwt_rs::{SDJWTHolder, SDJWTSerializationFormat};
 
 pub const OWNER_ADDR: &str = "addr0001";
-pub const CALLER_APP_ADDR: &str = "addr0002";
+pub const FIRST_CALLER_APP_ADDR: &str = "addr0002";
+pub const SECOND_CALLER_APP_ADDR: &str = "addr0003";
+
 pub const VERIFIER_CONTRACT_LABEL: &str = "Verifier Contract";
+
 pub const FX_ROUTE_ID: u64 = 1;
+pub const SECOND_ROUTE_ID: u64 = 2;
+pub const THIRD_ROUTE_ID: u64 = 3;
+
 pub const MAX_PRESENTATION_LEN: usize = 3000;
 
 // Keys generation
@@ -65,7 +71,61 @@ pub fn claims(name: &str, age: u8, active: bool, joined_at: u16) -> Value {
     })
 }
 
-pub fn get_example_route_verification_requirements() -> RouteVerificationRequirements {
+fn make_route_verification_requirements(
+    presentation_req: PresentationReq,
+) -> RouteVerificationRequirements {
+    let re = serde_json::to_string(&presentation_req).unwrap();
+    let fx_jwk = serde_json::to_string(&issuer_jwk()).unwrap();
+
+    // Add some default criteria as presentation request
+    RouteVerificationRequirements {
+        verification_source: VerificationSource {
+            source: None,
+            data_or_location: Binary::from(fx_jwk.as_bytes()),
+        },
+        presentation_request: Binary::from(re.as_bytes()),
+    }
+}
+
+/// Is used to get input verification requirements for 2 routes
+pub fn get_two_input_routes_requirements() -> Vec<InputRoutesRequirements> {
+    let first_presentation_req: PresentationReq = vec![
+        (
+            "name".to_string(),
+            Criterion::String("John".to_string()),
+        ),
+        (
+            "age".to_string(),
+            Criterion::Number(24, MathsOperator::EqualTo),
+        ),
+        ("active".to_string(), Criterion::Boolean(true)),
+    ];
+
+    let second_presentation_req: PresentationReq = vec![
+        (
+            "name".to_string(),
+            Criterion::String("Jane".to_string()),
+        ),
+        (
+            "age".to_string(),
+            Criterion::Number(30, MathsOperator::EqualTo),
+        ),
+        ("active".to_string(), Criterion::Boolean(true)),
+    ];
+    vec![
+        InputRoutesRequirements {
+            route_id: SECOND_ROUTE_ID,
+            requirements: make_route_verification_requirements(first_presentation_req),
+        },
+        InputRoutesRequirements {
+            route_id: THIRD_ROUTE_ID,
+            requirements: make_route_verification_requirements(second_presentation_req),
+        },
+    ]
+}
+
+/// Is used to get route verification requirements for a single route
+pub fn get_route_verification_requirement() -> RouteVerificationRequirements {
     let presentation_req: PresentationReq = vec![
         (
             "age".to_string(),
@@ -78,36 +138,25 @@ pub fn get_example_route_verification_requirements() -> RouteVerificationRequire
         ),
     ];
 
-    let re = serde_json::to_string(&presentation_req).unwrap();
-    let fx_jwk = serde_json::to_string(&issuer_jwk()).unwrap();
-
-    println!("fx_jwk: {:#?}", fx_jwk);
-
-    // Add some default criteria as presentation request
-    RouteVerificationRequirements {
-        verification_source: VerificationSource {
-            source: None,
-            data_or_location: Binary::from(fx_jwk.as_bytes()),
-        },
-        presentation_request: Binary::from(re.as_bytes()),
-    }
+    make_route_verification_requirements(presentation_req)
 }
 
+/// Is used to instantiate verifier contract with some predefined parameters
 pub fn instantiate_verifier_contract<'a>(
     app: &'a App<MtApp>,
 ) -> (
     Proxy<'a, MtApp, SdjwtVerifier<'a>>,
     RouteVerificationRequirements,
 ) {
-    let fx_route_verification_req = get_example_route_verification_requirements();
+    let fx_route_verification_req = get_route_verification_requirement();
     let code_id = CodeId::store_code(app);
 
     // String, // Admin
     // String, // App Addr
     // Vec<(RouteId, RouteVerificationRequirements)>,
     let init_registrations = vec![InitRegistration {
-        app_admin: CALLER_APP_ADDR.to_string(),
-        app_addr: CALLER_APP_ADDR.to_string(),
+        app_admin: FIRST_CALLER_APP_ADDR.to_string(),
+        app_addr: FIRST_CALLER_APP_ADDR.to_string(),
         routes: vec![InputRoutesRequirements {
             route_id: FX_ROUTE_ID,
             requirements: fx_route_verification_req.clone(),
