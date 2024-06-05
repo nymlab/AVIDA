@@ -20,9 +20,14 @@ use josekit::{self, Value};
 use sd_jwt_rs::issuer;
 use sd_jwt_rs::{SDJWTHolder, SDJWTSerializationFormat};
 
-use crate::sdjwt::fixtures::{FIRST_CALLER_APP_ADDR, SECOND_CALLER_APP_ADDR, FX_ROUTE_ID, OWNER_ADDR};
+use crate::sdjwt::fixtures::{
+    FIRST_CALLER_APP_ADDR, FX_ROUTE_ID, OWNER_ADDR, SECOND_CALLER_APP_ADDR, SECOND_ROUTE_ID,
+    THIRD_ROUTE_ID,
+};
 
-use super::fixtures::{claims, instantiate_verifier_contract, get_two_input_routes_requirements, issuer, issuer_jwk};
+use super::fixtures::{
+    claims, get_two_input_routes_requirements, instantiate_verifier_contract, issuer, issuer_jwk,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -37,7 +42,9 @@ fn basic() {
     let (contract, fx_route_verification_req) = instantiate_verifier_contract(&app);
     let mut fx_issuer = issuer();
 
-    let registered_routes = contract.get_routes(FIRST_CALLER_APP_ADDR.to_string()).unwrap();
+    let registered_routes = contract
+        .get_routes(FIRST_CALLER_APP_ADDR.to_string())
+        .unwrap();
 
     assert_eq!(registered_routes.len(), 1);
     assert_eq!(registered_routes.first().unwrap(), &FX_ROUTE_ID);
@@ -103,7 +110,7 @@ fn basic() {
 
 /// Test the registration of a route with a presentation request
 #[test]
-fn test_register_success() {
+fn register_success() {
     let app: App<_> = App::default();
 
     let (contract, _) = instantiate_verifier_contract(&app);
@@ -111,9 +118,74 @@ fn test_register_success() {
     let two_routes_verification_req = get_two_input_routes_requirements();
 
     // Register the app with the two routes
-    contract.register(SECOND_CALLER_APP_ADDR.to_string(), two_routes_verification_req).call(OWNER_ADDR).unwrap();
+    assert!(contract
+        .register(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            two_routes_verification_req.clone()
+        )
+        .call(OWNER_ADDR)
+        .is_ok());
 
-    let registered_routes = contract.get_routes(SECOND_CALLER_APP_ADDR.to_string()).unwrap();
+    let registered_routes = contract
+        .get_routes(SECOND_CALLER_APP_ADDR.to_string())
+        .unwrap();
 
     assert_eq!(registered_routes.len(), 2);
+    assert_eq!(registered_routes, vec![SECOND_ROUTE_ID, THIRD_ROUTE_ID]);
+
+    let second_registered_req = contract
+        .get_route_requirements(SECOND_CALLER_APP_ADDR.to_string(), SECOND_ROUTE_ID)
+        .unwrap();
+
+    assert_eq!(
+        second_registered_req.verification_source,
+        two_routes_verification_req[0]
+            .requirements
+            .verification_source
+    );
+
+    assert_eq!(
+        second_registered_req.presentation_request,
+        two_routes_verification_req[0]
+            .requirements
+            .presentation_request
+    );
+
+    let route_verification_key = contract
+        .get_route_verification_key(SECOND_CALLER_APP_ADDR.to_string(), SECOND_ROUTE_ID)
+        .unwrap()
+        .unwrap();
+
+    let route_verification_jwk: josekit::jwk::Jwk =
+        serde_json::from_str(&route_verification_key).unwrap();
+
+    assert_eq!(route_verification_jwk, issuer_jwk());
+
+    let third_registered_req = contract
+        .get_route_requirements(SECOND_CALLER_APP_ADDR.to_string(), THIRD_ROUTE_ID)
+        .unwrap();
+
+    assert_eq!(
+        third_registered_req.verification_source,
+        two_routes_verification_req[1]
+            .requirements
+            .verification_source
+    );
+
+    assert_eq!(
+        third_registered_req.presentation_request,
+        two_routes_verification_req[1]
+            .requirements
+            .presentation_request
+    );
+
+    let route_verification_key = contract
+        .get_route_verification_key(SECOND_CALLER_APP_ADDR.to_string(), THIRD_ROUTE_ID)
+        .unwrap()
+        .unwrap();
+
+    let route_verification_jwk: josekit::jwk::Jwk =
+        serde_json::from_str(&route_verification_key).unwrap();
+
+    assert_eq!(route_verification_jwk, issuer_jwk());
 }
