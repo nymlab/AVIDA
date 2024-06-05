@@ -90,10 +90,7 @@ fn make_route_verification_requirements(
 /// Is used to get input verification requirements for 2 routes
 pub fn get_two_input_routes_requirements() -> Vec<InputRoutesRequirements> {
     let first_presentation_req: PresentationReq = vec![
-        (
-            "name".to_string(),
-            Criterion::String("John".to_string()),
-        ),
+        ("name".to_string(), Criterion::String("John".to_string())),
         (
             "age".to_string(),
             Criterion::Number(24, MathsOperator::EqualTo),
@@ -102,10 +99,7 @@ pub fn get_two_input_routes_requirements() -> Vec<InputRoutesRequirements> {
     ];
 
     let second_presentation_req: PresentationReq = vec![
-        (
-            "name".to_string(),
-            Criterion::String("Jane".to_string()),
-        ),
+        ("name".to_string(), Criterion::String("Jane".to_string())),
         (
             "age".to_string(),
             Criterion::Number(30, MathsOperator::EqualTo),
