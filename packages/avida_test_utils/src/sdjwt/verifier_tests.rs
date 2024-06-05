@@ -26,7 +26,8 @@ use crate::sdjwt::fixtures::{
 };
 
 use super::fixtures::{
-    claims, get_two_input_routes_requirements, instantiate_verifier_contract, issuer, issuer_jwk,
+    claims, get_two_input_routes_requirements, get_unsupported_key_type_input_routes_requirement,
+    instantiate_verifier_contract, issuer, issuer_jwk,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -188,4 +189,71 @@ fn register_success() {
         serde_json::from_str(&route_verification_key).unwrap();
 
     assert_eq!(route_verification_jwk, issuer_jwk());
+}
+
+#[test]
+fn register_app_is_already_registered() {
+    let app: App<_> = App::default();
+
+    let (contract, _) = instantiate_verifier_contract(&app);
+
+    let two_routes_verification_req = get_two_input_routes_requirements();
+
+    // Register the app with the two routes
+    assert!(contract
+        .register(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            two_routes_verification_req.clone()
+        )
+        .call(OWNER_ADDR)
+        .is_ok());
+
+    // Register the app with the two routes again
+    assert!(contract
+        .register(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            two_routes_verification_req.clone()
+        )
+        .call(OWNER_ADDR)
+        .is_err());
+}
+
+#[test]
+fn register_serde_json_error() {
+    let app: App<_> = App::default();
+
+    let (contract, _) = instantiate_verifier_contract(&app);
+
+    let mut two_routes_verification_req = get_two_input_routes_requirements();
+    two_routes_verification_req[0]
+        .requirements
+        .presentation_request = Binary::from(b"invalid");
+
+    // Register the app with the two routes
+    assert!(contract
+        .register(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            two_routes_verification_req
+        )
+        .call(OWNER_ADDR)
+        .is_err());
+}
+
+#[test]
+fn register_unsupported_key_type() {
+    let app: App<_> = App::default();
+
+    let (contract, _) = instantiate_verifier_contract(&app);
+
+    let unsupported_key_type_route_verification_requirement =
+        get_unsupported_key_type_input_routes_requirement();
+
+    // Register the app with the two routes
+    assert!(contract
+        .register(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            vec![unsupported_key_type_route_verification_requirement]
+        )
+        .call(OWNER_ADDR)
+        .is_err());
 }
