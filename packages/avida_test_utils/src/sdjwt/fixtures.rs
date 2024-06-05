@@ -60,6 +60,22 @@ pub fn issuer_jwk() -> josekit::jwk::Jwk {
     key_pair.to_jwk_public_key()
 }
 
+pub fn rsa_isuer() -> SDJWTIssuer {
+    let mut key_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    key_path = key_path.join("fixtures/test_rsa_private.pem");
+    let encoding_key_pem = fs::read(key_path).unwrap();
+    let encodingkey = EncodingKey::from_rsa_pem(&encoding_key_pem).unwrap();
+    SDJWTIssuer::new(encodingkey, Some("RSA".to_string()))
+}
+
+pub fn rsa_issuer_jwk() -> josekit::jwk::Jwk {
+    let mut key_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    key_path = key_path.join("fixtures/test_rsa_private.pem");
+    let encoding_key_pem = fs::read(key_path).unwrap();
+    let key_pair = josekit::jwk::alg::rsa::RsaKeyPair::from_pem(encoding_key_pem).unwrap();
+    key_pair.to_jwk_public_key()
+}
+
 pub fn claims(name: &str, age: u8, active: bool, joined_at: u16) -> Value {
     serde_json::json!({
         "exp": 1234567890,
@@ -76,6 +92,22 @@ fn make_route_verification_requirements(
 ) -> RouteVerificationRequirements {
     let re = serde_json::to_string(&presentation_req).unwrap();
     let fx_jwk = serde_json::to_string(&issuer_jwk()).unwrap();
+
+    // Add some default criteria as presentation request
+    RouteVerificationRequirements {
+        verification_source: VerificationSource {
+            source: None,
+            data_or_location: Binary::from(fx_jwk.as_bytes()),
+        },
+        presentation_request: Binary::from(re.as_bytes()),
+    }
+}
+
+fn make_unsupported_route_verification_requirements(
+    presentation_req: PresentationReq,
+) -> RouteVerificationRequirements {
+    let re = serde_json::to_string(&presentation_req).unwrap();
+    let fx_jwk = serde_json::to_string(&rsa_issuer_jwk()).unwrap();
 
     // Add some default criteria as presentation request
     RouteVerificationRequirements {
@@ -116,6 +148,24 @@ pub fn get_two_input_routes_requirements() -> Vec<InputRoutesRequirements> {
             requirements: make_route_verification_requirements(second_presentation_req),
         },
     ]
+}
+
+pub fn get_unsupported_key_type_input_routes_requirement() -> InputRoutesRequirements {
+    let presentation_req: PresentationReq = vec![
+        (
+            "age".to_string(),
+            Criterion::Number(30, MathsOperator::EqualTo),
+        ),
+        ("active".to_string(), Criterion::Boolean(true)),
+        (
+            "joined_at".to_string(),
+            Criterion::Number(2020, MathsOperator::GreaterThan),
+        ),
+    ];
+    InputRoutesRequirements {
+        route_id: SECOND_ROUTE_ID,
+        requirements: make_unsupported_route_verification_requirements(presentation_req),
+    }
 }
 
 /// Is used to get route verification requirements for a single route
