@@ -1,5 +1,6 @@
 {
   "name": "@avida-ts/types",
+<<<<<<< HEAD
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.ts",
@@ -16,4 +17,7 @@
     "typescript": "^5.4.5",
     "type-fest": "4.20.1"
   }
+=======
+  "version": "0.1.0"
+>>>>>>> b1cef2c (Change laddr to bind to 0.0.0.0 instead of 127.0.0.1 & wip: init avida-ts)
 }
