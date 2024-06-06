@@ -11,6 +11,7 @@ use avida_sdjwt_verifier::{
         self,
         sv::mt::{CodeId, SdjwtVerifierProxy},
     },
+    errors::SdjwtVerifierError,
     types::{Criterion, InitRegistration, MathsOperator, PresentationReq},
 };
 use serde::{Deserialize, Serialize};
@@ -209,13 +210,15 @@ fn register_app_is_already_registered() {
         .is_ok());
 
     // Register the app with the two routes again
-    assert!(contract
-        .register(
-            SECOND_CALLER_APP_ADDR.to_string(),
-            two_routes_verification_req.clone()
-        )
-        .call(OWNER_ADDR)
-        .is_err());
+    assert!(matches!(
+        contract
+            .register(
+                SECOND_CALLER_APP_ADDR.to_string(),
+                two_routes_verification_req.clone()
+            )
+            .call(OWNER_ADDR),
+        Err(SdjwtVerifierError::AppAlreadyRegistered)
+    ),);
 }
 
 #[test]
@@ -229,14 +232,16 @@ fn register_serde_json_error() {
         .requirements
         .presentation_request = Binary::from(b"invalid");
 
-    // Register the app with the two routes
-    assert!(contract
-        .register(
-            SECOND_CALLER_APP_ADDR.to_string(),
-            two_routes_verification_req
-        )
-        .call(OWNER_ADDR)
-        .is_err());
+    // Register the app with the two routes and invalid presentation request
+    assert!(matches!(
+        contract
+            .register(
+                SECOND_CALLER_APP_ADDR.to_string(),
+                two_routes_verification_req.clone()
+            )
+            .call(OWNER_ADDR),
+        Err(SdjwtVerifierError::Std(_))
+    ),);
 }
 
 #[test]
@@ -248,14 +253,17 @@ fn register_unsupported_key_type() {
     let unsupported_key_type_route_verification_requirement =
         get_unsupported_key_type_input_routes_requirement();
 
+    // TODO: Fix this test
     // Register the app with the two routes
-    assert!(contract
-        .register(
-            SECOND_CALLER_APP_ADDR.to_string(),
-            vec![unsupported_key_type_route_verification_requirement]
-        )
-        .call(OWNER_ADDR)
-        .is_err());
+    assert!(matches!(
+        contract
+            .register(
+                SECOND_CALLER_APP_ADDR.to_string(),
+                vec![unsupported_key_type_route_verification_requirement]
+            )
+            .call(OWNER_ADDR),
+        Err(SdjwtVerifierError::UnsupportedKeyType)
+    ),);
 }
 
 #[test]
@@ -281,8 +289,7 @@ fn deregister_success() {
         .call(OWNER_ADDR)
         .is_ok());
 
-    let registered_routes = contract
-        .get_routes(SECOND_CALLER_APP_ADDR.to_string());
+    let registered_routes = contract.get_routes(SECOND_CALLER_APP_ADDR.to_string());
 
     assert!(registered_routes.is_err());
 }
@@ -293,11 +300,13 @@ fn deregister_app_not_registered() {
 
     let (contract, _) = instantiate_verifier_contract(&app);
 
-    // Unregister the app
-    assert!(contract
-        .deregister(SECOND_CALLER_APP_ADDR.to_string())
-        .call(OWNER_ADDR)
-        .is_err());
+    // Deregister the not registered app
+    assert!(matches!(
+        contract
+            .deregister(SECOND_CALLER_APP_ADDR.to_string(),)
+            .call(OWNER_ADDR),
+        Err(SdjwtVerifierError::AppIsNotRegistered)
+    ),);
 }
 
 #[test]
@@ -317,9 +326,11 @@ fn deregister_unathorized() {
         .call(OWNER_ADDR)
         .is_ok());
 
-    // Unregister the app
-    assert!(contract
-        .deregister(SECOND_CALLER_APP_ADDR.to_string())
-        .call(SECOND_CALLER_APP_ADDR)
-        .is_err());
+    // Deregister the app using unathorized caller address
+    assert!(matches!(
+        contract
+            .deregister(SECOND_CALLER_APP_ADDR.to_string(),)
+            .call(SECOND_CALLER_APP_ADDR),
+        Err(SdjwtVerifierError::Unauthorised)
+    ),);
 }

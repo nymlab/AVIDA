@@ -3,7 +3,7 @@ use cosmwasm_std::Storage;
 
 use std::collections::HashMap;
 
-use crate::{
+pub use crate::{
     contract::SdjwtVerifier,
     errors::SdjwtVerifierError,
     types::{validate, PendingRoute, VerificationReq, VerificationRequest},
