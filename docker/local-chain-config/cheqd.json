@@ -1,0 +1,16 @@
+{
+  "type": "cosmos",
+  "value": {
+    "key": "cheqd-relayer",
+    "chain-id": "cheqd-local-1",
+    "rpc-addr": "http://cheqd-node:26657",
+    "account-prefix": "cheq",
+    "keyring-backend": "test",
+    "gas-adjustment": 1.2,
+    "gas-prices": "0.05ncheq",
+    "debug": true,
+    "timeout": "20s",
+    "output-format": "json",
+    "sign-mode": "direct"
+  }
+}
