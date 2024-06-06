@@ -27,8 +27,9 @@ use crate::sdjwt::fixtures::{
 };
 
 use super::fixtures::{
-    claims, get_two_input_routes_requirements, get_route_verification_requirement, get_unsupported_key_type_input_routes_requirement,
-    instantiate_verifier_contract, issuer, issuer_jwk, 
+    claims, get_route_verification_requirement, get_two_input_routes_requirements,
+    get_unsupported_key_type_input_routes_requirement, instantiate_verifier_contract, issuer,
+    issuer_jwk,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -335,7 +336,7 @@ fn deregister_unathorized() {
 }
 
 #[test]
-fn update_success(){
+fn update_success() {
     let app: App<_> = App::default();
 
     let (contract, _) = instantiate_verifier_contract(&app);
@@ -351,8 +352,7 @@ fn update_success(){
         .call(OWNER_ADDR)
         .is_ok());
 
-    let updated_route_verification_req =  get_route_verification_requirement();
-    
+    let updated_route_verification_req = get_route_verification_requirement();
 
     // Update the route verification requirements
     assert!(contract
@@ -380,16 +380,130 @@ fn update_success(){
 
     // Update the route verification requirements
     assert!(contract
-        .update(
-            SECOND_CALLER_APP_ADDR.to_string(),
-            SECOND_ROUTE_ID,
-            None
-        )
+        .update(SECOND_CALLER_APP_ADDR.to_string(), SECOND_ROUTE_ID, None)
         .call(OWNER_ADDR)
         .is_ok());
 
     assert!(contract
         .get_route_requirements(SECOND_CALLER_APP_ADDR.to_string(), SECOND_ROUTE_ID)
         .is_err());
-    
+}
+
+#[test]
+fn update_app_not_registered() {
+    let app: App<_> = App::default();
+
+    let (contract, _) = instantiate_verifier_contract(&app);
+
+    let updated_route_verification_req = get_route_verification_requirement();
+
+    // Update the route verification requirements of the not registered app
+    assert!(matches!(
+        contract
+            .update(
+                SECOND_CALLER_APP_ADDR.to_string(),
+                SECOND_ROUTE_ID,
+                Some(updated_route_verification_req)
+            )
+            .call(OWNER_ADDR),
+        Err(SdjwtVerifierError::AppIsNotRegistered)
+    ),);
+}
+
+#[test]
+fn update_unathorized() {
+    let app: App<_> = App::default();
+
+    let (contract, _) = instantiate_verifier_contract(&app);
+
+    let two_routes_verification_req = get_two_input_routes_requirements();
+
+    // Register the app with the two routes
+    assert!(contract
+        .register(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            two_routes_verification_req
+        )
+        .call(OWNER_ADDR)
+        .is_ok());
+
+    let updated_route_verification_req = get_route_verification_requirement();
+
+    // Update the route verification requirements using unathorized caller address
+    assert!(matches!(
+        contract
+            .update(
+                SECOND_CALLER_APP_ADDR.to_string(),
+                SECOND_ROUTE_ID,
+                Some(updated_route_verification_req)
+            )
+            .call(SECOND_CALLER_APP_ADDR),
+        Err(SdjwtVerifierError::Unauthorised)
+    ),);
+}
+
+#[test]
+fn update_serde_json_error() {
+    let app: App<_> = App::default();
+
+    let (contract, _) = instantiate_verifier_contract(&app);
+
+    let two_routes_verification_req = get_two_input_routes_requirements();
+
+    // Register the app with the two routes
+    assert!(contract
+        .register(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            two_routes_verification_req
+        )
+        .call(OWNER_ADDR)
+        .is_ok());
+
+    let mut updated_route_verification_req = get_route_verification_requirement();
+    updated_route_verification_req.presentation_request = Binary::from(b"invalid");
+
+    // Update the route verification requirements with invalid presentation request
+    assert!(matches!(
+        contract
+            .update(
+                SECOND_CALLER_APP_ADDR.to_string(),
+                SECOND_ROUTE_ID,
+                Some(updated_route_verification_req)
+            )
+            .call(OWNER_ADDR),
+        Err(SdjwtVerifierError::Std(_))
+    ),);
+}
+
+#[test]
+fn update_unsupported_key_type() {
+    let app: App<_> = App::default();
+
+    let (contract, _) = instantiate_verifier_contract(&app);
+
+    let unsupported_key_type_route_verification_requirement =
+        get_unsupported_key_type_input_routes_requirement();
+
+    // Register the app with the two routes
+    assert!(contract
+        .register(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            vec![unsupported_key_type_route_verification_requirement]
+        )
+        .call(OWNER_ADDR)
+        .is_ok());
+
+    let updated_route_verification_req = get_route_verification_requirement();
+
+    // Update the route verification requirements with unsupported key type
+    assert!(matches!(
+        contract
+            .update(
+                SECOND_CALLER_APP_ADDR.to_string(),
+                SECOND_ROUTE_ID,
+                Some(updated_route_verification_req)
+            )
+            .call(OWNER_ADDR),
+        Err(SdjwtVerifierError::UnsupportedKeyType)
+    ),);
 }
