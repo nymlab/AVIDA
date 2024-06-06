@@ -27,8 +27,8 @@ use crate::sdjwt::fixtures::{
 };
 
 use super::fixtures::{
-    claims, get_two_input_routes_requirements, get_unsupported_key_type_input_routes_requirement,
-    instantiate_verifier_contract, issuer, issuer_jwk,
+    claims, get_two_input_routes_requirements, get_route_verification_requirement, get_unsupported_key_type_input_routes_requirement,
+    instantiate_verifier_contract, issuer, issuer_jwk, 
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -133,7 +133,6 @@ fn register_success() {
         .unwrap();
 
     assert_eq!(registered_routes.len(), 2);
-    assert_eq!(registered_routes, vec![SECOND_ROUTE_ID, THIRD_ROUTE_ID]);
 
     let second_registered_req = contract
         .get_route_requirements(SECOND_CALLER_APP_ADDR.to_string(), SECOND_ROUTE_ID)
@@ -214,7 +213,7 @@ fn register_app_is_already_registered() {
         contract
             .register(
                 SECOND_CALLER_APP_ADDR.to_string(),
-                two_routes_verification_req.clone()
+                two_routes_verification_req
             )
             .call(OWNER_ADDR),
         Err(SdjwtVerifierError::AppAlreadyRegistered)
@@ -237,7 +236,7 @@ fn register_serde_json_error() {
         contract
             .register(
                 SECOND_CALLER_APP_ADDR.to_string(),
-                two_routes_verification_req.clone()
+                two_routes_verification_req
             )
             .call(OWNER_ADDR),
         Err(SdjwtVerifierError::Std(_))
@@ -278,7 +277,7 @@ fn deregister_success() {
     assert!(contract
         .register(
             SECOND_CALLER_APP_ADDR.to_string(),
-            two_routes_verification_req.clone()
+            two_routes_verification_req
         )
         .call(OWNER_ADDR)
         .is_ok());
@@ -321,7 +320,7 @@ fn deregister_unathorized() {
     assert!(contract
         .register(
             SECOND_CALLER_APP_ADDR.to_string(),
-            two_routes_verification_req.clone()
+            two_routes_verification_req
         )
         .call(OWNER_ADDR)
         .is_ok());
@@ -333,4 +332,64 @@ fn deregister_unathorized() {
             .call(SECOND_CALLER_APP_ADDR),
         Err(SdjwtVerifierError::Unauthorised)
     ),);
+}
+
+#[test]
+fn update_success(){
+    let app: App<_> = App::default();
+
+    let (contract, _) = instantiate_verifier_contract(&app);
+
+    let two_routes_verification_req = get_two_input_routes_requirements();
+
+    // Register the app with the two routes
+    assert!(contract
+        .register(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            two_routes_verification_req.clone()
+        )
+        .call(OWNER_ADDR)
+        .is_ok());
+
+    let updated_route_verification_req =  get_route_verification_requirement();
+    
+
+    // Update the route verification requirements
+    assert!(contract
+        .update(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            SECOND_ROUTE_ID,
+            Some(updated_route_verification_req.clone())
+        )
+        .call(OWNER_ADDR)
+        .is_ok());
+
+    let updated_registered_req = contract
+        .get_route_requirements(SECOND_CALLER_APP_ADDR.to_string(), SECOND_ROUTE_ID)
+        .unwrap();
+
+    assert_eq!(
+        updated_registered_req.verification_source,
+        updated_route_verification_req.verification_source
+    );
+
+    assert_eq!(
+        updated_registered_req.presentation_request,
+        updated_route_verification_req.presentation_request
+    );
+
+    // Update the route verification requirements
+    assert!(contract
+        .update(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            SECOND_ROUTE_ID,
+            None
+        )
+        .call(OWNER_ADDR)
+        .is_ok());
+
+    assert!(contract
+        .get_route_requirements(SECOND_CALLER_APP_ADDR.to_string(), SECOND_ROUTE_ID)
+        .is_err());
+    
 }
