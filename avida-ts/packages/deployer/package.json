@@ -1,0 +1,22 @@
+{
+  "name": "@avida-ts/deployer",
+  "type": "module",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup src/index.ts --config tsup.config.ts",
+    "lint": "eslint src",
+    "check": "tsc --noEmit",
+    "build:cosmes": "./postinstall.sh"
+  },
+  "exports": "./dist/index.js",
+  "devDependencies": {
+    "tsup": "^8.1.0",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "cosmes": "nymlab/cosmes#f9c4e4ef3f"
+  }
+}
