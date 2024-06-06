@@ -257,3 +257,69 @@ fn register_unsupported_key_type() {
         .call(OWNER_ADDR)
         .is_err());
 }
+
+#[test]
+fn deregister_success() {
+    let app: App<_> = App::default();
+
+    let (contract, _) = instantiate_verifier_contract(&app);
+
+    let two_routes_verification_req = get_two_input_routes_requirements();
+
+    // Register the app with the two routes
+    assert!(contract
+        .register(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            two_routes_verification_req.clone()
+        )
+        .call(OWNER_ADDR)
+        .is_ok());
+
+    // Unregister the app
+    assert!(contract
+        .deregister(SECOND_CALLER_APP_ADDR.to_string())
+        .call(OWNER_ADDR)
+        .is_ok());
+
+    let registered_routes = contract
+        .get_routes(SECOND_CALLER_APP_ADDR.to_string());
+
+    assert!(registered_routes.is_err());
+}
+
+#[test]
+fn deregister_app_not_registered() {
+    let app: App<_> = App::default();
+
+    let (contract, _) = instantiate_verifier_contract(&app);
+
+    // Unregister the app
+    assert!(contract
+        .deregister(SECOND_CALLER_APP_ADDR.to_string())
+        .call(OWNER_ADDR)
+        .is_err());
+}
+
+#[test]
+fn deregister_unathorized() {
+    let app: App<_> = App::default();
+
+    let (contract, _) = instantiate_verifier_contract(&app);
+
+    let two_routes_verification_req = get_two_input_routes_requirements();
+
+    // Register the app with the two routes
+    assert!(contract
+        .register(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            two_routes_verification_req.clone()
+        )
+        .call(OWNER_ADDR)
+        .is_ok());
+
+    // Unregister the app
+    assert!(contract
+        .deregister(SECOND_CALLER_APP_ADDR.to_string())
+        .call(SECOND_CALLER_APP_ADDR)
+        .is_err());
+}
