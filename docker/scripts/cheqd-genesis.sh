@@ -42,4 +42,4 @@ cheqd-noded genesis validate-genesis --home ${CHEQD_HOME}
 
 cat .cheqdnode/config/genesis.json
 
-cheqd-noded start --home ${CHEQD_HOME} --log_level="trace" --rpc.laddr tcp://127.0.0.1:26657
+cheqd-noded start --home ${CHEQD_HOME} --log_level="trace" --rpc.laddr tcp://0.0.0.0:26657
