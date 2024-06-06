@@ -5,3 +5,7 @@
 
 # Built wasm files
 artifacts/
+
+avida-ts/**/dist/
+
+**/node_modules/
