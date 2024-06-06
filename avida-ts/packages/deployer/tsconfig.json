@@ -1,0 +1,37 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // always be explicit about strict mode
+    "strict": true,
+
+    "outDir": "dist",
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": ["ES2022"],
+
+    // preserve jsdoc comments for intellisense
+    "removeComments": false,
+
+    // generate types and their sourcemaps
+    "declaration": true,
+    "declarationMap": true
+
+    // types may be required depending on package setup
+    // "types": ["node", "vitest/globals"]
+  },
+  "include": ["../../reset.d.ts", "src/**/*.d.ts", "src/**/*.ts"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "test",
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "src/**/test/**"
+  ]
+}

@@ -22,19 +22,18 @@ rm -rf ${CHEQD_HOME}
 cheqd-noded init localnet --default-denom ${CHEQD_DENOM} --chain-id ${CHEQD_CHAIN_ID} --home ${CHEQD_HOME} --overwrite
 
 # add minimum gas prices config to app configuration file
-sed -i -r 's/minimum-gas-prices = ""/minimum-gas-prices = "0.01ncheq"/' ${CHEQD_HOME}/config/app.toml
 sed -i -r 's/enabled-unsafe-cors = false/enabled-unsafe-cors = true/' ${CHEQD_HOME}/config/app.toml
 sed -i -r 's/log_level = "error"/log_level = "debug"/' ${CHEQD_HOME}/config/config.toml
 
 
 
-cheqd-noded genesis add-genesis-account $RELAYER_ADDR 10000000000000${CHEQD_DENOM} --home ${CHEQD_HOME}
-cheqd-noded genesis add-genesis-account $RESOURCE_ADDR 10000000000000${CHEQD_DENOM} --home ${CHEQD_HOME}
+cheqd-noded genesis add-genesis-account $RELAYER_ADDR  2000000000000000000000${CHEQD_DENOM} --home ${CHEQD_HOME}
+cheqd-noded genesis add-genesis-account $RESOURCE_ADDR 2000000000000000000000${CHEQD_DENOM} --home ${CHEQD_HOME}
 
 # setup validator
 cheqd-noded keys add validator --keyring-backend ${KEYRING_BACKEND} --keyring-dir ${CHEQD_HOME}
-cheqd-noded genesis add-genesis-account validator 10000000000000${CHEQD_DENOM} --keyring-backend ${KEYRING_BACKEND} --home ${CHEQD_HOME}
-cheqd-noded genesis gentx validator 10000000000000${CHEQD_DENOM} --chain-id ${CHEQD_CHAIN_ID} --home ${CHEQD_HOME} --keyring-backend ${KEYRING_BACKEND} --amount 10000000000000${CHEQD_DENOM}
+cheqd-noded genesis add-genesis-account validator 2000000000000000000000${CHEQD_DENOM} --keyring-backend ${KEYRING_BACKEND} --home ${CHEQD_HOME}
+cheqd-noded genesis gentx validator 10000000000000000${CHEQD_DENOM} --chain-id ${CHEQD_CHAIN_ID} --home ${CHEQD_HOME} --keyring-backend ${KEYRING_BACKEND} --amount 10000000000000000${CHEQD_DENOM}
 
 # collect-genesis transactions
 cheqd-noded genesis collect-gentxs --home ${CHEQD_HOME}
