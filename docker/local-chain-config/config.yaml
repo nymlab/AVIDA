@@ -1,0 +1,72 @@
+global:
+    api-listen-addr: :5183
+    timeout: 10s
+    memo: ""
+    light-cache-size: 20
+    log-level: info
+    ics20-memo-limit: 0
+    max-receiver-size: 150
+chains:
+    cheqd-local-1:
+        type: cosmos
+        value:
+            key-directory: .relayer/keys/cheqd-local-1
+            key: cheqd-relayer
+            chain-id: cheqd-local-1
+            rpc-addr: http://localhost:26657
+            account-prefix: cheqd
+            keyring-backend: test
+            gas-adjustment: 1.5
+            gas-prices: 55ncheq
+            min-gas-amount: 20000000000
+            max-gas-amount: 200000000000000
+            debug: true
+            timeout: 20s
+            block-timeout: ""
+            output-format: json
+            sign-mode: direct
+            extra-codecs: []
+            coin-type: null
+            signing-algorithm: ""
+            broadcast-mode: batch
+            min-loop-duration: 0s
+            extension-options: []
+            feegrants: null
+    neutron-local-1:
+        type: cosmos
+        value:
+            key-directory: .relayer/keys/neutron-local-1
+            key: neutron-relayer
+            chain-id: neutron-local-1
+            rpc-addr: http://localhost:25557
+            account-prefix: neutron
+            keyring-backend: test
+            gas-adjustment: 1.2
+            gas-prices: 1untrn
+            min-gas-amount: 100000
+            max-gas-amount: 500000
+            debug: true
+            timeout: 20s
+            block-timeout: ""
+            output-format: json
+            sign-mode: direct
+            extra-codecs: []
+            coin-type: null
+            signing-algorithm: ""
+            broadcast-mode: batch
+            min-loop-duration: 0s
+            extension-options: []
+            feegrants: null
+paths:
+    avida-cheqd-neutron:
+        src:
+            chain-id: cheqd-local-1
+            client-id: 07-tendermint-0
+            connection-id: connection-0
+        dst:
+            chain-id: neutron-local-1
+            client-id: 07-tendermint-1
+            connection-id: connection-0
+        src-channel-filter:
+            rule: ""
+            channel-list: []
