@@ -25,7 +25,7 @@ use ssi::{
     types::{ResourceWithMetadata, StdAck},
 };
 
-/// The main strcut for the contract
+/// The main struct for the contract
 pub struct AnonCredsVerifier<'a> {
     pub channel: Item<'a, IbcChannel>,
     /// Storage of resources and their last update
