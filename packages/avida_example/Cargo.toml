@@ -1,0 +1,18 @@
+[package]
+name = "avida_example"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+avida-common = { path = "../common/"}
+cosmwasm-schema = { workspace = true }
+schemars = { workspace = true }
+cosmwasm-std = { workspace = true }
+sylvia = { workspace = true }
+serde = { workspace = true }
+cw-storage-plus.workspace = true
+cw-utils = { workspace = true }
+thiserror = { workspace = true }
