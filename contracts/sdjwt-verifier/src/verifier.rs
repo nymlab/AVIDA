@@ -35,8 +35,6 @@ pub use jsonwebtoken::{
     DecodingKey,
 };
 
-pub use josekit::{self};
-
 use sd_jwt_rs::{SDJWTSerializationFormat, SDJWTVerifier};
 
 #[contract(module=crate::contract)]
