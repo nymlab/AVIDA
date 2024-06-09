@@ -19,7 +19,7 @@ use josekit::{self};
 
 use cw_multi_test::App as MtApp;
 
-// Test constants
+/// Test constants
 pub const OWNER_ADDR: &str = "addr0001";
 pub const FIRST_CALLER_APP_ADDR: &str = "addr0002";
 pub const SECOND_CALLER_APP_ADDR: &str = "addr0003";
