@@ -162,6 +162,12 @@ impl SdjwtVerifier<'_> {
     }
 }
 
+impl Default for SdjwtVerifier<'_> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[entry_point]
 /// The entry point for connecting a channel
 pub fn ibc_channel_connect(

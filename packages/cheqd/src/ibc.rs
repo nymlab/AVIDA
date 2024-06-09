@@ -94,7 +94,7 @@ pub fn ibc_packet_ack_resource_extractor(
     let ack: StdAck = from_json(&msg.acknowledgement.data)?;
     match ack {
         StdAck::Success(binary) => {
-            let resource: ResourceWithMetadata = from_json(&binary)?;
+            let resource: ResourceWithMetadata = from_json(binary)?;
             let original_packet: ResourceReqPacket = from_json(&msg.original_packet.data)?;
 
             if original_packet.resource_id != resource.linked_resource_metadata.resource_id {

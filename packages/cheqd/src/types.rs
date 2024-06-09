@@ -13,9 +13,9 @@ pub struct ResourceReqPacket {
     pub collection_id: String,
 }
 
-impl std::string::ToString for ResourceReqPacket {
-    fn to_string(&self) -> String {
-        format!("{}:{}", self.collection_id, self.resource_id)
+impl std::fmt::Display for ResourceReqPacket {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", self.collection_id, self.resource_id)
     }
 }
 
