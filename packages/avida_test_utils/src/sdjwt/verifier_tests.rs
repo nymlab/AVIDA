@@ -34,13 +34,17 @@ pub struct Claims {
 fn basic() {
     let app = App::default();
 
+    // Instantiate verifier contract with some predefined parameters
     let (contract, fx_route_verification_req) = instantiate_verifier_contract(&app);
+
+    // Get an sdjwt issuer instance with some ed25519 predefined private key, read from a file
     let mut fx_issuer = issuer();
 
     let registered_routes = contract
         .get_routes(FIRST_CALLER_APP_ADDR.to_string())
         .unwrap();
 
+    // Ensure that app is registered with the expected routes and requirements
     assert_eq!(registered_routes.len(), 1);
     assert_eq!(registered_routes.first().unwrap(), &FX_ROUTE_ID);
 
@@ -103,13 +107,14 @@ fn basic() {
     println!("resp: {:?}", resp);
 }
 
-/// Test the registration of a route with a presentation request
 #[test]
 fn register_success() {
     let app: App<_> = App::default();
 
+    // Instantiate verifier contract with some predefined parameters
     let (contract, _) = instantiate_verifier_contract(&app);
 
+    // Get input verification requirements for 2 routes
     let two_routes_verification_req = get_two_input_routes_requirements();
 
     // Register the app with the two routes
@@ -121,6 +126,7 @@ fn register_success() {
         .call(OWNER_ADDR)
         .is_ok());
 
+    // Ensure that app is registered with the expected routes and requirements
     let registered_routes = contract
         .get_routes(SECOND_CALLER_APP_ADDR.to_string())
         .unwrap();
@@ -188,8 +194,10 @@ fn register_success() {
 fn register_app_is_already_registered() {
     let app: App<_> = App::default();
 
+    // Instantiate verifier contract with some predefined parameters
     let (contract, _) = instantiate_verifier_contract(&app);
 
+    // Get input verification requirements for 2 routes
     let two_routes_verification_req = get_two_input_routes_requirements();
 
     // Register the app with the two routes
@@ -201,7 +209,7 @@ fn register_app_is_already_registered() {
         .call(OWNER_ADDR)
         .is_ok());
 
-    // Register the app with the two routes again
+    // Try register the app with the two routes again
     assert!(matches!(
         contract
             .register(
@@ -217,14 +225,18 @@ fn register_app_is_already_registered() {
 fn register_serde_json_error() {
     let app: App<_> = App::default();
 
+    // Instantiate verifier contract with some predefined parameters
     let (contract, _) = instantiate_verifier_contract(&app);
 
+    // Get input verification requirements for 2 routes
     let mut two_routes_verification_req = get_two_input_routes_requirements();
+
+    // Make invalid presentation request
     two_routes_verification_req[0]
         .requirements
         .presentation_request = Binary::from(b"invalid");
 
-    // Register the app with the two routes and invalid presentation request
+    // Try register the app with the two routes and invalid presentation request
     assert!(matches!(
         contract
             .register(
@@ -240,13 +252,14 @@ fn register_serde_json_error() {
 fn register_unsupported_key_type() {
     let app: App<_> = App::default();
 
+    // Instantiate verifier contract with some predefined parameters
     let (contract, _) = instantiate_verifier_contract(&app);
 
+    // Get an unsupported input verification requirements for a single route
     let unsupported_key_type_route_verification_requirement =
         get_unsupported_key_type_input_routes_requirement();
 
-    // TODO: Fix this test
-    // Register the app with the two routes
+    // Try egister the app with the unsupported key type
     assert!(matches!(
         contract
             .register(
@@ -262,8 +275,10 @@ fn register_unsupported_key_type() {
 fn deregister_success() {
     let app: App<_> = App::default();
 
+    // Instantiate verifier contract with some predefined parameters
     let (contract, _) = instantiate_verifier_contract(&app);
 
+    // Get input verification requirements for 2 routes
     let two_routes_verification_req = get_two_input_routes_requirements();
 
     // Register the app with the two routes
@@ -281,6 +296,7 @@ fn deregister_success() {
         .call(OWNER_ADDR)
         .is_ok());
 
+    // Ensure there is no routes left after the app deregistration
     let registered_routes = contract.get_routes(SECOND_CALLER_APP_ADDR.to_string());
 
     assert!(registered_routes.is_err());
@@ -290,9 +306,10 @@ fn deregister_success() {
 fn deregister_app_not_registered() {
     let app: App<_> = App::default();
 
+    // Instantiate verifier contract with some predefined parameters
     let (contract, _) = instantiate_verifier_contract(&app);
 
-    // Deregister the not registered app
+    // Try deregister the not registered app
     assert!(matches!(
         contract
             .deregister(SECOND_CALLER_APP_ADDR.to_string(),)
@@ -305,8 +322,10 @@ fn deregister_app_not_registered() {
 fn deregister_unathorized() {
     let app: App<_> = App::default();
 
+    // Instantiate verifier contract with some predefined parameters
     let (contract, _) = instantiate_verifier_contract(&app);
 
+    // Get input verification requirements for 2 routes
     let two_routes_verification_req = get_two_input_routes_requirements();
 
     // Register the app with the two routes
@@ -318,7 +337,7 @@ fn deregister_unathorized() {
         .call(OWNER_ADDR)
         .is_ok());
 
-    // Deregister the app using unathorized caller address
+    // Try deregister the app using unathorized caller address
     assert!(matches!(
         contract
             .deregister(SECOND_CALLER_APP_ADDR.to_string(),)
@@ -331,8 +350,10 @@ fn deregister_unathorized() {
 fn update_success() {
     let app: App<_> = App::default();
 
+    // Instantiate verifier contract with some predefined parameters
     let (contract, _) = instantiate_verifier_contract(&app);
 
+    // Get input verification requirements for 2 routes
     let two_routes_verification_req = get_two_input_routes_requirements();
 
     // Register the app with the two routes
@@ -344,6 +365,7 @@ fn update_success() {
         .call(OWNER_ADDR)
         .is_ok());
 
+    // Get route verification requirements for a single route
     let updated_route_verification_req = get_route_verification_requirement();
 
     // Update the route verification requirements
@@ -356,6 +378,7 @@ fn update_success() {
         .call(OWNER_ADDR)
         .is_ok());
 
+    // Ensure that the route verification requirements are updated
     let updated_registered_req = contract
         .get_route_requirements(SECOND_CALLER_APP_ADDR.to_string(), SECOND_ROUTE_ID)
         .unwrap();
@@ -370,7 +393,7 @@ fn update_success() {
         updated_route_verification_req.presentation_request
     );
 
-    // Update the route verification requirements
+    // Ensure that the route verification requirements are updated
     assert!(contract
         .update(SECOND_CALLER_APP_ADDR.to_string(), SECOND_ROUTE_ID, None)
         .call(OWNER_ADDR)
@@ -385,11 +408,13 @@ fn update_success() {
 fn update_app_not_registered() {
     let app: App<_> = App::default();
 
+    // Instantiate verifier contract with some predefined parameters
     let (contract, _) = instantiate_verifier_contract(&app);
 
+    // Get route verification requirements for a single route
     let updated_route_verification_req = get_route_verification_requirement();
 
-    // Update the route verification requirements of the not registered app
+    // Try update the route verification requirements of the not registered app
     assert!(matches!(
         contract
             .update(
@@ -406,8 +431,10 @@ fn update_app_not_registered() {
 fn update_unathorized() {
     let app: App<_> = App::default();
 
+    // Instantiate verifier contract with some predefined parameters
     let (contract, _) = instantiate_verifier_contract(&app);
 
+    // Get input verification requirements for 2 routes
     let two_routes_verification_req = get_two_input_routes_requirements();
 
     // Register the app with the two routes
@@ -419,6 +446,7 @@ fn update_unathorized() {
         .call(OWNER_ADDR)
         .is_ok());
 
+    // Get route verification requirements for a single route
     let updated_route_verification_req = get_route_verification_requirement();
 
     // Update the route verification requirements using unathorized caller address
@@ -438,8 +466,10 @@ fn update_unathorized() {
 fn update_serde_json_error() {
     let app: App<_> = App::default();
 
+    // Instantiate verifier contract with some predefined parameters
     let (contract, _) = instantiate_verifier_contract(&app);
 
+    // Get input verification requirements for 2 routes
     let two_routes_verification_req = get_two_input_routes_requirements();
 
     // Register the app with the two routes
@@ -451,10 +481,12 @@ fn update_serde_json_error() {
         .call(OWNER_ADDR)
         .is_ok());
 
+    // Get route verification requirements for a single route
     let mut updated_route_verification_req = get_route_verification_requirement();
+
+    // Try update the route verification requirements with invalid presentation request
     updated_route_verification_req.presentation_request = Binary::from(b"invalid");
 
-    // Update the route verification requirements with invalid presentation request
     assert!(matches!(
         contract
             .update(
@@ -471,8 +503,10 @@ fn update_serde_json_error() {
 fn update_unsupported_key_type() {
     let app: App<_> = App::default();
 
+    // Instantiate verifier contract with some predefined parameters
     let (contract, _) = instantiate_verifier_contract(&app);
 
+    // Get route verification requirements for a single route
     let route_verification_req = get_route_verification_requirement();
 
     // Register the app with the two routes
@@ -487,10 +521,11 @@ fn update_unsupported_key_type() {
         .call(OWNER_ADDR)
         .is_ok());
 
+    // Get an unsupported input verification requirements for a single route
     let unsupported_key_type_route_verification_requirement =
         get_unsupported_key_type_input_routes_requirement();
 
-    // Update the route verification requirements with unsupported key type
+    // Try update the route verification requirements with unsupported key type
     assert!(matches!(
         contract
             .update(
