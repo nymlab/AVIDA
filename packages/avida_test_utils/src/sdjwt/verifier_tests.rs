@@ -481,27 +481,30 @@ fn update_unsupported_key_type() {
 
     let (contract, _) = instantiate_verifier_contract(&app);
 
-    let unsupported_key_type_route_verification_requirement =
-        get_unsupported_key_type_input_routes_requirement();
+    let route_verification_req = get_route_verification_requirement();
 
     // Register the app with the two routes
     assert!(contract
         .register(
             SECOND_CALLER_APP_ADDR.to_string(),
-            vec![unsupported_key_type_route_verification_requirement]
+            vec![InputRoutesRequirements {
+                route_id: SECOND_ROUTE_ID,
+                requirements: route_verification_req
+            }]
         )
         .call(OWNER_ADDR)
         .is_ok());
 
-    let updated_route_verification_req = get_route_verification_requirement();
+    let unsupported_key_type_route_verification_requirement =
+        get_unsupported_key_type_input_routes_requirement();
 
     // Update the route verification requirements with unsupported key type
     assert!(matches!(
         contract
             .update(
                 SECOND_CALLER_APP_ADDR.to_string(),
-                SECOND_ROUTE_ID,
-                Some(updated_route_verification_req)
+                unsupported_key_type_route_verification_requirement.route_id,
+                Some(unsupported_key_type_route_verification_requirement.requirements)
             )
             .call(OWNER_ADDR),
         Err(SdjwtVerifierError::UnsupportedKeyType)
