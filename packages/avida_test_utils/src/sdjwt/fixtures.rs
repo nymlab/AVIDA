@@ -7,22 +7,17 @@ use cosmwasm_std::Binary;
 
 use sylvia::multitest::{App, Proxy};
 
-use avida_common::{
-    traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy,
-    types::{InputRoutesRequirements, RouteVerificationRequirements, VerificationSource},
+use avida_common::types::{
+    InputRoutesRequirements, RouteVerificationRequirements, VerificationSource,
 };
 use avida_sdjwt_verifier::{
-    contract::sv::mt::{CodeId, SdjwtVerifierProxy},
+    contract::sv::mt::CodeId,
     contract::*,
     types::{Criterion, InitRegistration, MathsOperator, PresentationReq},
 };
-use serde::{Deserialize, Serialize};
-
 use josekit::{self};
 
 use cw_multi_test::App as MtApp;
-use sd_jwt_rs::issuer;
-use sd_jwt_rs::{SDJWTHolder, SDJWTSerializationFormat};
 
 pub const OWNER_ADDR: &str = "addr0001";
 pub const FIRST_CALLER_APP_ADDR: &str = "addr0002";
@@ -58,14 +53,6 @@ pub fn issuer_jwk() -> josekit::jwk::Jwk {
     let key_pair = josekit::jwk::alg::ed::EdKeyPair::from_pem(encoding_key_pem).unwrap();
     println!("key_pair: {:#?}", key_pair);
     key_pair.to_jwk_public_key()
-}
-
-pub fn rsa_isuer() -> SDJWTIssuer {
-    let mut key_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    key_path = key_path.join("fixtures/test_rsa_private.pem");
-    let encoding_key_pem = fs::read(key_path).unwrap();
-    let encodingkey = EncodingKey::from_rsa_pem(&encoding_key_pem).unwrap();
-    SDJWTIssuer::new(encodingkey, Some("RSA".to_string()))
 }
 
 pub fn rsa_issuer_jwk() -> josekit::jwk::Jwk {

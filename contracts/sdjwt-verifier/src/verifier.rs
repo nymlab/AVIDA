@@ -141,7 +141,7 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         let app_addr = deps.api.addr_validate(&app_addr)?;
         let app_admin = self.app_admins.load(deps.storage, app_addr.as_str())?;
 
-        if app_admin != &info.sender {
+        if app_admin != info.sender {
             return Err(SdjwtVerifierError::Unauthorised);
         }
 
@@ -386,7 +386,7 @@ impl SdjwtVerifier<'_> {
 
                 Ok(VerificationRequest::new(verification_req, None))
             } else {
-                return Err(SdjwtVerifierError::UnsupportedKeyType);
+                Err(SdjwtVerifierError::UnsupportedKeyType)
             }
         }
     }

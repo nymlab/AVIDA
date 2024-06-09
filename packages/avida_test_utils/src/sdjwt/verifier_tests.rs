@@ -3,17 +3,9 @@ use cosmwasm_std::Binary;
 use sylvia::multitest::App;
 
 use avida_common::{
-    traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy,
-    types::{InputRoutesRequirements, RouteVerificationRequirements, VerificationSource},
+    traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy, types::InputRoutesRequirements,
 };
-use avida_sdjwt_verifier::{
-    contract::{
-        self,
-        sv::mt::{CodeId, SdjwtVerifierProxy},
-    },
-    errors::SdjwtVerifierError,
-    types::{Criterion, InitRegistration, MathsOperator, PresentationReq},
-};
+use avida_sdjwt_verifier::{contract::sv::mt::SdjwtVerifierProxy, errors::SdjwtVerifierError};
 use serde::{Deserialize, Serialize};
 
 use josekit::{self, Value};
