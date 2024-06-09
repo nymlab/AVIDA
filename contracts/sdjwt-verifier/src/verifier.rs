@@ -67,6 +67,8 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
     ) -> Result<Response, Self::Error> {
         let ExecCtx { deps, env, info } = ctx;
         let app_addr = deps.api.addr_validate(&app_addr)?;
+
+        // Complete registration
         self._register(
             deps.storage,
             &env,
@@ -76,7 +78,7 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         )
     }
 
-    /// Verifiable Presentation Verifier for dApp contracts
+    /// Performs the verification of the provided presentation within the context of the given route
     #[sv::msg(exec)]
     fn verify(
         &self,
@@ -90,10 +92,11 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         let app_addr = app_addr.unwrap_or_else(|| info.sender.to_string());
         let app_addr = deps.api.addr_validate(&app_addr)?;
 
+        // Performs the verification of the provided presentation within the context of the given route
         self._verify(deps, presentation, route_id, app_addr.as_str())
     }
 
-    // For dApp to update their criteria verification criteria
+    /// For dApp to update their verification criteria
     #[sv::msg(exec)]
     fn update(
         &self,
@@ -104,6 +107,7 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
     ) -> Result<Response, Self::Error> {
         let ExecCtx { deps, env, info } = ctx;
 
+        // Ensure the app with this address is registered
         if !self.app_trust_data_source.has(deps.storage, &app_addr)
             || !self.app_routes_requirements.has(deps.storage, &app_addr)
         {
@@ -114,10 +118,12 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
 
         let app_admin = self.app_admins.load(deps.storage, app_addr.as_str())?;
 
+        // Ensure the caller is the admin of the dApp
         if app_admin != info.sender {
             return Err(SdjwtVerifierError::Unauthorised);
         }
 
+        // Perform verification criteria update
         self._update(
             deps.storage,
             &env,
@@ -127,11 +133,12 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         )
     }
 
-    //For dApp contracts to deregister
+    /// For dApp contracts to deregister
     #[sv::msg(exec)]
     fn deregister(&self, ctx: ExecCtx, app_addr: String) -> Result<Response, Self::Error> {
         let ExecCtx { deps, info, .. } = ctx;
 
+        // Ensure the app with this address is registered
         if !self.app_trust_data_source.has(deps.storage, &app_addr)
             || !self.app_routes_requirements.has(deps.storage, &app_addr)
         {
@@ -141,14 +148,16 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         let app_addr = deps.api.addr_validate(&app_addr)?;
         let app_admin = self.app_admins.load(deps.storage, app_addr.as_str())?;
 
+        // Ensure the caller is the admin of the dApp
         if app_admin != info.sender {
             return Err(SdjwtVerifierError::Unauthorised);
         }
 
+        // Perform deregistration
         self._deregister(deps.storage, app_addr.as_str())
     }
 
-    // Query available routes for a dApp contract
+    /// Query available routes for a dApp contract
     #[sv::msg(query)]
     fn get_routes(&self, ctx: QueryCtx, app_addr: String) -> Result<Vec<RouteId>, Self::Error> {
         let v = self
@@ -158,7 +167,7 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         Ok(routes)
     }
 
-    // Query requirements of a route for a dApp contract
+    /// Query requirements of a route for a dApp contract
     #[sv::msg(query)]
     fn get_route_requirements(
         &self,
@@ -188,6 +197,7 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
 }
 
 impl SdjwtVerifier<'_> {
+    /// Verify the provided presentation within the context of the given route
     pub fn _verify(
         &self,
         deps: DepsMut,
@@ -231,6 +241,7 @@ impl SdjwtVerifier<'_> {
         }
     }
 
+    /// Performs a registration of an application and all its routes
     pub fn _register(
         &self,
         storage: &mut dyn Storage,
@@ -258,18 +269,21 @@ impl SdjwtVerifier<'_> {
             data_sources.insert(route_id, requirements.verification_source.clone());
             // On registration we check if the dApp has request for IBC data
             // FIXME: add IBC submessages
+
+            // Make a verification request for specified app addr and route id with a provided route criteria
             let VerificationRequest {
                 verification_request,
-                sub_msg,
+                ibc_msg,
             } = self.make_verification_request(storage, env, app_addr, route_id, requirements)?;
 
             req_map.insert(route_id, verification_request);
 
-            if let Some(sub_msg) = sub_msg {
-                response = response.add_submessage(sub_msg);
+            if let Some(ibc_msg) = ibc_msg {
+                response = response.add_submessage(ibc_msg);
             }
         }
 
+        // Save the registered trust data sources and route requirements
         self.app_trust_data_source
             .save(storage, app_addr, &data_sources)?;
         self.app_routes_requirements
@@ -279,6 +293,7 @@ impl SdjwtVerifier<'_> {
         Ok(response)
     }
 
+    /// Performs a deregister of an application and all its routes
     fn _deregister(
         &self,
         storage: &mut dyn Storage,
@@ -291,6 +306,7 @@ impl SdjwtVerifier<'_> {
         Ok(Response::default())
     }
 
+    /// Performs an update on the verification requirements for a given app addr and route id with the new criteria
     fn _update(
         &self,
         storage: &mut dyn Storage,
@@ -309,21 +325,23 @@ impl SdjwtVerifier<'_> {
         if let Some(route_criteria) = route_criteria {
             data_sources.insert(route_id, route_criteria.verification_source.clone());
 
+            // Make a verification request for specified app addr and route id with a provided route criteria
             let VerificationRequest {
                 verification_request,
-                sub_msg,
+                ibc_msg,
             } = self.make_verification_request(storage, env, app_addr, route_id, route_criteria)?;
 
             req_map.insert(route_id, verification_request);
 
-            if let Some(sub_msg) = sub_msg {
-                response = response.add_submessage(sub_msg);
+            if let Some(ibc_msg) = ibc_msg {
+                response = response.add_submessage(ibc_msg);
             }
         } else {
             data_sources.remove(&route_id);
             req_map.remove(&route_id);
         }
 
+        // Save the updated trust data sources and route requirements
         self.app_trust_data_source
             .save(storage, app_addr, &data_sources)?;
         self.app_routes_requirements
@@ -332,6 +350,7 @@ impl SdjwtVerifier<'_> {
         Ok(response)
     }
 
+    /// Creates a verification request for specified app addr and route id and provided route criteria
     fn make_verification_request(
         &self,
         storage: &mut dyn Storage,
