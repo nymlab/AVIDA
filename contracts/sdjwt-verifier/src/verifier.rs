@@ -30,10 +30,13 @@ use sylvia::{
 };
 
 // sd-jwt specific dependencies
-use jsonwebtoken::{
+pub use jsonwebtoken::{
     jwk::{AlgorithmParameters, EllipticCurve, Jwk, OctetKeyPairParameters},
     DecodingKey,
 };
+
+pub use josekit::{self};
+
 use sd_jwt_rs::{SDJWTSerializationFormat, SDJWTVerifier};
 
 #[contract(module=crate::contract)]

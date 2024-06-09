@@ -37,6 +37,7 @@ jsonwebtoken = { git = "https://github.com/nymlab/jsonwebtoken", rev = "1e5ebdc8
 base64 = "0.21.0"
 thiserror = { workspace = true }
 serde_json = "1.0.116"
+josekit = "0.8.6"
 
 
 [dev-dependencies]
