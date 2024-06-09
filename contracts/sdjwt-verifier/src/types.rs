@@ -21,16 +21,18 @@ pub struct PendingRoute {
     pub app_addr: String,
 }
 
+/// The verification request type, which consists of the verification request and the ibc message
 pub struct VerificationRequest {
     pub verification_request: VerificationReq,
-    pub sub_msg: Option<SubMsg>,
+    pub ibc_msg: Option<SubMsg>,
 }
 
 impl VerificationRequest {
-    pub fn new(verification_request: VerificationReq, sub_msg: Option<SubMsg>) -> Self {
+    /// Create a new verification request
+    pub fn new(verification_request: VerificationReq, ibc_msg: Option<SubMsg>) -> Self {
         VerificationRequest {
             verification_request,
-            sub_msg,
+            ibc_msg,
         }
     }
 }
@@ -124,7 +126,7 @@ pub fn validate(
                     _ => return Err(SdjwtVerifierError::CriterionValueTypeUnexpected),
                 };
             } else {
-                return Err(SdjwtVerifierError::DisclosedClaimNotFound(key.to_string()));
+                return Err(SdjwtVerifierError::DisclosedClaimNotFound(key));
             }
         }
     } else {
