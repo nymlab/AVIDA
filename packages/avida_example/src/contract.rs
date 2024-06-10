@@ -1,24 +1,26 @@
 use avida_common::types::InputRoutesRequirements;
 use cosmwasm_std::{entry_point, from_json, DepsMut, Env, Reply, Response, StdResult, SubMsg};
-use sylvia::{contract, entry_points};
-use sylvia::types::InstantiateCtx;
-use cw_storage_plus::{Item, Map};
+use sylvia::{
+    contract, entry_points, schemars,
+    types::InstantiateCtx,
+};
+use cw_storage_plus::{Item};
 use cw_utils::parse_reply_execute_data;
 
 use crate::error::ContractError;
 use crate::msg::{IntoCosmos, VerifyRequest};
-use crate::constants::{GIVE_ME_DRINK_ROUTE_ID, GIVE_ME_FOOD_ROUTE_ID, GIVE_ME_GASOLINE_ROUTE_ID};
+use crate::constants::{GIVE_ME_DRINK_ROUTE_ID, GIVE_ME_FOOD_ROUTE_ID, GIVE_ME_GASOLINE_ROUTE_ID, REGISTER_REQUIREMENT_REPLY_ID};
 use crate::msg::{ExecuteMsg, GiveMeSomeDrink, GiveMeSomeFood, GiveMeSomeGasoline, RegisterRequirement, RegisterRequest};
 use crate::state::PENDING_TRANSACTIONS;
 
 
-pub struct RestorantContract <'a>{
+pub struct RestaurantContract <'a>{
     verifier: Item<'a, String>,
 }
 
 #[entry_points]
 #[contract]
-impl RestorantContract <'_> {
+impl RestaurantContract <'_> {
     pub const fn new() -> Self {
         Self {
             verifier: Item::new("verifier"),
@@ -27,13 +29,14 @@ impl RestorantContract <'_> {
 
     #[sv::msg(instantiate)]
     pub fn instantiate(&self, ctx: InstantiateCtx, verifier: String) -> StdResult<Response> {
-        self.verifier.save(ctx.deps.storage, &verifier)?;
+        let InstantiateCtx { deps, .. } = ctx;
+        self.verifier.save(deps.storage, &verifier)?;
         Ok(Response::default())
     }
 
     // Register the permission policy
     #[sv::msg(exec)]
-    pub fn register(&self, ctx: sylvia::types::ExecCtx, msg: RegisterRequirement) -> StdResult<Response> {
+    pub fn register_requirement(&self, ctx: sylvia::types::ExecCtx, msg: RegisterRequirement) -> StdResult<Response> {
         let route_requirements: InputRoutesRequirements;
         match msg {
             RegisterRequirement::Drink { requirements } => {
@@ -60,9 +63,18 @@ impl RestorantContract <'_> {
             app_addr: ctx.info.sender.to_string(),
             route_criteria: vec![route_requirements]
         };
+
         let verifier_contract = self.verifier.load(ctx.deps.storage)?;
+
+        // let register_msg = SubMsg::reply_on_success(
+        //     register_msg.into_cosmos_msg(verifier_contract)?, 
+        //     REGISTER_REQUIREMENT_REPLY_ID
+        // );
         
-        Ok(Response::new().add_message(register_msg.into_cosmos_msg(verifier_contract)?))
+        // Ok(Response::new().add_submessage(register_msg))
+
+        Ok(Response::new()
+            .add_message(register_msg.into_cosmos_msg(verifier_contract)?))
     }
 
     // Ask for the portion
@@ -135,6 +147,13 @@ impl RestorantContract <'_> {
 pub fn reply(deps: DepsMut, _env: Env, reply: Reply) -> Result<Response, ContractError> {
     // 
     match reply.id {
+        REGISTER_REQUIREMENT_REPLY_ID => {
+            let verification_result = parse_reply_execute_data(reply)?;
+            if verification_result.data.is_none() {
+                return Err(ContractError::VerificationProcessError)
+            }
+            return Ok(Response::new())
+        }
         GIVE_ME_DRINK_ROUTE_ID => {
             let verification_result = parse_reply_execute_data(reply)?;
             let verified: bool = from_json(&verification_result.data.unwrap())?;

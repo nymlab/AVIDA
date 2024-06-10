@@ -1,7 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use avida_common::types::{ InputRoutesRequirements, RouteId, RouteVerificationRequirements, VerfiablePresentation};
 use cosmwasm_std::{to_json_binary, CosmosMsg, StdResult, Uint64, WasmMsg};
-use serde::Serialize;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -39,28 +38,6 @@ pub enum ExecuteMsg {
     GiveMeSomeDrink(GiveMeSomeDrink),
     GiveMeSomeFood(GiveMeSomeFood),
     GiveMeSomeGasoline(GiveMeSomeGasoline),
-}
-
-pub trait NeedToBeVerified {
-    fn need_to_be_verified(&self) -> bool;
-}
-
-impl NeedToBeVerified for GiveMeSomeDrink {
-    fn need_to_be_verified(&self) -> bool {
-        true
-    }
-}
-
-impl NeedToBeVerified for GiveMeSomeFood {
-    fn need_to_be_verified(&self) -> bool {
-        true
-    }
-}
-
-impl NeedToBeVerified for GiveMeSomeGasoline {
-    fn need_to_be_verified(&self) -> bool {
-        true
-    }
 }
 
 #[cw_serde]
@@ -102,24 +79,3 @@ impl IntoCosmos for RegisterRequest {
 impl IntoCosmos for VerifyRequest {
     into_cosmos_msg!();
 }
-
-
-// pub trait ExecuteMsg {
-//     fn get_proof(&self) -> VerfiablePresentation;
-// }
-// 
-// impl ExecuteMsg for GiveMeSomeDrink {
-//     fn get_proof(&self) -> VerfiablePresentation {
-//         self.proof.clone()
-//     }
-// }
-// impl ExecuteMsg for GiveMeSomeFood {
-//     fn get_proof(&self) -> VerfiablePresentation {
-//         self.proof.clone()
-//     }
-// }
-// impl ExecuteMsg for GiveMeSomeGasoline {
-//     fn get_proof(&self) -> VerfiablePresentation {
-//         self.proof.clone()
-//     }
-// }   
