@@ -11,8 +11,15 @@ avida-common = { path = "../common/"}
 cosmwasm-schema = { workspace = true }
 schemars = { workspace = true }
 cosmwasm-std = { workspace = true }
-sylvia = { workspace = true }
+sylvia = { version = "0.10.1", features = ["mt"] }
 serde = { workspace = true }
 cw-storage-plus.workspace = true
 cw-utils = { workspace = true }
 thiserror = { workspace = true }
+
+[dev-dependencies]
+avida-sdjwt-verifier = { path = "../../contracts/sdjwt-verifier/"}
+serde_json = "1.0.116"
+josekit = "0.8.6"
+sd-jwt-rs = "0.7.0"
+jsonwebtoken = { version="9.3.0", features=["use_pem"]}
