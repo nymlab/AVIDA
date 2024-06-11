@@ -1,6 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use avida_common::types::{ InputRoutesRequirements, RouteId, RouteVerificationRequirements, VerfiablePresentation};
-use cosmwasm_std::{to_json_binary, CosmosMsg, StdResult, Uint64, WasmMsg};
+use cosmwasm_std::Uint64;
+use sylvia::cw_std::{WasmMsg, StdResult, to_json_binary};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -55,19 +56,19 @@ pub struct VerifyRequest {
 
 // IntoCosmos trait
 pub trait IntoCosmos {
-    fn into_cosmos_msg(&self, contract_addr: String) -> StdResult<CosmosMsg>;
+    fn into_wasm_msg(&self, contract_addr: String) -> StdResult<WasmMsg>;
 }
 
 macro_rules! into_cosmos_msg {
     () => {
-        fn into_cosmos_msg(&self, contract_addr: String) -> StdResult<CosmosMsg> {
+        fn into_wasm_msg(&self, contract_addr: String) -> StdResult<WasmMsg> {
             let msg = to_json_binary(self)?;
-            let execute_msg = WasmMsg::Execute {
-                contract_addr: contract_addr.into(),
-                msg,
+            Ok(WasmMsg::Execute {
+                contract_addr: contract_addr,
+                msg: msg,
+                // This is currently no set but it will likely be set to a reasonable price
                 funds: vec![],
-            };
-            Ok(execute_msg.into())
+            })
         }
     }
 }
