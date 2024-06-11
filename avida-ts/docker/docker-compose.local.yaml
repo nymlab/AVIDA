@@ -1,0 +1,63 @@
+version: "3"
+
+services:
+  cheqd-node:
+    image: ghcr.io/nymlab/cheqd-node:v2.0.1-arm64
+    ports:
+      - target: 26656
+        published: 26656 # Tendermint peer-to-peer (P2P) port
+      - target: 26657
+        published: 26657 # Tendermint RPC port
+    volumes:
+      - ./scripts/:/tmp
+    entrypoint: /tmp/cheqd-genesis.sh
+
+  neutron-node:
+    image: ghrc.io/nymlab/neutron-standalone:v3.0.5-arm64
+    ports:
+      - target: 1318
+        published: 1317 # GRPC
+      - target: 26656
+        published: 25556 # Tendermint P2P port
+      - target: 26657
+        published: 25557 # Tendermint RPC port
+    environment:
+      - RUN_BACKGROUND=0
+      - CHAINID=neutron-local-1
+
+  # contract: address with instantiate2 neutron1js0jdjmwtzpp32sfz6x44t2mxv5vzk5mku4ckqge46us9erq097qa60waw
+  # deployer: neutron demo_2
+  # salt: ascii avida-local
+  neutron-deployer:
+    image: ghrc.io/nymlab/neutron-standalone:v3.0.5-arm64
+    volumes:
+      - ./../../artifacts/:/tmp/artifacts/
+      - ./scripts/:/tmp/scripts/
+    depends_on:
+      - neutron-node
+    ports:
+      - target: 1318
+        published: 2317 # GRPC
+      - target: 26656
+        published: 24456 # Tendermint P2P port
+      - target: 26657
+        published: 24457 # Tendermint RPC port
+    working_dir: /opt/neutron
+    environment:
+      - RUN_BACKGROUND=0
+      - CHAINID=neutron-local-1
+    entrypoint: "bash /tmp/scripts/neutron-deploy.sh"
+
+  relayer:
+    image: ghcr.io/cosmos/relayer:v2.5.2
+    depends_on:
+      - cheqd-node
+      - neutron-node
+    working_dir: /tmp
+    volumes:
+      - ./scripts/:/tmp/scripts/
+      - ./local-chain-config/:/tmp/local-chain-config/
+      - ./.relayer/:/tmp/.relayer/
+    environment:
+      - CONTRACT_ADDRESS=neutron1js0jdjmwtzpp32sfz6x44t2mxv5vzk5mku4ckqge46us9erq097qa60waw
+    entrypoint: "sh ./scripts/relayer-avida-link.sh" # setup relayer and create client and connection but will need to set up channel after
