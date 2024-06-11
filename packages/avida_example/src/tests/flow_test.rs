@@ -1,6 +1,8 @@
+use std::ops::Add;
+
 use avida_common::types::{InputRoutesRequirements, RouteVerificationRequirements, VerificationSource};
 use avida_common::traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy;
-use cosmwasm_std::Binary;
+use cosmwasm_std::{Addr, Binary};
 
 use sd_jwt_rs::issuer;
 use sd_jwt_rs::{SDJWTHolder, SDJWTSerializationFormat};
@@ -19,9 +21,8 @@ use josekit::{self, Value};
 pub fn flow_drink_verification() {
     let app = App::default();
 
-    let verifier_owner = "addr0001";
-    let restaurant_owner = "addr0002";
-    let caller = "addr0003";
+    let owner = Addr::unchecked("owner"); // "owner";
+    let caller = Addr::unchecked("caller"); // "caller";
     let mut fx_issuer = issuer();
 
     // Add only 1 criterion - age greater than 18
@@ -55,41 +56,42 @@ pub fn flow_drink_verification() {
     let contract_verifier = code_id_verifier
         .instantiate(max_presentation_len, vec![])
         .with_label("Verifier")
-        .with_admin(verifier_owner)
-        .call(&verifier_owner)
+        .call(&owner.as_str())
         .unwrap();
     
     let contract_restaurant = code_id_restaurant
         .instantiate(contract_verifier.contract_addr.to_string())
         .with_label("Restaurant")
-        .with_admin(restaurant_owner)
-        .call(&restaurant_owner)
+        .call(&owner.as_str())
         .unwrap();
 
-    // Register route to verifier
-    let _ = contract_verifier
-        .register(
-            caller.to_string(),
-            vec![InputRoutesRequirements{
-                route_id: GIVE_ME_DRINK_ROUTE_ID,
-                requirements: fx_route_verification_req.clone()
-            }]
-        )
-    .call(&caller)
-    .unwrap();
-    // let _a = contract_restaurant
-    //     .register_requirement(
-    //         RegisterRequirement::Drink { requirements: fx_route_verification_req.clone() },
+    // // Register route to verifier
+    // let _ = contract_verifier
+    //     .register(
+    //         contract_restaurant.contract_addr.to_string(),
+    //         vec![InputRoutesRequirements{
+    //             route_id: GIVE_ME_DRINK_ROUTE_ID,
+    //             requirements: fx_route_verification_req.clone()
+    //         }]
     //     )
-    //     .call(&caller);
+    // .call(&caller)
+    // .unwrap();
+    
+    let _a = contract_restaurant
+        .register_requirement(
+            RegisterRequirement::Drink { 
+                requirements: fx_route_verification_req.clone() 
+            })
+        .call(&owner.as_str())
+        .unwrap();
     // Check that verifier has route registered.
-    let registered_routes = contract_verifier.get_routes(caller.to_string()).unwrap();
+    let registered_routes = contract_verifier.get_routes(contract_restaurant.contract_addr.to_string()).unwrap();
 
     assert_eq!(registered_routes.len(), 1);
     assert_eq!(registered_routes.first().unwrap(), &GIVE_ME_DRINK_ROUTE_ID);
 
     let registered_req = contract_verifier
-        .get_route_requirements(caller.to_string(), GIVE_ME_DRINK_ROUTE_ID)
+        .get_route_requirements(contract_restaurant.contract_addr.to_string(), GIVE_ME_DRINK_ROUTE_ID)
         .unwrap();
 
     assert_eq!(
@@ -103,7 +105,7 @@ pub fn flow_drink_verification() {
     );
 
     let route_verification_key = contract_verifier
-        .get_route_verification_key(caller.to_string(), GIVE_ME_DRINK_ROUTE_ID)
+        .get_route_verification_key(contract_restaurant.contract_addr.to_string(), GIVE_ME_DRINK_ROUTE_ID)
         .unwrap()
         .unwrap();
 
@@ -143,7 +145,7 @@ pub fn flow_drink_verification() {
         .give_me_some_drink(
             msg
         )
-        .call(&caller)
+        .call(&owner.as_str())
         .unwrap();
     
     println!("aa: {:#?}", _aa);
