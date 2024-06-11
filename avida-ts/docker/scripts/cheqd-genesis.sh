@@ -6,7 +6,7 @@ set -ex
 # we need to add some keys to the genesis file
 # use that file to start the chaink
 
-CHEQD_HOME=".cheqdnode"
+CHEQD_HOME="./.cheqdnode"
 CHEQD_CHAIN_ID="cheqd-local-1"
 CHEQD_DENOM="ncheq"
 KEYRING_BACKEND="test"

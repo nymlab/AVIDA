@@ -30,11 +30,10 @@ use sylvia::{
 };
 
 // sd-jwt specific dependencies
-pub use jsonwebtoken::{
+use jsonwebtoken::{
     jwk::{AlgorithmParameters, EllipticCurve, Jwk, OctetKeyPairParameters},
     DecodingKey,
 };
-
 use sd_jwt_rs::{SDJWTSerializationFormat, SDJWTVerifier};
 
 #[contract(module=crate::contract)]
@@ -404,8 +403,6 @@ impl SdjwtVerifier<'_> {
         } else {
             let issuer_pubkey: Jwk =
                 serde_json_wasm::from_slice(&route_criteria.verification_source.data_or_location)?;
-
-            println!("issuer_pubkey: {:?}", issuer_pubkey);
 
             if let AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
                 curve: EllipticCurve::Ed25519,
