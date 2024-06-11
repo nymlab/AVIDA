@@ -2,10 +2,11 @@
 
 set -ex
 
-RELAYER_HOME=".relayer"
+RELAYER_HOME="./docker/.relayer"
 CHEQD_CHAIN_ID="cheqd-local-1"
 NEUTRON_CHAIN_ID="neutron-local-1"
 CHEQD_RELAYER_MNEMONIC="rebuild sand ocean matrix habit trigger total vendor airport once hybrid napkin refuse drive pottery novel misery steel pony sudden vibrant ready witness nation"
+# From https://github.com/neutron-org/neutron/blob/main/network/init.sh
 NEUTRON_RELAYER_MNEMONIC="alley afraid soup fall idea toss can goose become valve initial strong forward bright dish figure check leopard decide warfare hub unusual join cart"
 
 # if the $Relayer_HOME exists, skip the initialization, else initialize the relayer
@@ -35,8 +36,3 @@ fi
  else
   rly keys restore $NEUTRON_CHAIN_ID neutron-relayer "$NEUTRON_RELAYER_MNEMONIC" --home $RELAYER_HOME
  fi
-
-
- ## create a new client & connection, even if config exists
- rly transact client $CHEQD_CHAIN_ID $NEUTRON_CHAIN_ID avida-cheqd-neutron --override --home $RELAYER_HOME
- rly transact connection avida-cheqd-neutron --override --home $RELAYER_HOME
