@@ -69,6 +69,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "avida-example"
+version = "0.1.0"
+dependencies = [
+ "avida-common",
+ "avida-sdjwt-verifier",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw-utils",
+ "josekit",
+ "jsonwebtoken 9.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "schemars",
+ "sd-jwt-rs 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde",
+ "serde_json",
+ "sylvia",
+ "thiserror",
+]
+
+[[package]]
 name = "avida-sdjwt-verifier"
 version = "0.1.0"
 dependencies = [
@@ -108,26 +129,6 @@ dependencies = [
  "serde_json",
  "sylvia",
  "sylvia-derive",
-]
-
-[[package]]
-name = "avida_example"
-version = "0.1.0"
-dependencies = [
- "avida-common",
- "avida-sdjwt-verifier",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-storage-plus",
- "cw-utils",
- "josekit",
- "jsonwebtoken 9.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "schemars",
- "sd-jwt-rs 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde",
- "serde_json",
- "sylvia",
- "thiserror",
 ]
 
 [[package]]
