@@ -30,6 +30,9 @@ services:
     depends_on:
       - cheqd-node
       - neutron-node
+    working_dir: /tmp
     volumes:
-      - ./scripts/:/tmp
-    entrypoint: /tmp/relayer-setup.sh # setup relayer and create client and connection
+      - ./scripts/:/tmp/scripts/
+      - ./local-chain-config/:/tmp/local-chain-config/
+      - ./.relayer/:/tmp/.relayer/
+    entrypoint: "sh ./scripts/relayer-avida-link.sh" # setup relayer and create client and connection but will need to set up channel after

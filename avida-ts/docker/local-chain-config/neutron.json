@@ -3,7 +3,7 @@
   "value": {
     "key": "neutron-relayer",
     "chain-id": "neutron-local-1",
-    "rpc-addr": "http://localhost:25557",
+    "rpc-addr": "http://neutron-node:26657",
     "account-prefix": "neutron",
     "keyring-backend": "test",
     "gas-adjustment": 1.2,
@@ -11,6 +11,7 @@
     "debug": true,
     "timeout": "20s",
     "output-format": "json",
-    "sign-mode": "direct"
+    "sign-mode": "direct",
+    "denom": "untrn"
   }
 }

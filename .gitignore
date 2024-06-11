@@ -1,7 +1,7 @@
 /target
 .env
-.cheqdnode
-.relayer
+**/.cheqdnode
+**/.relayer
 
 # Built wasm files
 artifacts/
