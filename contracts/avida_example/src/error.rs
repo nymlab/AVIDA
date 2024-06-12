@@ -13,9 +13,6 @@ pub enum ContractError {
     #[error("VerificationProcessError")]
     VerificationProcessError,
 
-    #[error("InternalError")]
-    InternalError,
-
     #[error("InvalidRouteId")]
     InvalidRouteId
 }
