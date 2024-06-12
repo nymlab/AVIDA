@@ -26,7 +26,7 @@ pub const SECOND_CALLER_APP_ADDR: &str = "addr0003";
 
 pub const VERIFIER_CONTRACT_LABEL: &str = "Verifier Contract";
 
-pub const FX_ROUTE_ID: u64 = 1;
+pub const FIRST_ROUTE_ID: u64 = 1;
 pub const SECOND_ROUTE_ID: u64 = 2;
 pub const THIRD_ROUTE_ID: u64 = 3;
 
@@ -197,7 +197,7 @@ pub fn instantiate_verifier_contract<'a>(
         app_admin: FIRST_CALLER_APP_ADDR.to_string(),
         app_addr: FIRST_CALLER_APP_ADDR.to_string(),
         routes: vec![InputRoutesRequirements {
-            route_id: FX_ROUTE_ID,
+            route_id: FIRST_ROUTE_ID,
             requirements: fx_route_verification_req.clone(),
         }],
     }];
