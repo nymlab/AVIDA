@@ -1,14 +1,15 @@
 use jsonwebtoken::EncodingKey;
+use sd_jwt_rs::issuer;
 use sd_jwt_rs::SDJWTIssuer;
+use sd_jwt_rs::{SDJWTHolder, SDJWTSerializationFormat};
 use serde_json::Value;
 use std::{fs, path::PathBuf};
-use sd_jwt_rs::issuer;
-use sd_jwt_rs::{SDJWTHolder, SDJWTSerializationFormat};
 
 use cosmwasm_std::Binary;
 
 use sylvia::multitest::{App, Proxy};
 
+use avida_common::types::TrustRegistry;
 use avida_common::types::{
     InputRoutesRequirements, RouteVerificationRequirements, VerificationSource,
 };
@@ -17,9 +18,8 @@ use avida_sdjwt_verifier::{
     contract::*,
     types::{Criterion, InitRegistration, MathsOperator, PresentationReq},
 };
-use josekit::{self};
-
 use cw_multi_test::App as MtApp;
+use josekit::{self};
 
 /// Test constants
 pub const OWNER_ADDR: &str = "addr0001";
@@ -33,6 +33,12 @@ pub const SECOND_ROUTE_ID: u64 = 2;
 pub const THIRD_ROUTE_ID: u64 = 3;
 
 pub const MAX_PRESENTATION_LEN: usize = 3000;
+
+/// Is used to test different cases for route verification requirements
+pub enum RouteVerificationRequirementsType {
+    Supported(Option<TrustRegistry>),
+    UnsupportedKeyType,
+}
 
 // Keys generation
 // ```sh
@@ -83,7 +89,6 @@ pub fn claims(name: &str, age: u8, active: bool, joined_at: u16) -> Value {
 
 /// Make a presentation from the claims provided
 pub fn make_presentation(claims: Value) -> String {
-
     // Get an sdjwt issuer instance with some ed25519 predefined private key, read from a file
     let mut fx_issuer = issuer();
     let sdjwt = fx_issuer
@@ -109,28 +114,22 @@ pub fn make_presentation(claims: Value) -> String {
 }
 
 /// Is used to get route verification requirements
-fn make_route_verification_requirements(
+pub fn make_route_verification_requirements(
     presentation_req: PresentationReq,
+    route_verification_requirements_type: RouteVerificationRequirementsType,
 ) -> RouteVerificationRequirements {
     let re = serde_json::to_string(&presentation_req).unwrap();
-    let fx_jwk = serde_json::to_string(&issuer_jwk()).unwrap();
-
-    // Add some default criteria as presentation request
-    RouteVerificationRequirements {
-        verification_source: VerificationSource {
-            source: None,
-            data_or_location: Binary::from(fx_jwk.as_bytes()),
-        },
-        presentation_request: Binary::from(re.as_bytes()),
-    }
-}
-
-/// Is used to get an unsupported verification requirements
-fn make_unsupported_route_verification_requirements(
-    presentation_req: PresentationReq,
-) -> RouteVerificationRequirements {
-    let re = serde_json::to_string(&presentation_req).unwrap();
-    let fx_jwk = serde_json::to_string(&rsa_issuer_jwk()).unwrap();
+    let fx_jwk = match route_verification_requirements_type {
+        RouteVerificationRequirementsType::Supported(Some(_)) => {
+            "fixtures/test_ed25519_private.pem".to_string()
+        }
+        RouteVerificationRequirementsType::Supported(None) => {
+            serde_json::to_string(&issuer_jwk()).unwrap()
+        }
+        RouteVerificationRequirementsType::UnsupportedKeyType => {
+            serde_json::to_string(&rsa_issuer_jwk()).unwrap()
+        }
+    };
 
     // Add some default criteria as presentation request
     RouteVerificationRequirements {
@@ -164,17 +163,44 @@ pub fn get_two_input_routes_requirements() -> Vec<InputRoutesRequirements> {
     vec![
         InputRoutesRequirements {
             route_id: SECOND_ROUTE_ID,
-            requirements: make_route_verification_requirements(first_presentation_req),
+            requirements: make_route_verification_requirements(
+                first_presentation_req,
+                RouteVerificationRequirementsType::Supported(Option::None),
+            ),
         },
         InputRoutesRequirements {
             route_id: THIRD_ROUTE_ID,
-            requirements: make_route_verification_requirements(second_presentation_req),
+            requirements: make_route_verification_requirements(
+                second_presentation_req,
+                RouteVerificationRequirementsType::Supported(Option::None),
+            ),
         },
     ]
 }
 
-/// Is used to get an unsupported input verification requirements for a single route
-pub fn get_unsupported_key_type_input_routes_requirement() -> InputRoutesRequirements {
+/// Is used to get route verification requirements for a single route
+pub fn get_route_verification_requirement(
+    route_verification_requirements_type: RouteVerificationRequirementsType,
+) -> RouteVerificationRequirements {
+    let presentation_req: PresentationReq = vec![
+        (
+            "age".to_string(),
+            Criterion::Number(30, MathsOperator::EqualTo),
+        ),
+        ("active".to_string(), Criterion::Boolean(true)),
+        (
+            "joined_at".to_string(),
+            Criterion::Number(2020, MathsOperator::GreaterThan),
+        ),
+    ];
+
+    make_route_verification_requirements(presentation_req, route_verification_requirements_type)
+}
+
+/// Is used to get route verification requirements for a single route
+pub fn get_input_route_requirement(
+    route_verification_requirements_type: RouteVerificationRequirementsType,
+) -> InputRoutesRequirements {
     let presentation_req: PresentationReq = vec![
         (
             "age".to_string(),
@@ -188,35 +214,23 @@ pub fn get_unsupported_key_type_input_routes_requirement() -> InputRoutesRequire
     ];
     InputRoutesRequirements {
         route_id: SECOND_ROUTE_ID,
-        requirements: make_unsupported_route_verification_requirements(presentation_req),
+        requirements: make_route_verification_requirements(
+            presentation_req,
+            route_verification_requirements_type,
+        ),
     }
-}
-
-/// Is used to get route verification requirements for a single route
-pub fn get_route_verification_requirement() -> RouteVerificationRequirements {
-    let presentation_req: PresentationReq = vec![
-        (
-            "age".to_string(),
-            Criterion::Number(30, MathsOperator::EqualTo),
-        ),
-        ("active".to_string(), Criterion::Boolean(true)),
-        (
-            "joined_at".to_string(),
-            Criterion::Number(2020, MathsOperator::GreaterThan),
-        ),
-    ];
-
-    make_route_verification_requirements(presentation_req)
 }
 
 /// Is used to instantiate verifier contract with some predefined parameters
 pub fn instantiate_verifier_contract<'a>(
     app: &'a App<MtApp>,
+    route_verification_requirements_type: RouteVerificationRequirementsType,
 ) -> (
     Proxy<'a, MtApp, SdjwtVerifier<'a>>,
     RouteVerificationRequirements,
 ) {
-    let fx_route_verification_req = get_route_verification_requirement();
+    let fx_route_verification_req =
+        get_route_verification_requirement(route_verification_requirements_type);
     let code_id = CodeId::store_code(app);
 
     // String, // Admin

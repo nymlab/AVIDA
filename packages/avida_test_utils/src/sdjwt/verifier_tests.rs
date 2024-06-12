@@ -16,9 +16,9 @@ use crate::sdjwt::fixtures::{
 };
 
 use super::fixtures::{
-    claims, get_route_verification_requirement, get_two_input_routes_requirements, make_presentation,
-    get_unsupported_key_type_input_routes_requirement, instantiate_verifier_contract,
-    issuer_jwk, MAX_PRESENTATION_LEN,
+    claims, get_input_route_requirement, get_route_verification_requirement,
+    get_two_input_routes_requirements, instantiate_verifier_contract, issuer_jwk,
+    make_presentation, RouteVerificationRequirementsType, MAX_PRESENTATION_LEN,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,7 +32,8 @@ fn instantiate_success() {
     let app = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, fx_route_verification_req) = instantiate_verifier_contract(&app);
+    let (contract, fx_route_verification_req) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     let registered_routes = contract
         .get_routes(FIRST_CALLER_APP_ADDR.to_string())
@@ -72,8 +73,9 @@ fn verify_success() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
-    
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
+
     // Make a presentation with some claims
     let claims = claims("Alice", 30, true, 2021);
 
@@ -96,22 +98,28 @@ fn verify_presentation_too_large() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     // Make a presentation with a too large claims
-    let claims = claims(&"Very long name".repeat(MAX_PRESENTATION_LEN), 30, true, 2021);
+    let claims = claims(
+        &"Very long name".repeat(MAX_PRESENTATION_LEN),
+        30,
+        true,
+        2021,
+    );
 
     let presentation = make_presentation(claims);
 
     // Try verify too large presentation
     assert!(matches!(
         contract
-        .verify(
-            Binary::from(presentation.as_bytes()),
-            FIRST_ROUTE_ID,
-            Some(FIRST_CALLER_APP_ADDR.to_string()),
-        )
-        .call(FIRST_CALLER_APP_ADDR),
+            .verify(
+                Binary::from(presentation.as_bytes()),
+                FIRST_ROUTE_ID,
+                Some(FIRST_CALLER_APP_ADDR.to_string()),
+            )
+            .call(FIRST_CALLER_APP_ADDR),
         Err(SdjwtVerifierError::PresentationTooLarge)
     ),);
 }
@@ -121,7 +129,8 @@ fn verify_route_not_registered() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     // Make a presentation with some claims
     let claims = claims("Alice", 30, true, 2021);
@@ -131,23 +140,49 @@ fn verify_route_not_registered() {
     // Try verify verify presentation with not registered route
     assert!(matches!(
         contract
-        .verify(
-            Binary::from(presentation.as_bytes()),
-            SECOND_ROUTE_ID,
-            Some(FIRST_CALLER_APP_ADDR.to_string()),
-        )
-        .call(FIRST_CALLER_APP_ADDR),
+            .verify(
+                Binary::from(presentation.as_bytes()),
+                SECOND_ROUTE_ID,
+                Some(FIRST_CALLER_APP_ADDR.to_string()),
+            )
+            .call(FIRST_CALLER_APP_ADDR),
         Err(SdjwtVerifierError::RouteNotRegistered)
     ),);
 }
 
+#[test]
+fn verify_pubkey_not_found() {
+    let app: App<_> = App::default();
+
+    // Instantiate verifier contract with some predefined parameters
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
+
+    // Make a presentation with some claims
+    let claims = claims("Alice", 30, true, 2021);
+
+    let presentation = make_presentation(claims);
+
+    // Try verify verify presentation with not found pubkey
+    assert!(matches!(
+        contract
+            .verify(
+                Binary::from(presentation.as_bytes()),
+                FIRST_ROUTE_ID,
+                Some(FIRST_CALLER_APP_ADDR.to_string()),
+            )
+            .call(SECOND_CALLER_APP_ADDR),
+        Err(SdjwtVerifierError::PubKeyNotFound)
+    ),);
+}
 
 #[test]
 fn register_success() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     // Get input verification requirements for 2 routes
     let two_routes_verification_req = get_two_input_routes_requirements();
@@ -230,7 +265,8 @@ fn register_app_is_already_registered() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     // Get input verification requirements for 2 routes
     let two_routes_verification_req = get_two_input_routes_requirements();
@@ -261,7 +297,8 @@ fn register_serde_json_error() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     // Get input verification requirements for 2 routes
     let mut two_routes_verification_req = get_two_input_routes_requirements();
@@ -288,11 +325,12 @@ fn register_unsupported_key_type() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     // Get an unsupported input verification requirements for a single route
     let unsupported_key_type_route_verification_requirement =
-        get_unsupported_key_type_input_routes_requirement();
+        get_input_route_requirement(RouteVerificationRequirementsType::UnsupportedKeyType);
 
     // Try egister the app with the unsupported key type
     assert!(matches!(
@@ -311,7 +349,8 @@ fn deregister_success() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     // Get input verification requirements for 2 routes
     let two_routes_verification_req = get_two_input_routes_requirements();
@@ -342,7 +381,8 @@ fn deregister_app_not_registered() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     // Try deregister the not registered app
     assert!(matches!(
@@ -358,7 +398,8 @@ fn deregister_unathorized() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     // Get input verification requirements for 2 routes
     let two_routes_verification_req = get_two_input_routes_requirements();
@@ -386,7 +427,8 @@ fn update_success() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     // Get input verification requirements for 2 routes
     let two_routes_verification_req = get_two_input_routes_requirements();
@@ -401,7 +443,8 @@ fn update_success() {
         .is_ok());
 
     // Get route verification requirements for a single route
-    let updated_route_verification_req = get_route_verification_requirement();
+    let updated_route_verification_req =
+        get_route_verification_requirement(RouteVerificationRequirementsType::Supported(None));
 
     // Update the route verification requirements
     assert!(contract
@@ -444,10 +487,12 @@ fn update_app_not_registered() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     // Get route verification requirements for a single route
-    let updated_route_verification_req = get_route_verification_requirement();
+    let updated_route_verification_req =
+        get_route_verification_requirement(RouteVerificationRequirementsType::Supported(None));
 
     // Try update the route verification requirements of the not registered app
     assert!(matches!(
@@ -467,7 +512,8 @@ fn update_unathorized() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     // Get input verification requirements for 2 routes
     let two_routes_verification_req = get_two_input_routes_requirements();
@@ -482,7 +528,8 @@ fn update_unathorized() {
         .is_ok());
 
     // Get route verification requirements for a single route
-    let updated_route_verification_req = get_route_verification_requirement();
+    let updated_route_verification_req =
+        get_route_verification_requirement(RouteVerificationRequirementsType::Supported(None));
 
     // Update the route verification requirements using unathorized caller address
     assert!(matches!(
@@ -502,7 +549,8 @@ fn update_serde_json_error() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     // Get input verification requirements for 2 routes
     let two_routes_verification_req = get_two_input_routes_requirements();
@@ -517,7 +565,8 @@ fn update_serde_json_error() {
         .is_ok());
 
     // Get route verification requirements for a single route
-    let mut updated_route_verification_req = get_route_verification_requirement();
+    let mut updated_route_verification_req =
+        get_route_verification_requirement(RouteVerificationRequirementsType::Supported(None));
 
     // Try update the route verification requirements with invalid presentation request
     updated_route_verification_req.presentation_request = Binary::from(b"invalid");
@@ -539,10 +588,12 @@ fn update_unsupported_key_type() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) = instantiate_verifier_contract(&app);
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported(None));
 
     // Get route verification requirements for a single route
-    let route_verification_req = get_route_verification_requirement();
+    let route_verification_req =
+        get_route_verification_requirement(RouteVerificationRequirementsType::Supported(None));
 
     // Register the app with the two routes
     assert!(contract
@@ -558,7 +609,7 @@ fn update_unsupported_key_type() {
 
     // Get an unsupported input verification requirements for a single route
     let unsupported_key_type_route_verification_requirement =
-        get_unsupported_key_type_input_routes_requirement();
+        get_input_route_requirement(RouteVerificationRequirementsType::UnsupportedKeyType);
 
     // Try update the route verification requirements with unsupported key type
     assert!(matches!(
