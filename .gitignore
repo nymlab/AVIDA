@@ -3,3 +3,4 @@
 
 # Built wasm files
 artifacts/
+.vscode
