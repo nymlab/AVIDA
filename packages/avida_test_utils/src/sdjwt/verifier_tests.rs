@@ -31,14 +31,11 @@ pub struct Claims {
 }
 
 #[test]
-fn basic() {
+fn instantiate_success() {
     let app = App::default();
 
     // Instantiate verifier contract with some predefined parameters
     let (contract, fx_route_verification_req) = instantiate_verifier_contract(&app);
-
-    // Get an sdjwt issuer instance with some ed25519 predefined private key, read from a file
-    let mut fx_issuer = issuer();
 
     let registered_routes = contract
         .get_routes(FIRST_CALLER_APP_ADDR.to_string())
@@ -71,8 +68,19 @@ fn basic() {
         serde_json::from_str(&route_verification_key).unwrap();
 
     assert_eq!(route_verification_jwk, issuer_jwk());
+}
 
+#[test]
+fn verify_success() {
+    let app: App<_> = App::default();
+
+    // Instantiate verifier contract with some predefined parameters
+    let (contract, _) = instantiate_verifier_contract(&app);
+    
     let claims = claims("Alice", 30, true, 2021);
+
+    // Get an sdjwt issuer instance with some ed25519 predefined private key, read from a file
+    let mut fx_issuer = issuer();
     let sdjwt = fx_issuer
         .issue_sd_jwt(
             claims.clone(),
