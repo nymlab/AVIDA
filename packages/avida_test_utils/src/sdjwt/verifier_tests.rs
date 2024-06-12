@@ -14,7 +14,7 @@ use sd_jwt_rs::issuer;
 use sd_jwt_rs::{SDJWTHolder, SDJWTSerializationFormat};
 
 use crate::sdjwt::fixtures::{
-    FIRST_CALLER_APP_ADDR, FX_ROUTE_ID, OWNER_ADDR, SECOND_CALLER_APP_ADDR, SECOND_ROUTE_ID,
+    FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID, OWNER_ADDR, SECOND_CALLER_APP_ADDR, SECOND_ROUTE_ID,
     THIRD_ROUTE_ID,
 };
 
@@ -46,10 +46,10 @@ fn basic() {
 
     // Ensure that app is registered with the expected routes and requirements
     assert_eq!(registered_routes.len(), 1);
-    assert_eq!(registered_routes.first().unwrap(), &FX_ROUTE_ID);
+    assert_eq!(registered_routes.first().unwrap(), &FIRST_ROUTE_ID);
 
     let registered_req = contract
-        .get_route_requirements(FIRST_CALLER_APP_ADDR.to_string(), FX_ROUTE_ID)
+        .get_route_requirements(FIRST_CALLER_APP_ADDR.to_string(), FIRST_ROUTE_ID)
         .unwrap();
 
     assert_eq!(
@@ -63,7 +63,7 @@ fn basic() {
     );
 
     let route_verification_key = contract
-        .get_route_verification_key(FIRST_CALLER_APP_ADDR.to_string(), FX_ROUTE_ID)
+        .get_route_verification_key(FIRST_CALLER_APP_ADDR.to_string(), FIRST_ROUTE_ID)
         .unwrap()
         .unwrap();
 
@@ -98,7 +98,7 @@ fn basic() {
     let resp = contract
         .verify(
             Binary::from(presentation.as_bytes()),
-            FX_ROUTE_ID,
+            FIRST_ROUTE_ID,
             Some(FIRST_CALLER_APP_ADDR.to_string()),
         )
         .call(FIRST_CALLER_APP_ADDR)
