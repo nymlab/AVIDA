@@ -342,13 +342,18 @@ impl SdjwtVerifier<'_> {
             req_map.remove(&route_id);
         }
 
-        // Save the updated trust data sources and route requirements
-        self.app_trust_data_source
-            .save(storage, app_addr, &data_sources)?;
-        self.app_routes_requirements
-            .save(storage, app_addr, &req_map)?;
+        if data_sources.is_empty() && req_map.is_empty() {
+            // If there are no more routes, deregister the app
+            self._deregister(storage, app_addr)
+        } else {
+            // Save the updated trust data sources and route requirements
+            self.app_trust_data_source
+                .save(storage, app_addr, &data_sources)?;
+            self.app_routes_requirements
+                .save(storage, app_addr, &req_map)?;
 
-        Ok(response)
+            Ok(response)
+        }
     }
 
     /// Creates a verification request for specified app addr and route id and provided route criteria
