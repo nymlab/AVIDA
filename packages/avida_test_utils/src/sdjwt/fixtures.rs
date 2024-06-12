@@ -2,6 +2,8 @@ use jsonwebtoken::EncodingKey;
 use sd_jwt_rs::SDJWTIssuer;
 use serde_json::Value;
 use std::{fs, path::PathBuf};
+use sd_jwt_rs::issuer;
+use sd_jwt_rs::{SDJWTHolder, SDJWTSerializationFormat};
 
 use cosmwasm_std::Binary;
 
@@ -77,6 +79,33 @@ pub fn claims(name: &str, age: u8, active: bool, joined_at: u16) -> Value {
         "active": active,
         "joined_at": joined_at
     })
+}
+
+/// Make a presentation from the claims provided
+pub fn make_presentation(claims: Value) -> String {
+
+    // Get an sdjwt issuer instance with some ed25519 predefined private key, read from a file
+    let mut fx_issuer = issuer();
+    let sdjwt = fx_issuer
+        .issue_sd_jwt(
+            claims.clone(),
+            issuer::ClaimsForSelectiveDisclosureStrategy::AllLevels,
+            None,
+            false,
+            SDJWTSerializationFormat::Compact,
+        )
+        .unwrap();
+
+    let mut claims_to_disclosure = claims;
+    claims_to_disclosure["age"] = Value::Bool(true);
+    claims_to_disclosure["active"] = Value::Bool(true);
+    claims_to_disclosure["joined_at"] = Value::Bool(true);
+    let c = claims_to_disclosure.as_object().unwrap().clone();
+
+    let mut holder = SDJWTHolder::new(sdjwt, SDJWTSerializationFormat::Compact).unwrap();
+    holder
+        .create_presentation(c, None, None, None, None)
+        .unwrap()
 }
 
 /// Is used to get route verification requirements
