@@ -1,5 +1,5 @@
 use avida_cheqd::types::ResourceReqPacket;
-use cosmwasm_std::Storage;
+use cosmwasm_std::{ensure, Storage};
 
 use std::collections::HashMap;
 
@@ -206,6 +206,12 @@ impl SdjwtVerifier<'_> {
         route_id: RouteId,
         app_addr: &str,
     ) -> Result<Response, SdjwtVerifierError> {
+        // Ensure the presentation is not too large
+        ensure!(
+            presentation.len() <= self.max_presentation_len.load(deps.storage)?,
+            SdjwtVerifierError::PresentationTooLarge
+        );
+
         // If app is registered, load the requirementes for the given route_id
         let requirements = self
             .app_routes_requirements
