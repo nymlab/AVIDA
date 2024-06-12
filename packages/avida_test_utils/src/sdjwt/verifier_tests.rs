@@ -21,7 +21,7 @@ use crate::sdjwt::fixtures::{
 use super::fixtures::{
     claims, get_route_verification_requirement, get_two_input_routes_requirements,
     get_unsupported_key_type_input_routes_requirement, instantiate_verifier_contract, issuer,
-    issuer_jwk,
+    issuer_jwk, MAX_PRESENTATION_LEN,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -114,6 +114,52 @@ fn verify_success() {
 
     println!("resp: {:?}", resp);
 }
+
+#[test]
+fn verify_presentation_too_large() {
+    let app: App<_> = App::default();
+
+    // Instantiate verifier contract with some predefined parameters
+    let (contract, _) = instantiate_verifier_contract(&app);
+
+    let claims = claims(&"Very long name".repeat(MAX_PRESENTATION_LEN), 30, true, 2021);
+
+    // Get an sdjwt issuer instance with some ed25519 predefined private key, read from a file
+    let mut fx_issuer = issuer();
+    let sdjwt = fx_issuer
+        .issue_sd_jwt(
+            claims.clone(),
+            issuer::ClaimsForSelectiveDisclosureStrategy::AllLevels,
+            None,
+            false,
+            SDJWTSerializationFormat::Compact,
+        )
+        .unwrap();
+
+    let mut claims_to_disclosure = claims.clone();
+    claims_to_disclosure["age"] = Value::Bool(true);
+    claims_to_disclosure["active"] = Value::Bool(true);
+    claims_to_disclosure["joined_at"] = Value::Bool(true);
+    let c = claims_to_disclosure.as_object().unwrap().clone();
+
+    let mut holder = SDJWTHolder::new(sdjwt, SDJWTSerializationFormat::Compact).unwrap();
+    let presentation = holder
+        .create_presentation(c, None, None, None, None)
+        .unwrap();
+
+    // Try verify too large presentation
+    assert!(matches!(
+        contract
+        .verify(
+            Binary::from(presentation.as_bytes()),
+            FIRST_ROUTE_ID,
+            Some(FIRST_CALLER_APP_ADDR.to_string()),
+        )
+        .call(FIRST_CALLER_APP_ADDR),
+        Err(SdjwtVerifierError::PresentationTooLarge)
+    ),);
+}
+
 
 #[test]
 fn register_success() {
