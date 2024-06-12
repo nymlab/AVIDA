@@ -8,10 +8,7 @@ use avida_common::{
 use avida_sdjwt_verifier::{contract::sv::mt::SdjwtVerifierProxy, errors::SdjwtVerifierError};
 use serde::{Deserialize, Serialize};
 
-use josekit::{self, Value};
-
-use sd_jwt_rs::issuer;
-use sd_jwt_rs::{SDJWTHolder, SDJWTSerializationFormat};
+use josekit::{self};
 
 use crate::sdjwt::fixtures::{
     FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID, OWNER_ADDR, SECOND_CALLER_APP_ADDR, SECOND_ROUTE_ID,
@@ -19,8 +16,8 @@ use crate::sdjwt::fixtures::{
 };
 
 use super::fixtures::{
-    claims, get_route_verification_requirement, get_two_input_routes_requirements,
-    get_unsupported_key_type_input_routes_requirement, instantiate_verifier_contract, issuer,
+    claims, get_route_verification_requirement, get_two_input_routes_requirements, make_presentation,
+    get_unsupported_key_type_input_routes_requirement, instantiate_verifier_contract,
     issuer_jwk, MAX_PRESENTATION_LEN,
 };
 
@@ -77,31 +74,10 @@ fn verify_success() {
     // Instantiate verifier contract with some predefined parameters
     let (contract, _) = instantiate_verifier_contract(&app);
     
+    // Make a presentation with some claims
     let claims = claims("Alice", 30, true, 2021);
 
-    // Get an sdjwt issuer instance with some ed25519 predefined private key, read from a file
-    let mut fx_issuer = issuer();
-    let sdjwt = fx_issuer
-        .issue_sd_jwt(
-            claims.clone(),
-            issuer::ClaimsForSelectiveDisclosureStrategy::AllLevels,
-            None,
-            false,
-            SDJWTSerializationFormat::Compact,
-        )
-        .unwrap();
-
-    let mut claims_to_disclosure = claims.clone();
-    claims_to_disclosure["name"] = Value::Bool(false);
-    claims_to_disclosure["age"] = Value::Bool(true);
-    claims_to_disclosure["active"] = Value::Bool(true);
-    claims_to_disclosure["joined_at"] = Value::Bool(true);
-    let c = claims_to_disclosure.as_object().unwrap().clone();
-
-    let mut holder = SDJWTHolder::new(sdjwt, SDJWTSerializationFormat::Compact).unwrap();
-    let presentation = holder
-        .create_presentation(c, None, None, None, None)
-        .unwrap();
+    let presentation = make_presentation(claims);
 
     let resp = contract
         .verify(
@@ -122,30 +98,10 @@ fn verify_presentation_too_large() {
     // Instantiate verifier contract with some predefined parameters
     let (contract, _) = instantiate_verifier_contract(&app);
 
+    // Make a presentation with a too large claims
     let claims = claims(&"Very long name".repeat(MAX_PRESENTATION_LEN), 30, true, 2021);
 
-    // Get an sdjwt issuer instance with some ed25519 predefined private key, read from a file
-    let mut fx_issuer = issuer();
-    let sdjwt = fx_issuer
-        .issue_sd_jwt(
-            claims.clone(),
-            issuer::ClaimsForSelectiveDisclosureStrategy::AllLevels,
-            None,
-            false,
-            SDJWTSerializationFormat::Compact,
-        )
-        .unwrap();
-
-    let mut claims_to_disclosure = claims.clone();
-    claims_to_disclosure["age"] = Value::Bool(true);
-    claims_to_disclosure["active"] = Value::Bool(true);
-    claims_to_disclosure["joined_at"] = Value::Bool(true);
-    let c = claims_to_disclosure.as_object().unwrap().clone();
-
-    let mut holder = SDJWTHolder::new(sdjwt, SDJWTSerializationFormat::Compact).unwrap();
-    let presentation = holder
-        .create_presentation(c, None, None, None, None)
-        .unwrap();
+    let presentation = make_presentation(claims);
 
     // Try verify too large presentation
     assert!(matches!(
@@ -157,6 +113,31 @@ fn verify_presentation_too_large() {
         )
         .call(FIRST_CALLER_APP_ADDR),
         Err(SdjwtVerifierError::PresentationTooLarge)
+    ),);
+}
+
+#[test]
+fn verify_route_not_registered() {
+    let app: App<_> = App::default();
+
+    // Instantiate verifier contract with some predefined parameters
+    let (contract, _) = instantiate_verifier_contract(&app);
+
+    // Make a presentation with some claims
+    let claims = claims("Alice", 30, true, 2021);
+
+    let presentation = make_presentation(claims);
+
+    // Try verify verify presentation with not registered route
+    assert!(matches!(
+        contract
+        .verify(
+            Binary::from(presentation.as_bytes()),
+            SECOND_ROUTE_ID,
+            Some(FIRST_CALLER_APP_ADDR.to_string()),
+        )
+        .call(FIRST_CALLER_APP_ADDR),
+        Err(SdjwtVerifierError::RouteNotRegistered)
     ),);
 }
 
