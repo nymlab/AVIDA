@@ -2,12 +2,14 @@
 name = "avida-example"
 version = "0.1.0"
 edition = "2021"
+authors = ["andrew <andrew@nymlab.it>"]
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
+doctest = false
 
 [dependencies]
-avida-common = { path = "../common/"}
+avida-common = { path = "../../packages/common/"}
 cosmwasm-schema = { workspace = true }
 schemars = { workspace = true }
 cosmwasm-std = { workspace = true }
@@ -18,7 +20,7 @@ cw-utils = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-avida-sdjwt-verifier = { path = "../../contracts/sdjwt-verifier/"}
+avida-sdjwt-verifier = { path = "../sdjwt-verifier/"}
 serde_json = "1.0.116"
 josekit = "0.8.6"
 sd-jwt-rs = "0.7.0"
