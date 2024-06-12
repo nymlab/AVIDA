@@ -9,7 +9,6 @@ use cosmwasm_std::Binary;
 
 use sylvia::multitest::{App, Proxy};
 
-use avida_common::types::TrustRegistry;
 use avida_common::types::{
     InputRoutesRequirements, RouteVerificationRequirements, VerificationSource,
 };
@@ -36,7 +35,7 @@ pub const MAX_PRESENTATION_LEN: usize = 3000;
 
 /// Is used to test different cases for route verification requirements
 pub enum RouteVerificationRequirementsType {
-    Supported(Option<TrustRegistry>),
+    Supported,
     UnsupportedKeyType,
 }
 
@@ -119,11 +118,8 @@ pub fn make_route_verification_requirements(
     route_verification_requirements_type: RouteVerificationRequirementsType,
 ) -> RouteVerificationRequirements {
     let re = serde_json::to_string(&presentation_req).unwrap();
-    let fx_jwk = match route_verification_requirements_type {
-        RouteVerificationRequirementsType::Supported(Some(_)) => {
-            "fixtures/test_ed25519_private.pem".to_string()
-        }
-        RouteVerificationRequirementsType::Supported(None) => {
+    let data_or_location = match route_verification_requirements_type {
+        RouteVerificationRequirementsType::Supported => {
             serde_json::to_string(&issuer_jwk()).unwrap()
         }
         RouteVerificationRequirementsType::UnsupportedKeyType => {
@@ -135,7 +131,7 @@ pub fn make_route_verification_requirements(
     RouteVerificationRequirements {
         verification_source: VerificationSource {
             source: None,
-            data_or_location: Binary::from(fx_jwk.as_bytes()),
+            data_or_location: Binary::from(data_or_location.as_bytes()),
         },
         presentation_request: Binary::from(re.as_bytes()),
     }
@@ -165,14 +161,14 @@ pub fn get_two_input_routes_requirements() -> Vec<InputRoutesRequirements> {
             route_id: SECOND_ROUTE_ID,
             requirements: make_route_verification_requirements(
                 first_presentation_req,
-                RouteVerificationRequirementsType::Supported(Option::None),
+                RouteVerificationRequirementsType::Supported,
             ),
         },
         InputRoutesRequirements {
             route_id: THIRD_ROUTE_ID,
             requirements: make_route_verification_requirements(
                 second_presentation_req,
-                RouteVerificationRequirementsType::Supported(Option::None),
+                RouteVerificationRequirementsType::Supported,
             ),
         },
     ]
