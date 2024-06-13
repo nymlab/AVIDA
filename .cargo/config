@@ -1,2 +1,2 @@
 [alias]
-cw-wasm = "build --release --target wasm32-unknown-unknown --package example-plugin"
+cw-wasm = "build --release --lib --target wasm32-unknown-unknown --package avida-sdjwt-verifier"

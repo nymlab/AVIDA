@@ -32,8 +32,10 @@ serde = {workspace = true}
 serde-json-wasm = {workspace = true}
 cw2 = { workspace = true }
 cw-utils= { workspace = true }
-sd-jwt-rs = { git = "https://github.com/nymlab/sd-jwt-rust", rev = "4c6719b7e35", default-features = false, features = ["no_rand"]}
-jsonwebtoken = { git = "https://github.com/nymlab/jsonwebtoken", rev = "f65a5d858ba0", default-features = false, features = ["no_rand"] }
+#sd-jwt-rs = { git = "https://github.com/nymlab/sd-jwt-rust", rev = "4c6719b7e35", default-features = false, features = ["no_rand"]}
+#jsonwebtoken = { git = "https://github.com/nymlab/jsonwebtoken", rev = "f65a5d858ba0", default-features = false, features = ["no_rand"] }
+sd-jwt-rs = { path = "../../../platform-d/sd-jwt-rust", default-features = false, features = ["no_rand"]}
+jsonwebtoken = { path = "../../../platform-d/jsonwebtoken",  default-features = false, features = ["no_rand"] }
 thiserror = { workspace = true }
 serde_json = "1.0.116"
 
