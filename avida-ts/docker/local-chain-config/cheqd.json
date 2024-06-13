@@ -12,6 +12,7 @@
     "timeout": "20s",
     "output-format": "json",
     "sign-mode": "direct",
-    "denom": "ncheq"
+    "denom": "ncheq",
+    "client-rpc-endpoint": "http://localhost:26657"
   }
 }

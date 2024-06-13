@@ -74,14 +74,13 @@ version = "0.1.0"
 dependencies = [
  "avida-cheqd",
  "avida-common",
- "base64 0.21.7",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
- "jsonwebtoken 9.3.0 (git+https://github.com/nymlab/jsonwebtoken?rev=1e5ebdc802f0f13)",
- "sd-jwt-rs 0.7.0 (git+https://github.com/nymlab/sd-jwt-rust?rev=c97e740d25fea)",
+ "jsonwebtoken 9.3.0 (git+https://github.com/nymlab/jsonwebtoken?rev=f65a5d858ba0)",
+ "sd-jwt-rs 0.7.0 (git+https://github.com/nymlab/sd-jwt-rust?rev=4c6719b7e35)",
  "serde",
  "serde-json-wasm 0.5.1",
  "serde_json",
@@ -737,16 +736,14 @@ dependencies = [
 [[package]]
 name = "jsonwebtoken"
 version = "9.3.0"
-source = "git+https://github.com/nymlab/jsonwebtoken?rev=1e5ebdc802f0f13#1e5ebdc802f0f130e387279e9fba0352e1683b6b"
+source = "git+https://github.com/nymlab/jsonwebtoken?rev=f65a5d858ba0#f65a5d858ba042f3a7d55016b2550492cd1b80e7"
 dependencies = [
  "base64 0.21.7",
  "ed25519-dalek",
  "js-sys",
- "pem",
  "ring",
  "serde",
  "serde_json",
- "simple_asn1",
 ]
 
 [[package]]
@@ -1197,11 +1194,11 @@ dependencies = [
 [[package]]
 name = "sd-jwt-rs"
 version = "0.7.0"
-source = "git+https://github.com/nymlab/sd-jwt-rust?rev=c97e740d25fea#c97e740d25feaa072b63eeeaa2e1d4d3fa2d85b1"
+source = "git+https://github.com/nymlab/sd-jwt-rust?rev=4c6719b7e35#4c6719b7e35a54c65ef4de3bae90f41b3381add4"
 dependencies = [
  "base64 0.21.7",
  "hmac",
- "jsonwebtoken 9.3.0 (git+https://github.com/nymlab/jsonwebtoken?rev=1e5ebdc802f0f13)",
+ "jsonwebtoken 9.3.0 (git+https://github.com/nymlab/jsonwebtoken?rev=f65a5d858ba0)",
  "log",
  "serde",
  "serde_json",

@@ -1,4 +1,5 @@
-import { MnemonicWallet } from "cosmes/wallet";
+import { MnemonicWallet, type UnsignedTx } from "cosmes/wallet";
+
 import {
   MsgStoreCode,
   MsgInstantiateContract,
@@ -18,26 +19,26 @@ interface ChainConfig {
     "rpc-addr": string;
     denom: string;
     "gas-prices": string;
+    "client-rpc-endpoint": string;
   };
 }
 
-export async function main(): Promise<void> {
-  // Neutron chain config in ../../../../docker/local-chain-config/neutron.json
+export async function deploy(
+  chainName: string = "neutron",
+  deployer_mnemonic: string,
+): Promise<void> {
   const chainConfig = JSON.parse(
-    fs.readFileSync("./docker/local-chain-config/neutron.json", "utf-8"),
+    fs.readFileSync(`./docker/local-chain-config/${chainName}.json`, "utf-8"),
   ) as ChainConfig;
 
-  console.log("chainConfig: ", chainConfig);
-  console.log("chainConfig: ", chainConfig.value["account-prefix"]);
-  console.log("chainConfig: ", chainConfig.value["chain-id"]);
-  console.log("chainConfig: ", chainConfig.value["rpc-addr"]);
+  console.log("Chain config:", chainConfig);
 
   // Example usage for Osmosis chain
   const deployer = new MnemonicWallet({
-    mnemonic: DEMO_MNEMONIC_1,
+    mnemonic: deployer_mnemonic,
     bech32Prefix: chainConfig.value["account-prefix"],
     chainId: chainConfig.value["chain-id"],
-    rpc: chainConfig.value["rpc-addr"],
+    rpc: chainConfig.value["client-rpc-endpoint"],
     gasPrice: {
       amount: "0.0025",
       denom: chainConfig.value.denom,
@@ -45,13 +46,32 @@ export async function main(): Promise<void> {
     coinType: 118, // optional (default: 118)
     index: 0, // optional (default: 0)
   });
-  console.log("Address:", deployer.address); // prints the bech32 address
+  console.log("Deployer Addr:", deployer.address); // prints the bech32 address
 
-  // Sign an arbitrary message
-  const { signature } = await deployer.signArbitrary("Hello from CosmES!");
-  console.log("Signature:", signature);
+  // Store wasm MsgStoreCode
+  const wasm: Buffer = fs.readFileSync(
+    "../artifacts/avida_sdjwt_verifier-aarch64.wasm",
+  );
+  const wasmByteCode = new Uint8Array(wasm.buffer);
 
-  // Broadcast a transaction
-  // const res = await wallet.broadcastTxSync( ... );
-  // console.log("Tx result:", res);
+  console.log("length of wasmByteCode:", wasmByteCode.length);
+
+  const msg = new MsgStoreCode({
+    wasmByteCode,
+    sender: deployer.address,
+  });
+
+  const tx: UnsignedTx = {
+    msgs: [msg],
+    memo: "AVIDA: store code",
+  };
+
+  const fee = await deployer.estimateFee(tx);
+  console.log("Tx fee:", fee);
+
+  const txHash = await deployer.broadcastTx(tx, fee);
+  console.log("Tx hash:", txHash);
+
+  const { txResponse } = await deployer.pollTx(txHash);
+  console.log("Tx response:", txResponse);
 }

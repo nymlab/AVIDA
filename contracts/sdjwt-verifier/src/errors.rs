@@ -21,8 +21,6 @@ pub enum SdjwtVerifierError {
     Std(#[from] StdError),
     #[error("data deserialization error")]
     DataDeserialization,
-    #[error("base64 decode error")]
-    Base64DecodeError,
     #[error("Presentation Too Large")]
     PresentationTooLarge,
     #[error("Verified Claims should be an Object Map")]

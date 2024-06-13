@@ -16,7 +16,7 @@ pnpm run relayer-config
 Then we can bring up docker containers:
 
 ```bash
-docker-compose -f docker/docker-compose.yml up -d
+docker-compose -f docker/docker-compose.local.yaml up -d
 ```
 
 ## Deploy contracts

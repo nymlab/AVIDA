@@ -12,6 +12,7 @@
     "timeout": "20s",
     "output-format": "json",
     "sign-mode": "direct",
-    "denom": "untrn"
+    "denom": "untrn",
+    "client-rpc-endpoint": "http://localhost:25557"
   }
 }
