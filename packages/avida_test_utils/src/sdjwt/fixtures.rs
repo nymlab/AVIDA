@@ -39,6 +39,12 @@ pub enum RouteVerificationRequirementsType {
     UnsupportedKeyType,
 }
 
+/// IS used to test different cases for presentation verification
+pub enum PresentationVerificationType {
+    Success,
+    RequiredClaimsNotSatisfied,
+}
+
 // Keys generation
 // ```sh
 // # for Ed25519
@@ -86,8 +92,11 @@ pub fn claims(name: &str, age: u8, active: bool, joined_at: u16) -> Value {
     })
 }
 
-/// Make a presentation from the claims provided
-pub fn make_presentation(claims: Value) -> String {
+/// Make a presentation corresponding to the claims provided and the presentation verification error type
+pub fn make_presentation(
+    claims: Value,
+    presentation_verification_type: PresentationVerificationType,
+) -> String {
     // Get an sdjwt issuer instance with some ed25519 predefined private key, read from a file
     let mut fx_issuer = issuer();
     let sdjwt = fx_issuer
@@ -104,6 +113,14 @@ pub fn make_presentation(claims: Value) -> String {
     claims_to_disclosure["age"] = Value::Bool(true);
     claims_to_disclosure["active"] = Value::Bool(true);
     claims_to_disclosure["joined_at"] = Value::Bool(true);
+
+    match presentation_verification_type {
+        PresentationVerificationType::RequiredClaimsNotSatisfied => {
+            claims_to_disclosure["age"] = Value::Bool(false);
+        }
+        _ => (),
+    }
+
     let c = claims_to_disclosure.as_object().unwrap().clone();
 
     let mut holder = SDJWTHolder::new(sdjwt, SDJWTSerializationFormat::Compact).unwrap();
