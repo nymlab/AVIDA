@@ -1,4 +1,4 @@
-use cosmwasm_std::Binary;
+use cosmwasm_std::{Binary, from_json};
 
 use sylvia::multitest::App;
 
@@ -90,7 +90,8 @@ fn verify_success() {
         .call(FIRST_CALLER_APP_ADDR)
         .unwrap();
 
-    println!("resp: {:?}", resp);
+    let validate_result: bool = from_json(resp.data.unwrap()).unwrap();
+    assert!(validate_result);
 }
 
 #[test]
