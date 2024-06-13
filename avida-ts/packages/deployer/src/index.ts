@@ -50,7 +50,7 @@ export async function deploy(
 
   // Store wasm MsgStoreCode
   const wasm: Buffer = fs.readFileSync(
-    "../artifacts/avida_sdjwt_verifier-aarch64.wasm",
+    "../artifacts/avida_sdjwt_verifier.wasm",
   );
   const wasmByteCode = new Uint8Array(wasm.buffer);
 

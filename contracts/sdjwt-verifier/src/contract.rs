@@ -24,7 +24,7 @@ use sylvia::{
     types::{InstantiateCtx, QueryCtx},
 };
 
-use jsonwebtoken::jwk::Jwk;
+use sd_jwt_rs::Jwk;
 use std::collections::HashMap;
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");

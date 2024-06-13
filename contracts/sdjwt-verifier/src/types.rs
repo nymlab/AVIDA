@@ -5,7 +5,8 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::from_json;
 use cosmwasm_std::Binary;
 use cosmwasm_std::SubMsg;
-use jsonwebtoken::jwk::Jwk;
+use sd_jwt_rs::Jwk;
+//use sd_jwt_rs::Jwk;
 use serde::{Deserialize, Serialize};
 
 #[cw_serde]

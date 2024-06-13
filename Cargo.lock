@@ -79,8 +79,7 @@ dependencies = [
  "cw-storage-plus",
  "cw-utils",
  "cw2",
- "jsonwebtoken 9.3.0",
- "sd-jwt-rs 0.7.0",
+ "sd-jwt-rs 0.7.0 (git+https://github.com/nymlab/sd-jwt-rust?rev=fe246a8436172bf)",
  "serde",
  "serde-json-wasm 0.5.1",
  "serde_json",
@@ -356,7 +355,6 @@ dependencies = [
  "platforms",
  "rustc_version",
  "subtle",
- "zeroize",
 ]
 
 [[package]]
@@ -508,7 +506,6 @@ version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115531babc129696a58c64a4fef0a8bf9e9698629fb97e9e40767d235cfbcd53"
 dependencies = [
- "pkcs8",
  "signature",
 ]
 
@@ -520,10 +517,8 @@ checksum = "4a3daa8e81a3963a60642bcc1f90a670680bd4a77535faa384e9d1c79d620871"
 dependencies = [
  "curve25519-dalek 4.1.2",
  "ed25519",
- "serde",
  "sha2 0.10.8",
  "subtle",
- "zeroize",
 ]
 
 [[package]]
@@ -745,18 +740,6 @@ dependencies = [
 [[package]]
 name = "jsonwebtoken"
 version = "9.3.0"
-dependencies = [
- "base64 0.21.7",
- "ed25519-dalek",
- "js-sys",
- "ring",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "jsonwebtoken"
-version = "9.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9ae10193d25051e74945f1ea2d0b42e03cc3b890f7e4cc5faa44997d808193f"
 dependencies = [
@@ -767,6 +750,18 @@ dependencies = [
  "serde",
  "serde_json",
  "simple_asn1",
+]
+
+[[package]]
+name = "jsonwebtoken"
+version = "9.3.0"
+source = "git+https://github.com/nymlab/jsonwebtoken?rev=096c5bc97023733a2b8c#096c5bc97023733a2b8cc69da730098cdea78005"
+dependencies = [
+ "base64 0.21.7",
+ "ed25519-dalek",
+ "js-sys",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1179,10 +1174,14 @@ dependencies = [
 [[package]]
 name = "sd-jwt-rs"
 version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa8849dd3f125c4f7b38d26f9999973335d21b841b55ae779bcdfefc161ca7ac"
 dependencies = [
  "base64 0.21.7",
  "hmac",
- "jsonwebtoken 9.3.0",
+ "jsonwebtoken 9.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log",
+ "rand",
  "serde",
  "serde_json",
  "sha2 0.10.8",
@@ -1193,14 +1192,11 @@ dependencies = [
 [[package]]
 name = "sd-jwt-rs"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa8849dd3f125c4f7b38d26f9999973335d21b841b55ae779bcdfefc161ca7ac"
+source = "git+https://github.com/nymlab/sd-jwt-rust?rev=fe246a8436172bf#fe246a8436172bf656e8dd25d38594775e5ff1c7"
 dependencies = [
  "base64 0.21.7",
  "hmac",
- "jsonwebtoken 9.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "log",
- "rand",
+ "jsonwebtoken 9.3.0 (git+https://github.com/nymlab/jsonwebtoken?rev=096c5bc97023733a2b8c)",
  "serde",
  "serde_json",
  "sha2 0.10.8",
