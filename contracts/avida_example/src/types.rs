@@ -13,20 +13,27 @@ pub enum RegisterRequirement {
     Food {requirements: RouteVerificationRequirements},
 }
 
+pub type OrderSubject = String;
+
 #[cw_serde]
 pub struct GiveMeSomeDrink {
-    pub kind: String,
+    pub kind: OrderSubject,
     pub proof: VerfiablePresentation,
 }
 
 #[cw_serde]
 pub struct GiveMeSomeFood {
-    pub kind: String,
+    pub kind: OrderSubject,
     pub proof: VerfiablePresentation,
 }
 
+// Query messages
 #[cw_serde]
-pub enum ExecuteMsg {
-    GiveMeSomeDrink(GiveMeSomeDrink),
-    GiveMeSomeFood(GiveMeSomeFood),
+pub struct GetVerifierResponse {
+    pub verifier: String
+}
+
+#[cw_serde]
+pub struct GetRegisteredRequirementResponse {
+    pub requirements: RouteVerificationRequirements
 }

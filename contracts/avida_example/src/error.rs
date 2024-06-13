@@ -10,11 +10,17 @@ pub enum ContractError {
     #[error("{0}")]
     ParseReplyError(#[from] ParseReplyError),
 
-    #[error("VerificationProcessError")]
-    VerificationProcessError,
+    #[error("{0}")]
+    RegistrationError(String),
+
+    #[error("{0}")]
+    VerificationProcessError(String),
+
+    #[error("{0}")]
+    GetRouteRequirementsError(String),
 
     #[error("InvalidRouteId")]
-    InvalidRouteId
+    InvalidRouteId,
 }
 
 impl From<ContractError> for cosmwasm_std::StdError {
