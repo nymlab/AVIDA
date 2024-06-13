@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, from_json};
+use cosmwasm_std::{from_json, Binary};
 
 use sylvia::multitest::App;
 
@@ -18,7 +18,8 @@ use crate::sdjwt::fixtures::{
 use super::fixtures::{
     claims, get_input_route_requirement, get_route_verification_requirement,
     get_two_input_routes_requirements, instantiate_verifier_contract, issuer_jwk,
-    make_presentation, RouteVerificationRequirementsType, MAX_PRESENTATION_LEN,
+    make_presentation, PresentationVerificationType, RouteVerificationRequirementsType,
+    MAX_PRESENTATION_LEN,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -69,7 +70,7 @@ fn instantiate_success() {
 }
 
 #[test]
-fn verify_success() {
+fn verify_success_validate_success() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
@@ -79,7 +80,7 @@ fn verify_success() {
     // Make a presentation with some claims
     let claims = claims("Alice", 30, true, 2021);
 
-    let presentation = make_presentation(claims);
+    let presentation = make_presentation(claims, PresentationVerificationType::Success);
 
     let resp = contract
         .verify(
@@ -92,6 +93,82 @@ fn verify_success() {
 
     let validate_result: bool = from_json(resp.data.unwrap()).unwrap();
     assert!(validate_result);
+}
+
+#[test]
+fn verify_success_validate_fails() {
+    let app: App<_> = App::default();
+
+    // Instantiate verifier contract with some predefined parameters
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
+
+    // Make a presentation with some claims that does not match presentation requirements
+    let claims = claims("Alice", 30, true, 2014);
+
+    let presentation = make_presentation(claims, PresentationVerificationType::Success);
+
+    let resp = contract
+        .verify(
+            Binary::from(presentation.as_bytes()),
+            FIRST_ROUTE_ID,
+            Some(FIRST_CALLER_APP_ADDR.to_string()),
+        )
+        .call(FIRST_CALLER_APP_ADDR)
+        .unwrap();
+
+    let validate_result: bool = from_json(resp.data.unwrap()).unwrap();
+    assert!(!validate_result);
+}
+
+#[test]
+fn verify_required_claims_not_satisfied() {
+    let app: App<_> = App::default();
+
+    // Instantiate verifier contract with some predefined parameters
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
+
+    // Make a presentation with a too large claims
+    let claims = claims("Alice", 30, true, 2021);
+
+    let presentation = make_presentation(
+        claims,
+        PresentationVerificationType::RequiredClaimsNotSatisfied,
+    );
+
+    // Try verify too large presentation
+    assert!(matches!(
+        contract
+            .verify(
+                Binary::from(presentation.as_bytes()),
+                FIRST_ROUTE_ID,
+                Some(FIRST_CALLER_APP_ADDR.to_string()),
+            )
+            .call(FIRST_CALLER_APP_ADDR),
+        Err(SdjwtVerifierError::RequiredClaimsNotSatisfied)
+    ),);
+}
+
+#[test]
+fn verify_without_sdjwt() {
+    let app: App<_> = App::default();
+
+    // Instantiate verifier contract with some predefined parameters
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
+
+    // Try verify presentation without sdjwt
+    assert!(matches!(
+        contract
+            .verify(
+                Binary::from(b""),
+                FIRST_ROUTE_ID,
+                Some(FIRST_CALLER_APP_ADDR.to_string()),
+            )
+            .call(FIRST_CALLER_APP_ADDR),
+        Err(SdjwtVerifierError::SdJwt(_))
+    ));
 }
 
 #[test]
@@ -110,7 +187,7 @@ fn verify_presentation_too_large() {
         2021,
     );
 
-    let presentation = make_presentation(claims);
+    let presentation = make_presentation(claims, PresentationVerificationType::Success);
 
     // Try verify too large presentation
     assert!(matches!(
@@ -136,7 +213,7 @@ fn verify_route_not_registered() {
     // Make a presentation with some claims
     let claims = claims("Alice", 30, true, 2021);
 
-    let presentation = make_presentation(claims);
+    let presentation = make_presentation(claims, PresentationVerificationType::Success);
 
     // Try verify verify presentation with not registered route
     assert!(matches!(
