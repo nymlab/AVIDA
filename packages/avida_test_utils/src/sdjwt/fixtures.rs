@@ -111,7 +111,7 @@ pub fn make_presentation(
         PresentationVerificationType::RequiredClaimsNotSatisfied => {
             claims_to_disclosure["age"] = Value::Bool(false);
         }
-        _ => (),
+        PresentationVerificationType::Success => todo!(),
     }
 
     let c = claims_to_disclosure.as_object().unwrap().clone();
