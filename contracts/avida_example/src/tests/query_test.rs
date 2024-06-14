@@ -19,7 +19,7 @@ fn get_verifier() {
     let contract_restaurant = code_id_restaurant
         .instantiate(verifier_contract_addr.to_string())
         .with_label("Restaurant")
-        .call(&owner.as_str())
+        .call(owner.as_str())
         .unwrap();
 
     let asked_verifier = contract_restaurant
@@ -41,13 +41,13 @@ fn get_route_requirements() {
     let contract_verifier = code_id_verifier
         .instantiate(max_presentation_len, vec![])
         .with_label("Verifier")
-        .call(&owner.as_str())
+        .call(owner.as_str())
         .unwrap();
     
     let contract_restaurant = code_id_restaurant
         .instantiate(contract_verifier.contract_addr.to_string())
         .with_label("Restaurant")
-        .call(&owner.as_str())
+        .call(owner.as_str())
         .unwrap();
     // Setup requirement
     let fx_route_verification_req = setup_requirement();
@@ -56,7 +56,7 @@ fn get_route_requirements() {
             RegisterRequirement::Drink { 
                 requirements: fx_route_verification_req.clone() 
             })
-        .call(&owner.as_str())
+        .call(owner.as_str())
         .unwrap();
     let registered_routes = contract_restaurant
         .get_route_requirements(GIVE_ME_DRINK_ROUTE_ID)

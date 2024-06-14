@@ -17,11 +17,11 @@ use crate::types::InitRegistration;
 
 
 /// Is used to instantiate verifier contract with some predefined parameters
-pub fn instantiate_verifier_contract<'a>(
-    app: &'a App<MtApp>,
+pub fn instantiate_verifier_contract(
+    app: &App<MtApp>,
     route_verification_requirements_type: RouteVerificationRequirementsType,
 ) -> (
-    Proxy<'a, MtApp, SdjwtVerifier<'a>>,
+    Proxy<'_, MtApp, SdjwtVerifier<'_>>,
     RouteVerificationRequirements,
 ) {
     let fx_route_verification_req =

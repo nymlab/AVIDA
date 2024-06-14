@@ -23,13 +23,14 @@ fn register_requirement() {
     let contract_verifier = code_id_verifier
         .instantiate(max_presentation_len, vec![])
         .with_label("Verifier")
-        .call(&owner.as_str())
+        .call(owner.as_str())
         .unwrap();
 
+    let addr = owner.as_str();
     let contract_restaurant = code_id_restaurant
         .instantiate(contract_verifier.contract_addr.to_string())
         .with_label("Restaurant")
-        .call(&owner.as_str())
+        .call(addr)
         .unwrap();
     // Setup requirement
     let fx_route_verification_req = setup_requirement();
@@ -37,7 +38,7 @@ fn register_requirement() {
         .register_requirement(RegisterRequirement::Drink {
             requirements: fx_route_verification_req.clone(),
         })
-        .call(&owner.as_str())
+        .call(owner.as_str())
         .unwrap();
     let registered_routes = contract_verifier
         .get_routes(contract_restaurant.contract_addr.to_string())
