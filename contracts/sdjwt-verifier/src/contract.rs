@@ -19,8 +19,10 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw_storage_plus::{Item, Map};
+#[cfg(not(feature = "library"))]
+use sylvia::entry_points;
 use sylvia::{
-    contract, entry_points, schemars,
+    contract, schemars,
     types::{InstantiateCtx, QueryCtx},
 };
 

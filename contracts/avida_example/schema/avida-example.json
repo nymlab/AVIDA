@@ -1,0 +1,386 @@
+{
+  "contract_name": "avida-example",
+  "contract_version": "0.1.0",
+  "idl_version": "1.0.0",
+  "instantiate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "InstantiateMsg",
+    "type": "object",
+    "required": [
+      "verifier"
+    ],
+    "properties": {
+      "verifier": {
+        "type": "string"
+      }
+    }
+  },
+  "execute": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ExecuteMsg",
+    "anyOf": [
+      {
+        "$ref": "#/definitions/ExecMsg"
+      }
+    ],
+    "definitions": {
+      "Binary": {
+        "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+        "type": "string"
+      },
+      "ExecMsg": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "register_requirement"
+            ],
+            "properties": {
+              "register_requirement": {
+                "type": "object",
+                "required": [
+                  "msg"
+                ],
+                "properties": {
+                  "msg": {
+                    "$ref": "#/definitions/RegisterRequirement"
+                  }
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "give_me_some_drink"
+            ],
+            "properties": {
+              "give_me_some_drink": {
+                "type": "object",
+                "required": [
+                  "msg"
+                ],
+                "properties": {
+                  "msg": {
+                    "$ref": "#/definitions/GiveMeSomeDrink"
+                  }
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "give_me_some_food"
+            ],
+            "properties": {
+              "give_me_some_food": {
+                "type": "object",
+                "required": [
+                  "msg"
+                ],
+                "properties": {
+                  "msg": {
+                    "$ref": "#/definitions/GiveMeSomeFood"
+                  }
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "GiveMeSomeDrink": {
+        "type": "object",
+        "required": [
+          "kind",
+          "proof"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "proof": {
+            "$ref": "#/definitions/Binary"
+          }
+        },
+        "additionalProperties": false
+      },
+      "GiveMeSomeFood": {
+        "type": "object",
+        "required": [
+          "kind",
+          "proof"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "proof": {
+            "$ref": "#/definitions/Binary"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RegisterRequirement": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "drink"
+            ],
+            "properties": {
+              "drink": {
+                "type": "object",
+                "required": [
+                  "requirements"
+                ],
+                "properties": {
+                  "requirements": {
+                    "$ref": "#/definitions/RouteVerificationRequirements"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "food"
+            ],
+            "properties": {
+              "food": {
+                "type": "object",
+                "required": [
+                  "requirements"
+                ],
+                "properties": {
+                  "requirements": {
+                    "$ref": "#/definitions/RouteVerificationRequirements"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "RouteVerificationRequirements": {
+        "description": "Specific verification requirements for the route, by `route_id`",
+        "type": "object",
+        "required": [
+          "presentation_request",
+          "verification_source"
+        ],
+        "properties": {
+          "presentation_request": {
+            "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationReq.presentation_required` on sdjwtVerifier",
+            "allOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              }
+            ]
+          },
+          "verification_source": {
+            "description": "This defines where the source data for verification is",
+            "allOf": [
+              {
+                "$ref": "#/definitions/VerificationSource"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "TrustRegistry": {
+        "type": "string",
+        "enum": [
+          "cheqd"
+        ]
+      },
+      "VerificationSource": {
+        "description": "Location to obtain the verification data from",
+        "type": "object",
+        "required": [
+          "data_or_location"
+        ],
+        "properties": {
+          "data_or_location": {
+            "description": "The data or location of the verification data at the trust registry For TrustRegistry::Cheqd, it is the `ResourceReqPacket` in avida-cheqd For data, the contracts should have the expected type In Sdjwt-Verifier, this is expected to be jwk",
+            "allOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              }
+            ]
+          },
+          "source": {
+            "description": "If `None`, this means data is directly provided",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/TrustRegistry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "query": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "QueryMsg",
+    "anyOf": [
+      {
+        "$ref": "#/definitions/QueryMsg"
+      }
+    ],
+    "definitions": {
+      "QueryMsg": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "get_verifier_address"
+            ],
+            "properties": {
+              "get_verifier_address": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "get_route_requirements"
+            ],
+            "properties": {
+              "get_route_requirements": {
+                "type": "object",
+                "required": [
+                  "route_id"
+                ],
+                "properties": {
+                  "route_id": {
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  }
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "migrate": null,
+  "sudo": null,
+  "responses": {
+    "get_route_requirements": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GetRegisteredRequirementResponse",
+      "type": "object",
+      "required": [
+        "requirements"
+      ],
+      "properties": {
+        "requirements": {
+          "$ref": "#/definitions/RouteVerificationRequirements"
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Binary": {
+          "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+          "type": "string"
+        },
+        "RouteVerificationRequirements": {
+          "description": "Specific verification requirements for the route, by `route_id`",
+          "type": "object",
+          "required": [
+            "presentation_request",
+            "verification_source"
+          ],
+          "properties": {
+            "presentation_request": {
+              "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationReq.presentation_required` on sdjwtVerifier",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Binary"
+                }
+              ]
+            },
+            "verification_source": {
+              "description": "This defines where the source data for verification is",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/VerificationSource"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "TrustRegistry": {
+          "type": "string",
+          "enum": [
+            "cheqd"
+          ]
+        },
+        "VerificationSource": {
+          "description": "Location to obtain the verification data from",
+          "type": "object",
+          "required": [
+            "data_or_location"
+          ],
+          "properties": {
+            "data_or_location": {
+              "description": "The data or location of the verification data at the trust registry For TrustRegistry::Cheqd, it is the `ResourceReqPacket` in avida-cheqd For data, the contracts should have the expected type In Sdjwt-Verifier, this is expected to be jwk",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Binary"
+                }
+              ]
+            },
+            "source": {
+              "description": "If `None`, this means data is directly provided",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/TrustRegistry"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "get_verifier_address": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GetVerifierResponse",
+      "type": "object",
+      "required": [
+        "verifier"
+      ],
+      "properties": {
+        "verifier": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

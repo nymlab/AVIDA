@@ -1,2 +1,1 @@
-mod fixtures;
-mod verifier_tests;
+pub mod fixtures;
