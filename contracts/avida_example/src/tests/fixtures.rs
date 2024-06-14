@@ -1,57 +1,23 @@
-use cosmwasm_std::Binary;
-use sd_jwt_rs::{issuer, SDJWTHolder, SDJWTSerializationFormat};
-use serde_json::Value;
-
-use avida_common::types::{RouteVerificationRequirements, VerificationSource};
+use avida_common::types::RouteVerificationRequirements;
 use avida_sdjwt_verifier::types::{Criterion, MathsOperator, PresentationReq};
-use avida_test_utils::sdjwt::fixtures::{issuer, issuer_jwk, claims};
+use avida_test_utils::sdjwt::fixtures::{
+    claims, make_presentation, make_route_verification_requirements, PresentationVerificationType,
+    RouteVerificationRequirementsType,
+};
 
 pub fn create_presentation() -> String {
     let claims = claims("Alice", 30, true, 2021);
-    let sdjwt = issuer()
-            .issue_sd_jwt(
-                claims.clone(),
-                issuer::ClaimsForSelectiveDisclosureStrategy::AllLevels,
-                None,
-                false,
-                SDJWTSerializationFormat::Compact,
-            )
-            .unwrap();
-
-    let mut claims_to_disclosure = claims.clone();
-    claims_to_disclosure["name"] = Value::Bool(false);
-    claims_to_disclosure["age"] = Value::Bool(true);
-    claims_to_disclosure["active"] = Value::Bool(true);
-    claims_to_disclosure["joined_at"] = Value::Bool(true);
-    let c = claims_to_disclosure.as_object().unwrap().clone();
-
-    let mut holder = SDJWTHolder::new(sdjwt, SDJWTSerializationFormat::Compact).unwrap();
-    holder
-        .create_presentation(c, None, None, None, None)
-        .unwrap()
+    make_presentation(claims, PresentationVerificationType::Success)
 }
 
 pub fn setup_requirement() -> RouteVerificationRequirements {
     // Add only 1 criterion - age greater than 18
-    let presentation_req: PresentationReq = vec![
-        (
-            "age".to_string(),
-            Criterion::Number(18, MathsOperator::GreaterThan),
-        )
-    ];
-
-    let request_serialized = serde_json::to_string(&presentation_req).unwrap();
-    let fx_jwk = serde_json::to_string(&issuer_jwk()).unwrap();
-
-    println!("fx_jwk: {:#?}", fx_jwk);
-
-    // Add some default criteria as presentation request
-    RouteVerificationRequirements {
-        verification_source: VerificationSource {
-            source: None,
-            data_or_location: Binary::from(fx_jwk.as_bytes()),
-        },
-        presentation_request: Binary::from(request_serialized.as_bytes()),
-    }
+    let presentation_req: PresentationReq = vec![(
+        "age".to_string(),
+        Criterion::Number(18, MathsOperator::GreaterThan),
+    )];
+    make_route_verification_requirements(
+        presentation_req,
+        RouteVerificationRequirementsType::Supported,
+    )
 }
-

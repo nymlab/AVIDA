@@ -5,17 +5,16 @@ use avida_common::traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy;
 use avida_sdjwt_verifier::contract::sv::mt::{CodeId as VerifierCodeID, SdjwtVerifierProxy};
 
 use crate::constants::GIVE_ME_DRINK_ROUTE_ID;
-use crate::types::RegisterRequirement;
 use crate::contract::sv::mt::{CodeId as RestaurantCodeID, RestaurantContractProxy};
 use crate::tests::fixtures::setup_requirement;
+use crate::types::RegisterRequirement;
 use avida_test_utils::sdjwt::fixtures::issuer_jwk;
-
 
 #[test]
 fn register_requirement() {
     let app = App::default();
     let owner = Addr::unchecked("owner"); // "owner";
-    // Storages for contracts
+                                          // Storages for contracts
     let code_id_verifier = VerifierCodeID::store_code(&app);
     let code_id_restaurant = RestaurantCodeID::store_code(&app);
 
@@ -26,7 +25,7 @@ fn register_requirement() {
         .with_label("Verifier")
         .call(&owner.as_str())
         .unwrap();
-    
+
     let contract_restaurant = code_id_restaurant
         .instantiate(contract_verifier.contract_addr.to_string())
         .with_label("Restaurant")
@@ -35,19 +34,23 @@ fn register_requirement() {
     // Setup requirement
     let fx_route_verification_req = setup_requirement();
     let _a = contract_restaurant
-        .register_requirement(
-            RegisterRequirement::Drink { 
-                requirements: fx_route_verification_req.clone() 
-            })
+        .register_requirement(RegisterRequirement::Drink {
+            requirements: fx_route_verification_req.clone(),
+        })
         .call(&owner.as_str())
         .unwrap();
-    let registered_routes = contract_verifier.get_routes(contract_restaurant.contract_addr.to_string()).unwrap();
+    let registered_routes = contract_verifier
+        .get_routes(contract_restaurant.contract_addr.to_string())
+        .unwrap();
 
     assert_eq!(registered_routes.len(), 1);
     assert_eq!(registered_routes.first().unwrap(), &GIVE_ME_DRINK_ROUTE_ID);
 
     let registered_req = contract_verifier
-        .get_route_requirements(contract_restaurant.contract_addr.to_string(), GIVE_ME_DRINK_ROUTE_ID)
+        .get_route_requirements(
+            contract_restaurant.contract_addr.to_string(),
+            GIVE_ME_DRINK_ROUTE_ID,
+        )
         .unwrap();
 
     assert_eq!(
@@ -61,7 +64,10 @@ fn register_requirement() {
     );
 
     let route_verification_key = contract_verifier
-        .get_route_verification_key(contract_restaurant.contract_addr.to_string(), GIVE_ME_DRINK_ROUTE_ID)
+        .get_route_verification_key(
+            contract_restaurant.contract_addr.to_string(),
+            GIVE_ME_DRINK_ROUTE_ID,
+        )
         .unwrap()
         .unwrap();
 
