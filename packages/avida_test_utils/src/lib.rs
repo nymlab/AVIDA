@@ -1,4 +1,2 @@
-pub mod util;
-
-#[cfg(test)]
-mod sdjwt;
+#[cfg(feature = "sdjwt")]
+pub mod sdjwt;

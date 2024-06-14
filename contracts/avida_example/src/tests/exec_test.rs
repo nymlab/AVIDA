@@ -8,8 +8,7 @@ use crate::constants::GIVE_ME_DRINK_ROUTE_ID;
 use crate::types::RegisterRequirement;
 use crate::contract::sv::mt::{CodeId as RestaurantCodeID, RestaurantContractProxy};
 use crate::tests::fixtures::setup_requirement;
-use super::fixtures::issuer_jwk;
-
+use avida_test_utils::sdjwt::fixtures::issuer_jwk;
 
 
 #[test]
