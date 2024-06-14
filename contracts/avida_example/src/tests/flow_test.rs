@@ -1,7 +1,6 @@
 use cosmwasm_std::{Addr, Binary};
 use sylvia::multitest::App;
 
-use avida_common::types::RouteVerificationRequirements;
 use avida_sdjwt_verifier::contract::sv::mt::CodeId as VerifierCodeID;
 
 use crate::types::{GiveMeSomeDrink, GiveMeSomeFood, RegisterRequirement};
@@ -15,7 +14,6 @@ pub fn flow_drink_verification() {
 
     let owner = Addr::unchecked("owner"); // "owner";
     let caller = Addr::unchecked("caller"); // "caller";
-    let fx_route_verification_req: RouteVerificationRequirements;
 
     // Storages for contracts
     let code_id_verifier = VerifierCodeID::store_code(&app);
@@ -26,23 +24,23 @@ pub fn flow_drink_verification() {
     let contract_verifier = code_id_verifier
         .instantiate(max_presentation_len, vec![])
         .with_label("Verifier")
-        .call(&owner.as_str())
+        .call(owner.as_str())
         .unwrap();
     
     let contract_restaurant = code_id_restaurant
         .instantiate(contract_verifier.contract_addr.to_string())
         .with_label("Restaurant")
-        .call(&owner.as_str())
+        .call(owner.as_str())
         .unwrap();
     
     // Setup requirement
-    fx_route_verification_req = setup_requirement();
+    let fx_route_verification_req = setup_requirement();
     let _a = contract_restaurant
         .register_requirement(
             RegisterRequirement::Drink { 
                 requirements: fx_route_verification_req.clone() 
             })
-        .call(&owner.as_str())
+        .call(owner.as_str())
         .unwrap();
 
     let presentation = create_presentation();
@@ -55,7 +53,7 @@ pub fn flow_drink_verification() {
         .give_me_some_drink(
             msg
         )
-        .call(&caller.as_str());
+        .call(caller.as_str());
     
     assert!(resp.is_ok());
     let events = resp.unwrap().events;
@@ -78,7 +76,6 @@ pub fn flow_food_verification() {
 
     let owner = Addr::unchecked("owner"); // "owner";
     let caller = Addr::unchecked("caller"); // "caller";
-    let fx_route_verification_req: RouteVerificationRequirements;
 
     // Storages for contracts
     let code_id_verifier = VerifierCodeID::store_code(&app);
@@ -89,23 +86,23 @@ pub fn flow_food_verification() {
     let contract_verifier = code_id_verifier
         .instantiate(max_presentation_len, vec![])
         .with_label("Verifier")
-        .call(&owner.as_str())
+        .call(owner.as_str())
         .unwrap();
     
     let contract_restaurant = code_id_restaurant
         .instantiate(contract_verifier.contract_addr.to_string())
         .with_label("Restaurant")
-        .call(&owner.as_str())
+        .call(owner.as_str())
         .unwrap();
     
     // Setup requirement
-    fx_route_verification_req = setup_requirement();
+    let fx_route_verification_req = setup_requirement();
     let _a = contract_restaurant
         .register_requirement(
             RegisterRequirement::Food { 
                 requirements: fx_route_verification_req.clone() 
             })
-        .call(&owner.as_str())
+        .call(owner.as_str())
         .unwrap();
 
     let presentation = create_presentation();
@@ -118,7 +115,7 @@ pub fn flow_food_verification() {
         .give_me_some_food(
             msg
         )
-        .call(&caller.as_str());
+        .call(caller.as_str());
     
     assert!(resp.is_ok());
     let events = resp.unwrap().events;
