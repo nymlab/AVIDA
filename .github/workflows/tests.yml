@@ -2,7 +2,7 @@ name: Test, Lint and Build Checker
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main, feat/mvp" ]
   pull_request:
 
 env:
