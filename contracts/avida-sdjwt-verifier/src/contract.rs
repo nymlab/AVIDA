@@ -3,6 +3,8 @@ use crate::{
     types::{InitRegistration, PendingRoute, VerificationReq},
 };
 
+use base_sdjwt_verifier::contract::sv::InstantiateMsg as BaseInitMsg;
+
 // AVIDA specific
 use avida_cheqd::ibc::{
     ibc_channel_close_handler, ibc_channel_open_handler, ibc_packet_ack_resource_extractor,
@@ -13,9 +15,10 @@ use avida_common::{
 };
 //  CosmWasm / Sylvia lib
 use cosmwasm_std::{
-    entry_point, from_json, Addr, DepsMut, Env, IbcBasicResponse, IbcChannelCloseMsg,
-    IbcChannelConnectMsg, IbcChannelOpenMsg, IbcChannelOpenResponse, IbcPacketAckMsg,
-    IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, Response, StdAck, StdResult,
+    entry_point, from_json, instantiate2_address, to_json_binary, Addr, CodeInfoResponse, DepsMut,
+    Env, IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
+    IbcChannelOpenResponse, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg,
+    IbcReceiveResponse, Response, StdAck, StdResult, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw_storage_plus::{Item, Map};
@@ -24,7 +27,7 @@ use sylvia::{
     types::{InstantiateCtx, QueryCtx},
 };
 
-use sd_jwt_rs::Jwk;
+use jsonwebtoken::jwk::Jwk;
 use std::collections::HashMap;
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -32,6 +35,8 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// The `invoice factory` structure stored in state
 pub struct SdjwtVerifier<'a> {
+    /// Base Sdjwt Verifier Addr
+    pub base_sdjwt_verifier: Item<'a, Addr>,
     /// Max Presentation Length
     pub max_presentation_len: MaxPresentationLen<'a>,
     /// Registered Smart Contract addrs and routes
@@ -56,6 +61,7 @@ pub struct SdjwtVerifier<'a> {
 impl SdjwtVerifier<'_> {
     pub fn new() -> Self {
         Self {
+            base_sdjwt_verifier: Item::new("base_sdjwt_verifier"),
             max_presentation_len: MAX_PRESENTATION_LEN,
             app_trust_data_source: Map::new("data_sources"),
             app_routes_requirements: Map::new("routes_requirements"),
@@ -70,6 +76,7 @@ impl SdjwtVerifier<'_> {
     fn instantiate(
         &self,
         ctx: InstantiateCtx,
+        base_sdjwt_verifier_code_id: u64,
         max_presentation_len: usize,
         // Vec of app_addr to their routes and requirements
         init_registrations: Vec<InitRegistration>,
@@ -86,7 +93,29 @@ impl SdjwtVerifier<'_> {
             self._register(deps.storage, &env, &admin, app_addr.as_str(), app.routes)?;
         }
 
-        Ok(Response::default())
+        // Instantiate the base verifier
+        let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
+        let CodeInfoResponse { checksum, .. } = deps
+            .querier
+            .query_wasm_code_info(base_sdjwt_verifier_code_id)?;
+        let salt = b"avida_sdjwt_verifier";
+
+        let base_addr = deps
+            .api
+            .addr_humanize(&instantiate2_address(&checksum, &creator, salt)?)?;
+        self.base_sdjwt_verifier.save(deps.storage, &base_addr)?;
+
+        // If this fails, the whole transaction should fail
+        let base_inst_msg = WasmMsg::Instantiate2 {
+            admin: Some(env.contract.address.to_string()),
+            code_id: base_sdjwt_verifier_code_id,
+            label: "avida-base-sdjwt-verifier".to_string(),
+            msg: to_json_binary(&BaseInitMsg {})?,
+            funds: vec![],
+            salt: salt.into(),
+        };
+
+        Ok(Response::default().add_message(base_inst_msg))
     }
 
     #[sv::msg(query)]
@@ -150,7 +179,7 @@ impl SdjwtVerifier<'_> {
 
         let r = req
             .get_mut(&pending_route.route_id)
-            .ok_or(SdjwtVerifierError::RequiredClaimsNotSatisfied)?;
+            .ok_or(SdjwtVerifierError::RouteRequirementError)?;
 
         r.issuer_pubkey = Some(pubkey);
 

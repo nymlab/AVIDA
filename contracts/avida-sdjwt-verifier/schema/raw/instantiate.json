@@ -3,10 +3,16 @@
   "title": "InstantiateMsg",
   "type": "object",
   "required": [
+    "base_sdjwt_verifier_code_id",
     "init_registrations",
     "max_presentation_len"
   ],
   "properties": {
+    "base_sdjwt_verifier_code_id": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
     "init_registrations": {
       "type": "array",
       "items": {

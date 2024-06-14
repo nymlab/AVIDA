@@ -3,9 +3,9 @@ OS="`uname -p`"
 echo "Building for arch = $OS"
 
 if [ $OS = 'arm' ]; then
-  OPTIMIZER="nymlab/optimizer:0.15.1-clang"
+  OPTIMIZER="nymlab/optimizer-arm64:0.15.1-clang"
 else
-  return 1
+  OPTIMIZER="nymlab/optimizer:0.15.1-clang"
 fi
 
 docker run --rm -v "$(pwd)":/code \

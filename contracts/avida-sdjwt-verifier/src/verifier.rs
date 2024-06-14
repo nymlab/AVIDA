@@ -6,8 +6,10 @@ use std::collections::HashMap;
 pub use crate::{
     contract::SdjwtVerifier,
     errors::SdjwtVerifierError,
-    types::{validate, PendingRoute, VerificationReq, VerificationRequest},
+    types::{PendingRoute, VerificationReq, VerificationRequest},
 };
+
+use base_sdjwt_verifier::contract::sv::ExecMsg as BaseExecMsg;
 
 // AVIDA specific
 use avida_cheqd::ibc::{get_timeout_timestamp, HOUR_PACKET_LIFETIME};
@@ -15,13 +17,13 @@ use avida_common::{
     traits::AvidaVerifierTrait,
     types::{
         AvidaVerifierSudoMsg, InputRoutesRequirements, RouteId, RouteVerificationRequirements,
-        TrustRegistry, VerfiablePresentation, VerificationSource,
+        TrustRegistry, VerifiablePresentation, VerificationSource,
     },
 };
 
 //  CosmWasm / Sylvia lib
 use cosmwasm_std::{
-    from_json, to_json_binary, Addr, CosmosMsg, DepsMut, Env, IbcTimeout, Response, SubMsg,
+    from_json, to_json_binary, Addr, CosmosMsg, Env, IbcTimeout, Response, SubMsg, WasmMsg,
 };
 
 use sylvia::{
@@ -30,9 +32,7 @@ use sylvia::{
 };
 
 // sd-jwt specific dependencies
-pub use sd_jwt_rs::{AlgorithmParameters, DecodingKey, EllipticCurve, Jwk, OctetKeyPairParameters};
-
-use sd_jwt_rs::{SDJWTSerializationFormat, SDJWTVerifier};
+pub use jsonwebtoken::jwk::{AlgorithmParameters, EllipticCurve, Jwk, OctetKeyPairParameters};
 
 #[contract(module=crate::contract)]
 #[sv::messages(avida_verifier_trait as AvidaVerifierTrait)]
@@ -49,7 +49,18 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
                 presentation,
             } => {
                 // In `Sudo`, the app address may be the `moduleAccount`
-                self._verify(deps, presentation, route_id, &app_addr)
+                // If app is registered, load the requirementes for the given route_id
+                let requirements = self
+                    .app_routes_requirements
+                    .load(deps.storage, app_addr.as_str())?
+                    .get(&route_id)
+                    .ok_or(SdjwtVerifierError::RouteNotRegistered)?
+                    .clone();
+
+                let msg = self.make_verify_msg(deps.storage, presentation, requirements)?;
+
+                // Performs the verification of the provided presentation within the context of the given route
+                Ok(Response::default().add_message(msg))
             }
         }
     }
@@ -82,16 +93,33 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         &self,
         ctx: ExecCtx,
         // Compact format serialised  sd-jwt
-        presentation: VerfiablePresentation,
+        presentation: VerifiablePresentation,
         route_id: RouteId,
         app_addr: Option<String>,
     ) -> Result<Response, Self::Error> {
         let ExecCtx { deps, info, .. } = ctx;
+
+        // Ensure the presentation is not too large
+        ensure!(
+            presentation.len() <= self.max_presentation_len.load(deps.storage)?,
+            SdjwtVerifierError::PresentationTooLarge
+        );
+
         let app_addr = app_addr.unwrap_or_else(|| info.sender.to_string());
         let app_addr = deps.api.addr_validate(&app_addr)?;
 
+        // If app is registered, load the requirementes for the given route_id
+        let requirements = self
+            .app_routes_requirements
+            .load(deps.storage, app_addr.as_str())?
+            .get(&route_id)
+            .ok_or(SdjwtVerifierError::RouteNotRegistered)?
+            .clone();
+
+        let msg = self.make_verify_msg(deps.storage, presentation, requirements)?;
+
         // Performs the verification of the provided presentation within the context of the given route
-        self._verify(deps, presentation, route_id, app_addr.as_str())
+        Ok(Response::default().add_message(msg))
     }
 
     /// For dApp to update their verification criteria
@@ -195,56 +223,6 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
 }
 
 impl SdjwtVerifier<'_> {
-    /// Verify the provided presentation within the context of the given route
-    pub fn _verify(
-        &self,
-        deps: DepsMut,
-        presentation: VerfiablePresentation,
-        route_id: RouteId,
-        app_addr: &str,
-    ) -> Result<Response, SdjwtVerifierError> {
-        // Ensure the presentation is not too large
-        ensure!(
-            presentation.len() <= self.max_presentation_len.load(deps.storage)?,
-            SdjwtVerifierError::PresentationTooLarge
-        );
-
-        // If app is registered, load the requirementes for the given route_id
-        let requirements = self
-            .app_routes_requirements
-            .load(deps.storage, app_addr)?
-            .get(&route_id)
-            .ok_or(SdjwtVerifierError::RouteNotRegistered)?
-            .clone();
-
-        let decoding_key = DecodingKey::from_jwk(
-            requirements
-                .issuer_pubkey
-                .as_ref()
-                .ok_or(SdjwtVerifierError::PubKeyNotFound)?,
-        )
-        .map_err(|e| SdjwtVerifierError::JwtError(e.to_string()))?;
-
-        // We verify the presentation
-        let verified_claims = SDJWTVerifier::new(
-            String::from_utf8(presentation.to_vec())
-                .map_err(|e| SdjwtVerifierError::StringConversion(e.to_string()))?,
-            Box::new(move |_, _| decoding_key.clone()),
-            None, // This version does not support key binding
-            None, // This version does not support key binding
-            SDJWTSerializationFormat::Compact,
-        )
-        .map_err(|e| SdjwtVerifierError::SdJwt(e.to_string()))?
-        .verified_claims;
-
-        // We validate the verified claims against the requirements
-        if let Ok(r) = validate(requirements.presentation_required, verified_claims) {
-            Ok(Response::default().set_data(to_json_binary(&r)?))
-        } else {
-            Err(SdjwtVerifierError::RequiredClaimsNotSatisfied)
-        }
-    }
-
     /// Performs a registration of an application and all its routes
     pub fn _register(
         &self,
@@ -357,6 +335,31 @@ impl SdjwtVerifier<'_> {
 
             Ok(response)
         }
+    }
+
+    //
+    fn make_verify_msg(
+        &self,
+        storage: &dyn Storage,
+        presentation: VerifiablePresentation,
+        requirements: VerificationReq,
+    ) -> Result<CosmosMsg, SdjwtVerifierError> {
+        let verify_msg = BaseExecMsg::Verify {
+            presentation,
+            presentation_required: requirements.presentation_required,
+            issuer_pubkey: to_json_binary(
+                &requirements
+                    .issuer_pubkey
+                    .ok_or(SdjwtVerifierError::PubKeyNotFound)?,
+            )?,
+        };
+
+        Ok(WasmMsg::Execute {
+            contract_addr: self.base_sdjwt_verifier.load(storage)?.to_string(),
+            msg: to_json_binary(&verify_msg)?,
+            funds: vec![],
+        }
+        .into())
     }
 
     /// Creates a verification request for specified app addr and route id and provided route criteria

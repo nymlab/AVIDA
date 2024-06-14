@@ -50,11 +50,15 @@ export async function deploy(
 
   // Store wasm MsgStoreCode
   const wasm: Buffer = fs.readFileSync(
-    "../artifacts/avida_sdjwt_verifier.wasm",
+    "../artifacts/avida_sdjwt_verifier-aarch64.wasm",
   );
   const wasmByteCode = new Uint8Array(wasm.buffer);
 
   console.log("length of wasmByteCode:", wasmByteCode.length);
+
+  const base64 = Buffer.from(wasmByteCode).toString("base64");
+
+  console.log("length of wasm base64 string:", base64.length);
 
   const msg = new MsgStoreCode({
     wasmByteCode,
@@ -66,7 +70,7 @@ export async function deploy(
     memo: "AVIDA: store code",
   };
 
-  const fee = await deployer.estimateFee(tx);
+  const fee = await deployer.estimateFee(tx, 0.5);
   console.log("Tx fee:", fee);
 
   const txHash = await deployer.broadcastTx(tx, fee);

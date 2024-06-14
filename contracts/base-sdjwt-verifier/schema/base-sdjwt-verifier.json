@@ -1,0 +1,151 @@
+{
+  "contract_name": "base-sdjwt-verifier",
+  "contract_version": "0.1.0",
+  "idl_version": "1.0.0",
+  "instantiate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "InstantiateMsg",
+    "type": "object"
+  },
+  "execute": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ExecuteMsg",
+    "anyOf": [
+      {
+        "$ref": "#/definitions/ExecMsg"
+      }
+    ],
+    "definitions": {
+      "Binary": {
+        "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+        "type": "string"
+      },
+      "Criterion": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "string"
+            ],
+            "properties": {
+              "string": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "number"
+            ],
+            "properties": {
+              "number": {
+                "type": "array",
+                "items": [
+                  {
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  },
+                  {
+                    "$ref": "#/definitions/MathsOperator"
+                  }
+                ],
+                "maxItems": 2,
+                "minItems": 2
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "boolean"
+            ],
+            "properties": {
+              "boolean": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "ExecMsg": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "verify"
+            ],
+            "properties": {
+              "verify": {
+                "type": "object",
+                "required": [
+                  "issuer_pubkey",
+                  "presentation",
+                  "presentation_required"
+                ],
+                "properties": {
+                  "issuer_pubkey": {
+                    "$ref": "#/definitions/Binary"
+                  },
+                  "presentation": {
+                    "$ref": "#/definitions/Binary"
+                  },
+                  "presentation_required": {
+                    "$ref": "#/definitions/PresentationReq"
+                  }
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "MathsOperator": {
+        "type": "string",
+        "enum": [
+          "greater_than",
+          "less_than",
+          "equal_to"
+        ]
+      },
+      "PresentationReq": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/Criterion"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2
+        }
+      }
+    }
+  },
+  "query": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "QueryMsg",
+    "anyOf": [
+      {
+        "$ref": "#/definitions/QueryMsg"
+      }
+    ],
+    "definitions": {
+      "QueryMsg": {
+        "type": "string",
+        "enum": []
+      }
+    }
+  },
+  "migrate": null,
+  "sudo": null,
+  "responses": {}
+}

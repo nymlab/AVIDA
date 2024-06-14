@@ -1,0 +1,42 @@
+[package]
+name = "base-sdjwt-verifier"
+version = "0.1.0"
+authors = ["belsy <belsy@nymlab.it>", "arsen <arsen.kondratiev@protonmail.com>"]
+edition = "2021"
+resolver = "2"
+
+exclude = [
+  "contract.wasm",
+  "hash.txt",
+]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[features]
+backtraces = ["cosmwasm-std/backtraces"]
+library = []
+migration = []
+mt = ["sylvia/mt"]
+
+[dependencies]
+avida-common= { path = "../../packages/common/"}
+avida-cheqd= { path = "../../packages/cheqd/"}
+cosmwasm-std = { workspace = true }
+cw-storage-plus = { workspace = true }
+cosmwasm-schema = { workspace = true }
+sylvia = { workspace = true }
+sylvia-derive = { workspace = true }
+serde = {workspace = true}
+serde-json-wasm = {workspace = true}
+cw2 = { workspace = true }
+cw-utils= { workspace = true }
+sd-jwt-rs = { git = "https://github.com/nymlab/sd-jwt-rust", rev = "96c0fa43edd56", default-features = false, features = ["no_rand"]}
+jsonwebtoken = { git = "https://github.com/nymlab/jsonwebtoken", rev = "98763b38713c54f", features = ["no_rand"] }
+thiserror = { workspace = true }
+serde_json = {version = "1.0.116", default-features = false, features = ["alloc"]}
+
+
+[dev-dependencies]
+sylvia = { workspace = true, features = ["mt"] }

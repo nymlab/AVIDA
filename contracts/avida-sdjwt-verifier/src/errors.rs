@@ -1,5 +1,5 @@
 use avida_cheqd::ibc::ChannelError;
-use cosmwasm_std::StdError;
+use cosmwasm_std::{Instantiate2AddressError, StdError};
 use serde_json_wasm::de::Error as SerdeJsonError;
 use thiserror::Error;
 
@@ -9,28 +9,16 @@ pub enum SdjwtVerifierError {
     ReturnedResourceFormat(String),
     #[error("IBC channel already exists")]
     ChannelAlreadyExists,
-    #[error("sdjwt {0}")]
-    SdJwt(String),
-    #[error("String Conversion {0}")]
-    StringConversion(String),
-    #[error("Jwt Conversion {0}")]
-    JwtError(String),
     #[error("Serde JSON Error")]
     SerdeJsonError(#[from] SerdeJsonError),
     #[error("{0}")]
     Std(#[from] StdError),
+    #[error("{0}")]
+    Instantiate2(#[from] Instantiate2AddressError),
     #[error("data deserialization error")]
     DataDeserialization,
     #[error("Presentation Too Large")]
     PresentationTooLarge,
-    #[error("Verified Claims should be an Object Map")]
-    VerifiedClaimsTypeUnexpected,
-    #[error("Criterion Value Type Unexpected")]
-    CriterionValueTypeUnexpected,
-    #[error("Criterion Value Number Unexpected")]
-    CriterionValueNumberInvalid,
-    #[error("No Disclosed Claims {0}")]
-    DisclosedClaimNotFound(String),
     #[error("App Already Registered")]
     AppAlreadyRegistered,
     #[error("App Is Not Registered")]
@@ -41,12 +29,12 @@ pub enum SdjwtVerifierError {
     UnsupportedKeyType,
     #[error("Route Not Registered")]
     RouteNotRegistered,
-    #[error("Required Claims Not Satisfied")]
-    RequiredClaimsNotSatisfied,
-    #[error("PubKey Not Found")]
-    PubKeyNotFound,
     #[error("channel error")]
     ChannelError(#[from] ChannelError),
+    #[error("Route Requirement Error")]
+    RouteRequirementError,
+    #[error("PubKey Not Found")]
+    PubKeyNotFound,
 }
 
 impl From<SdjwtVerifierError> for StdError {

@@ -7,7 +7,7 @@ pub type MaxPresentationLen<'a> = Item<'a, usize>;
 pub const MAX_PRESENTATION_LEN: MaxPresentationLen = Item::new("mpl");
 
 /// The verifiable presentation type is encoded as Binary
-pub type VerfiablePresentation = Binary;
+pub type VerifiablePresentation = Binary;
 
 /// For each route registered by a dApp smart contract,
 /// the requirements are stored and updatable
