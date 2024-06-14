@@ -41,3 +41,6 @@ serde_json = "1.0.116"
 
 [dev-dependencies]
 sylvia = { workspace = true, features = ["mt"] }
+avida-test-utils = { path = "../../packages/avida_test_utils/", features = ["sdjwt"]}
+cw-multi-test = "0.20.0"
+josekit = "0.8.6"

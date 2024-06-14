@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryMsg",
+  "anyOf": [
+    {
+      "$ref": "#/definitions/QueryMsg"
+    }
+  ],
+  "definitions": {
+    "QueryMsg": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "get_verifier_address"
+          ],
+          "properties": {
+            "get_verifier_address": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "get_route_requirements"
+          ],
+          "properties": {
+            "get_route_requirements": {
+              "type": "object",
+              "required": [
+                "route_id"
+              ],
+              "properties": {
+                "route_id": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

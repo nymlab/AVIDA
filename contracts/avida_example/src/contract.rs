@@ -23,7 +23,7 @@ pub struct RestaurantContract <'a>{
     pending_order_subjects: Map<'a, u64, OrderSubject>
 }
 
-#[entry_points]
+#[cfg_attr(not(feature = "library"), entry_points)]
 #[contract]
 impl RestaurantContract <'_> {
     pub const fn new() -> Self {
