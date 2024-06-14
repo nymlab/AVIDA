@@ -1,0 +1,76 @@
+name: Test, Lint and Build Checker
+
+on:
+  push:
+    branches: [ "main", "feat/mvp" ]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  contract-multi-test:
+    name: Contract Multitests
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install stable toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        target: wasm32-unknown-unknown
+        override: true
+
+    - name: Run contract unit tests
+      run: cargo test 
+      env:
+        RUST_BACKTRACE: 1
+
+  build-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+
+      - name: Compile WASM contract 
+        run: cargo build --lib --target wasm32-unknown-unknown --release
+        env:
+          RUSTFLAGS: "-C link-arg=-s"
+
+  lints:
+    name: Lints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Run cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: Run cargo clippy
+        run: cargo clippy -- -D warnings
