@@ -73,8 +73,8 @@ jobs:
       - name: Run cargo clippy
         run: cargo clippy -- -D warnings
 
-      - name: Generate Schema
-        run: ./scripts/schema.sh
+      - name: Generate Schemas
+        run: ./scripts/schemas.sh
 
       - name: Show Schema changes
         run: git status --porcelain
