@@ -48,9 +48,7 @@ jobs:
           override: true
 
       - name: Compile WASM contract
-        run: cargo cw-wasm
-        env:
-          RUSTFLAGS: "-C link-arg=-s"
+        run: make build
 
   lints:
     name: Lints
@@ -74,3 +72,13 @@ jobs:
 
       - name: Run cargo clippy
         run: cargo clippy -- -D warnings
+
+      - name: Generate Schemas
+        run: ./scripts/schemas.sh
+
+      - name: Show Schema changes
+        run: git status --porcelain
+
+      - name: Schema Changes
+        # fails if any changes not committed
+        run: test -z "$(git status --porcelain)"
