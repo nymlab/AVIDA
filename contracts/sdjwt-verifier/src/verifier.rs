@@ -68,6 +68,8 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         let ExecCtx { deps, env, info } = ctx;
         let app_addr = deps.api.addr_validate(&app_addr)?;
 
+        deps.api.debug(&format!("{:?}", route_criteria));
+
         // Complete registration
         self._register(
             deps.storage,
@@ -274,8 +276,6 @@ impl SdjwtVerifier<'_> {
         {
             data_sources.insert(route_id, requirements.verification_source.clone());
             // On registration we check if the dApp has request for IBC data
-            // FIXME: add IBC submessages
-
             // Make a verification request for specified app addr and route id with a provided route criteria
             let VerificationRequest {
                 verification_request,
@@ -402,7 +402,7 @@ impl SdjwtVerifier<'_> {
             }
         } else {
             let issuer_pubkey: Jwk =
-                serde_json_wasm::from_slice(&route_criteria.verification_source.data_or_location)?;
+                from_json(&route_criteria.verification_source.data_or_location)?;
 
             if let AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
                 curve: EllipticCurve::Ed25519,

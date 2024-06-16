@@ -60,7 +60,6 @@ pub fn issuer_jwk() -> josekit::jwk::Jwk {
     key_path = key_path.join("fixtures/test_ed25519_private.pem");
     let encoding_key_pem = fs::read(key_path).unwrap();
     let key_pair = josekit::jwk::alg::ed::EdKeyPair::from_pem(encoding_key_pem).unwrap();
-    println!("key_pair: {:#?}", key_pair);
     key_pair.to_jwk_public_key()
 }
 
@@ -70,7 +69,6 @@ pub fn rsa_issuer_jwk() -> josekit::jwk::Jwk {
     key_path = key_path.join("fixtures/test_rsa_private.pem");
     let encoding_key_pem = fs::read(key_path).unwrap();
     let key_pair = josekit::jwk::alg::rsa::RsaKeyPair::from_pem(encoding_key_pem).unwrap();
-    println!("key_pair: {:#?}", key_pair);
     key_pair.to_jwk_public_key()
 }
 
@@ -135,6 +133,14 @@ pub fn make_route_verification_requirements(
         }
     };
 
+    let jsonwebtoken_jwk: jsonwebtoken::jwk::Jwk =
+        serde_json_wasm::from_slice(data_or_location.as_bytes()).unwrap();
+
+    println!(
+        "jwk: {}",
+        serde_json_wasm::to_string(&jsonwebtoken_jwk).unwrap()
+    );
+
     // Add some default criteria as presentation request
     RouteVerificationRequirements {
         verification_source: VerificationSource {
@@ -164,6 +170,10 @@ pub fn get_two_input_routes_requirements() -> Vec<InputRoutesRequirements> {
         ),
         ("active".to_string(), Criterion::Boolean(true)),
     ];
+
+    let strreq = serde_json_wasm::to_string(&second_presentation_req).unwrap();
+    println!("strreq: {}", strreq);
+
     vec![
         InputRoutesRequirements {
             route_id: SECOND_ROUTE_ID,

@@ -15,7 +15,7 @@ pub enum SdjwtVerifierError {
     StringConversion(String),
     #[error("Jwt Conversion {0}")]
     JwtError(String),
-    #[error("Serde JSON Error")]
+    #[error("Serde JSON Error {0}")]
     SerdeJsonError(#[from] SerdeJsonError),
     #[error("{0}")]
     Std(#[from] StdError),
