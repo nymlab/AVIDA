@@ -13,7 +13,7 @@ AVIDA_SDJWT_PORT_BASE="wasm."
 CHANNEL_VERSION="cheqd-resource-v3"
 
 # This is used in avida local deploy
-CONTRACT_ADDRESS=${CONTRACT_ADDRESS:-neutron1js0jdjmwtzpp32sfz6x44t2mxv5vzk5mku4ckqge46us9erq097qa60waw}
+CONTRACT_ADDRESS=${CONTRACT_ADDRESS:-neutron1ev8e7z53nm9ncn8jv5efsuv7k5stn7uyt627qmpk9a98netlua0qumsp9n}
 
 AVIDA_SDJWT_PORT="$AVIDA_SDJWT_PORT_BASE$CONTRACT_ADDRESS"
 

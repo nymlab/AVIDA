@@ -22,6 +22,7 @@ sylvia = { workspace = true,  features = ["mt"] }
 sylvia-derive = { workspace = true }
 
 serde = { workspace = true }
+serde-json-wasm = {workspace = true}
 serde_json = "1.0"
 
 josekit = "0.8.6"

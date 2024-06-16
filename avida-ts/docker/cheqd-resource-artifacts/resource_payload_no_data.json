@@ -1,0 +1,25 @@
+{
+  "payload": {
+    "collectionId": "5rjaLzcffhGUH4nt4fyfAg",
+    "id": "9fbb1b86-91f8-4942-97b9-725b7714131c",
+    "name": "Test create resource",
+    "version": "1.1-indy",
+    "resourceType": "CL-Schema",
+    "alsoKnownAs": [
+      {
+        "uri": "https://example.com/alternative-uri",
+        "description": ""
+      },
+      {
+        "uri": "https://example.com/alternative-uri",
+        "description": "Alternative URI description"
+      }
+    ]
+  },
+  "signInputs": [
+    {
+      "verificationMethodId": "did:cheqd:testnet:5rjaLzcffhGUH4nt4fyfAg#key-1",
+      "privKey": "dTHxupAW0yqeeIgqZkjndoWSbZ2kRjK2FMwI6bgtZR6aNYVzr6sn2zzT5zOUYPMflJu17gBqNH0tjp62SlLg/w=="
+    }
+  ]
+}

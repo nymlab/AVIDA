@@ -1,4 +1,20 @@
 {
   "name": "@avida-ts/types",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.ts",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup src/index.ts --config tsup.config.ts",
+    "lint": "eslint src",
+    "check": "tsc --noEmit",
+    "build:cosmes": "./postinstall.sh"
+  },
+  "exports": "./dist/index.js",
+  "devDependencies": {
+    "tsup": "^8.1.0",
+    "typescript": "^5.4.5",
+    "type-fest": "4.20.1"
+  }
 }

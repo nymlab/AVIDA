@@ -6,9 +6,10 @@
     "strictBindCallApply": true,
     "noImplicitAny": true,
 
-    // target ESNext for modern features and tree-shaking
-    "target": "ESNext",
-    "module": "ESNext",
+    "lib": ["ES2020", "DOM"],
+    "target": "ES2020",
+    "module": "ES2020",
+
 
     // emit types and source maps for debugging and intellisense
     "declaration": true,
@@ -22,7 +23,7 @@
     "removeComments": false,
 
     // enable module resolution without file extensions on relative paths for things like npm package imports.
-    "moduleResolution": "Bundler",
+    "moduleResolution": "bundler",
 
     // allow importing TypeScript files using their native extension (.ts(x)). -- astro rule
     // "allowImportingTsExtensions": true,
@@ -98,11 +99,21 @@
   },
 
   // include @total-typescript reset for global type enhancements
-  "include": ["reset.d.ts"]
+  "include": ["reset.d.ts"],
 
   // "exclude": []
   // "exclude": ["node_modules", "cdk.out", "tmp", "wip", "notes"]
 
   // friendly warning:
   // at present astro may have issues if you use multiple `extends` in a tsconfig (typescript v5+ feature)
+  "tsc-alias": {
+    // Add file extensions to imports/exports for ESM compatibility.
+    "resolveFullPaths": true,
+    // See: https://github.com/justkey007/tsc-alias/discussions/110.
+    "replacers": {
+      "base-url": {
+        "enabled": false
+      }
+    }
+  }
 }
