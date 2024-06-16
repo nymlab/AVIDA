@@ -4,6 +4,10 @@ services:
   cheqd-node:
     image: ghcr.io/nymlab/cheqd-node:v2.0.1-arm64
     ports:
+      - target: 9090
+        published: 9090 # grpc
+      - target: 9091
+        published: 9091 # grpc-web
       - target: 26656
         published: 26656 # Tendermint peer-to-peer (P2P) port
       - target: 26657
@@ -15,8 +19,8 @@ services:
   neutron-node:
     image: ghrc.io/nymlab/neutron-standalone:v3.0.5-arm64
     ports:
-      - target: 1318
-        published: 1317 # GRPC
+      - target: 9090
+        published: 9080 # grpc
       - target: 26656
         published: 25556 # Tendermint P2P port
       - target: 26657
@@ -36,8 +40,6 @@ services:
     depends_on:
       - neutron-node
     ports:
-      - target: 1318
-        published: 2317 # GRPC
       - target: 26656
         published: 24456 # Tendermint P2P port
       - target: 26657
@@ -48,16 +50,10 @@ services:
       - CHAINID=neutron-local-1
     entrypoint: "bash /tmp/scripts/neutron-deploy.sh"
 
-  relayer:
-    image: ghcr.io/cosmos/relayer:v2.5.2
-    depends_on:
-      - cheqd-node
-      - neutron-node
-    working_dir: /tmp
+  hermes-relayer:
+    image: informalsystems/hermes:v1.9.0
+    working_dir: /home/hermes
     volumes:
-      - ./scripts/:/tmp/scripts/
-      - ./local-chain-config/:/tmp/local-chain-config/
-      - ./.relayer/:/tmp/.relayer/
-    environment:
-      - CONTRACT_ADDRESS=neutron1js0jdjmwtzpp32sfz6x44t2mxv5vzk5mku4ckqge46us9erq097qa60waw
-    entrypoint: "sh ./scripts/relayer-avida-link.sh" # setup relayer and create client and connection but will need to set up channel after
+      - ./hermes-relayer-config/:/home/hermes/hermes-relayer-config
+      - ./scripts/:/home/hermes/scripts/
+    entrypoint: ["sh", "./scripts/relayer-avida-link.sh"]

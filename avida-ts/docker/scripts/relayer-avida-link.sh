@@ -2,7 +2,9 @@
 
 set -ex
 
-RELAYER_HOME="/tmp/.relayer"
+RELAYER_CONFIG="/home/hermes/hermes-relayer-config/config.toml"
+NEUTRON_RELAYER="/home/hermes/hermes-relayer-config/neutron-relayer"
+CHEQD_RELAYER="/home/hermes/hermes-relayer-config/cheqd-relayer"
 CHEQD_CHAIN_ID="cheqd-local-1"
 NEUTRON_CHAIN_ID="neutron-local-1"
 PATH_NAME="avida-cheqd-neutron"
@@ -15,33 +17,31 @@ CONTRACT_ADDRESS=${CONTRACT_ADDRESS:-neutron1js0jdjmwtzpp32sfz6x44t2mxv5vzk5mku4
 
 AVIDA_SDJWT_PORT="$AVIDA_SDJWT_PORT_BASE$CONTRACT_ADDRESS"
 
+
+cat $RELAYER_CONFIG
+
+hermes --config $RELAYER_CONFIG \
+  keys add \
+  --chain $NEUTRON_CHAIN_ID \
+  --mnemonic-file $NEUTRON_RELAYER
+
+hermes --config $RELAYER_CONFIG \
+  keys add \
+  --chain $CHEQD_CHAIN_ID \
+  --mnemonic-file $CHEQD_RELAYER
+
 # let the nodes start, deploy avida-sdjwt-verifier contract
-sleep 30
+sleep 20
 
-## create a new client & connection, even if config exists
-rly transact client \
-  $CHEQD_CHAIN_ID \
-  $NEUTRON_CHAIN_ID \
-  $PATH_NAME \
-  --override \
-  --home $RELAYER_HOME
+hermes --config $RELAYER_CONFIG \
+  create channel \
+  --a-chain $CHEQD_CHAIN_ID \
+  --b-chain $NEUTRON_CHAIN_ID \
+  --a-port $CHEQD_RESOURCE_PORT \
+  --b-port $AVIDA_SDJWT_PORT \
+  --new-client-connection \
+  --order ORDER_UNORDERED \
+  --channel-version $CHANNEL_VERSION \
+  --yes
 
-rly transact connection \
-$PATH_NAME \
-  --override \
-  --home $RELAYER_HOME
-
-rly transact channel \
-  $PATH_NAME \
-  --src-port $CHEQD_RESOURCE_PORT \
-  --dst-port $AVIDA_SDJWT_PORT \
-  --order unordered \
-  --version $CHANNEL_VERSION \
-  --override \
-  --home $RELAYER_HOME
-
-# sleep 30
-
-# rly start \
-#   $PATH_NAME \
-#   --home $RELAYER_HOME
+hermes --config $RELAYER_CONFIG start
