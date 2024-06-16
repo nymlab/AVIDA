@@ -1,16 +1,20 @@
+use avida_common::types::{RouteVerificationRequirements, VerfiablePresentation};
 use cosmwasm_schema::cw_serde;
-use avida_common::types::{ RouteVerificationRequirements, VerfiablePresentation};
 
 #[cw_serde]
 pub struct InstantiateMsg {
     // Contract address where verifier is
-    verifier: String
+    verifier: String,
 }
 
 #[cw_serde]
 pub enum RegisterRequirement {
-    Drink {requirements: RouteVerificationRequirements},
-    Food {requirements: RouteVerificationRequirements},
+    Drink {
+        requirements: RouteVerificationRequirements,
+    },
+    Food {
+        requirements: RouteVerificationRequirements,
+    },
 }
 
 pub type OrderSubject = String;
@@ -30,10 +34,10 @@ pub struct GiveMeSomeFood {
 // Query messages
 #[cw_serde]
 pub struct GetVerifierResponse {
-    pub verifier: String
+    pub verifier: String,
 }
 
 #[cw_serde]
 pub struct GetRegisteredRequirementResponse {
-    pub requirements: RouteVerificationRequirements
+    pub requirements: RouteVerificationRequirements,
 }

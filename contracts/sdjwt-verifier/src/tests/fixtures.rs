@@ -1,20 +1,17 @@
-use sylvia::multitest::{App, Proxy};
 use avida_test_utils::sdjwt::fixtures::RouteVerificationRequirementsType;
 use avida_test_utils::sdjwt::fixtures::{
-    FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID, OWNER_ADDR, VERIFIER_CONTRACT_LABEL, MAX_PRESENTATION_LEN, get_route_verification_requirement
+    get_route_verification_requirement, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID,
+    MAX_PRESENTATION_LEN, OWNER_ADDR, VERIFIER_CONTRACT_LABEL,
 };
+use sylvia::multitest::{App, Proxy};
 
-use avida_common::types::{
-    InputRoutesRequirements, RouteVerificationRequirements,
-};
+use avida_common::types::{InputRoutesRequirements, RouteVerificationRequirements};
 
 use cw_multi_test::App as MtApp;
 
 use crate::contract::sv::mt::CodeId;
 use crate::contract::SdjwtVerifier;
 use crate::types::InitRegistration;
-
-
 
 /// Is used to instantiate verifier contract with some predefined parameters
 pub fn instantiate_verifier_contract(

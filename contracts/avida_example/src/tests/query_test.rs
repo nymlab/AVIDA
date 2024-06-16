@@ -4,10 +4,9 @@ use sylvia::multitest::App;
 use avida_sdjwt_verifier::contract::sv::mt::CodeId as VerifierCodeID;
 
 use crate::constants::GIVE_ME_DRINK_ROUTE_ID;
-use crate::types::RegisterRequirement;
 use crate::contract::sv::mt::{CodeId as RestaurantCodeID, RestaurantContractProxy};
 use crate::tests::fixtures::setup_requirement;
-
+use crate::types::RegisterRequirement;
 
 #[test]
 fn get_verifier() {
@@ -15,16 +14,14 @@ fn get_verifier() {
     let owner = Addr::unchecked("owner"); // "owner";
     let verifier_contract_addr = Addr::unchecked("verifier"); // "verifier";
     let code_id_restaurant = RestaurantCodeID::store_code(&app);
-    
+
     let contract_restaurant = code_id_restaurant
         .instantiate(verifier_contract_addr.to_string())
         .with_label("Restaurant")
         .call(owner.as_str())
         .unwrap();
 
-    let asked_verifier = contract_restaurant
-        .get_verifier_address()
-        .unwrap();
+    let asked_verifier = contract_restaurant.get_verifier_address().unwrap();
     assert_eq!(asked_verifier.verifier, verifier_contract_addr);
 }
 
@@ -32,7 +29,7 @@ fn get_verifier() {
 fn get_route_requirements() {
     let app = App::default();
     let owner = Addr::unchecked("owner"); // "owner";
-    // Storages for contracts
+                                          // Storages for contracts
     let code_id_verifier = VerifierCodeID::store_code(&app);
     let code_id_restaurant = RestaurantCodeID::store_code(&app);
 
@@ -43,7 +40,7 @@ fn get_route_requirements() {
         .with_label("Verifier")
         .call(owner.as_str())
         .unwrap();
-    
+
     let contract_restaurant = code_id_restaurant
         .instantiate(contract_verifier.contract_addr.to_string())
         .with_label("Restaurant")
@@ -52,10 +49,9 @@ fn get_route_requirements() {
     // Setup requirement
     let fx_route_verification_req = setup_requirement();
     let _a = contract_restaurant
-        .register_requirement(
-            RegisterRequirement::Drink { 
-                requirements: fx_route_verification_req.clone() 
-            })
+        .register_requirement(RegisterRequirement::Drink {
+            requirements: fx_route_verification_req.clone(),
+        })
         .call(owner.as_str())
         .unwrap();
     let registered_routes = contract_restaurant

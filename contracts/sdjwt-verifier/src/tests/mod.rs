@@ -1,2 +1,2 @@
-pub mod verifier_test;
 mod fixtures;
+pub mod verifier_test;
