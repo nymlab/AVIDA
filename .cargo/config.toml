@@ -1,2 +1,2 @@
 [alias]
-cw-wasm = "build --release --target wasm32-unknown-unknown --package example-plugin"
+cw-wasm = "build --lib --release --target wasm32-unknown-unknown --workspace --exclude avida-test-utils"

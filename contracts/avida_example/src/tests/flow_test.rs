@@ -3,10 +3,9 @@ use sylvia::multitest::App;
 
 use avida_sdjwt_verifier::contract::sv::mt::CodeId as VerifierCodeID;
 
-use crate::types::{GiveMeSomeDrink, GiveMeSomeFood, RegisterRequirement};
 use crate::contract::sv::mt::{CodeId as RestaurantCodeID, RestaurantContractProxy};
 use crate::tests::fixtures::{create_presentation, setup_requirement};
-
+use crate::types::{GiveMeSomeDrink, GiveMeSomeFood, RegisterRequirement};
 
 #[test]
 pub fn flow_drink_verification() {
@@ -26,20 +25,19 @@ pub fn flow_drink_verification() {
         .with_label("Verifier")
         .call(owner.as_str())
         .unwrap();
-    
+
     let contract_restaurant = code_id_restaurant
         .instantiate(contract_verifier.contract_addr.to_string())
         .with_label("Restaurant")
         .call(owner.as_str())
         .unwrap();
-    
+
     // Setup requirement
     let fx_route_verification_req = setup_requirement();
     let _a = contract_restaurant
-        .register_requirement(
-            RegisterRequirement::Drink { 
-                requirements: fx_route_verification_req.clone() 
-            })
+        .register_requirement(RegisterRequirement::Drink {
+            requirements: fx_route_verification_req.clone(),
+        })
         .call(owner.as_str())
         .unwrap();
 
@@ -50,23 +48,23 @@ pub fn flow_drink_verification() {
         proof: Binary::from(presentation.as_bytes()),
     };
     let resp = contract_restaurant
-        .give_me_some_drink(
-            msg
-        )
+        .give_me_some_drink(msg)
         .call(caller.as_str());
-    
+
     assert!(resp.is_ok());
     let events = resp.unwrap().events;
-    // Check that there is an event with key-value 
+    // Check that there is an event with key-value
     // {"action": "give_me_some_drink"} and {"drink": "beer"}
     assert!(events.into_iter().any(|event| {
-        event.attributes.clone()
+        event
+            .attributes
+            .clone()
             .into_iter()
             .any(|attr| attr.key == "action" && attr.value == "give_me_some_drink")
-        &&
-        event.attributes
-            .into_iter()
-            .any(|attr| attr.key == "Drink kind" && attr.value == "beer")
+            && event
+                .attributes
+                .into_iter()
+                .any(|attr| attr.key == "Drink kind" && attr.value == "beer")
     }));
 }
 
@@ -88,20 +86,19 @@ pub fn flow_food_verification() {
         .with_label("Verifier")
         .call(owner.as_str())
         .unwrap();
-    
+
     let contract_restaurant = code_id_restaurant
         .instantiate(contract_verifier.contract_addr.to_string())
         .with_label("Restaurant")
         .call(owner.as_str())
         .unwrap();
-    
+
     // Setup requirement
     let fx_route_verification_req = setup_requirement();
     let _a = contract_restaurant
-        .register_requirement(
-            RegisterRequirement::Food { 
-                requirements: fx_route_verification_req.clone() 
-            })
+        .register_requirement(RegisterRequirement::Food {
+            requirements: fx_route_verification_req.clone(),
+        })
         .call(owner.as_str())
         .unwrap();
 
@@ -112,22 +109,22 @@ pub fn flow_food_verification() {
         proof: Binary::from(presentation.as_bytes()),
     };
     let resp = contract_restaurant
-        .give_me_some_food(
-            msg
-        )
+        .give_me_some_food(msg)
         .call(caller.as_str());
-    
+
     assert!(resp.is_ok());
     let events = resp.unwrap().events;
-    // Check that there is an event with key-value 
+    // Check that there is an event with key-value
     // {"action": "give_me_some_drink"} and {"drink": "beer"}
     assert!(events.into_iter().any(|event| {
-        event.attributes.clone()
+        event
+            .attributes
+            .clone()
             .into_iter()
             .any(|attr| attr.key == "action" && attr.value == "give_me_some_food")
-        &&
-        event.attributes
-            .into_iter()
-            .any(|attr| attr.key == "Food kind" && attr.value == "Gazpacho")
+            && event
+                .attributes
+                .into_iter()
+                .any(|attr| attr.key == "Food kind" && attr.value == "Gazpacho")
     }));
 }
