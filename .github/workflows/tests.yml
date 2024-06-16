@@ -2,7 +2,7 @@ name: Test, Lint and Build Checker
 
 on:
   push:
-    branches: [ "main", "feat/mvp" ]
+    branches: ["main", "feat/mvp"]
   pull_request:
 
 env:
@@ -13,23 +13,23 @@ jobs:
     name: Contract Multitests
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    - name: Install stable toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        target: wasm32-unknown-unknown
-        override: true
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
 
-    - name: Run contract unit tests
-      run: cargo test 
-      env:
-        RUST_BACKTRACE: 1
+      - name: Run contract unit tests
+        run: cargo test
+        env:
+          RUST_BACKTRACE: 1
 
   build-check:
     runs-on: ubuntu-latest
@@ -47,8 +47,8 @@ jobs:
           target: wasm32-unknown-unknown
           override: true
 
-      - name: Compile WASM contract 
-        run: cargo build --lib --target wasm32-unknown-unknown --release
+      - name: Compile WASM contract
+        run: cargo cw-wasm
         env:
           RUSTFLAGS: "-C link-arg=-s"
 
