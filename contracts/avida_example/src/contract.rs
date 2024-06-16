@@ -1,31 +1,32 @@
 use avida_common::traits::avida_verifier_trait::sv::{AvidaVerifierTraitExecMsg, Querier};
-use avida_common::types::{ RouteId, InputRoutesRequirements};
+use avida_common::types::{InputRoutesRequirements, RouteId};
 
 use avida_sdjwt_verifier::contract::SdjwtVerifier;
-use sylvia::cw_std::{to_json_binary, WasmMsg};
 use sylvia::cw_std::{from_json, Reply, Response, StdResult, SubMsg};
+use sylvia::cw_std::{to_json_binary, WasmMsg};
 use sylvia::types::{QueryCtx, Remote, ReplyCtx};
-use sylvia::{
-    contract, entry_points, schemars,
-    types::InstantiateCtx,
-};
+use sylvia::{contract, entry_points, schemars, types::InstantiateCtx};
 
 use cw_storage_plus::{Item, Map};
 use cw_utils::parse_reply_execute_data;
 
+use crate::constants::{
+    GIVE_ME_DRINK_ROUTE_ID, GIVE_ME_FOOD_ROUTE_ID, REGISTER_REQUIREMENT_REPLY_ID,
+};
 use crate::error::ContractError;
-use crate::constants::{GIVE_ME_DRINK_ROUTE_ID, GIVE_ME_FOOD_ROUTE_ID, REGISTER_REQUIREMENT_REPLY_ID};
-use crate::types::{GetRegisteredRequirementResponse, GetVerifierResponse, GiveMeSomeDrink, GiveMeSomeFood, OrderSubject, RegisterRequirement};
+use crate::types::{
+    GetRegisteredRequirementResponse, GetVerifierResponse, GiveMeSomeDrink, GiveMeSomeFood,
+    OrderSubject, RegisterRequirement,
+};
 
-
-pub struct RestaurantContract <'a>{
+pub struct RestaurantContract<'a> {
     verifier: Item<'a, String>,
-    pending_order_subjects: Map<'a, u64, OrderSubject>
+    pending_order_subjects: Map<'a, u64, OrderSubject>,
 }
 
 #[cfg_attr(not(feature = "library"), entry_points)]
 #[contract]
-impl RestaurantContract <'_> {
+impl RestaurantContract<'_> {
     pub const fn new() -> Self {
         Self {
             verifier: Item::new("verifier"),
@@ -42,25 +43,25 @@ impl RestaurantContract <'_> {
 
     // Register the permission policy
     #[sv::msg(exec)]
-    pub fn register_requirement(&self, ctx: sylvia::types::ExecCtx, msg: RegisterRequirement) -> StdResult<Response> {
+    pub fn register_requirement(
+        &self,
+        ctx: sylvia::types::ExecCtx,
+        msg: RegisterRequirement,
+    ) -> StdResult<Response> {
         let route_requirements: InputRoutesRequirements = match msg {
-            RegisterRequirement::Drink { requirements } => {
-                InputRoutesRequirements{
-                    route_id: GIVE_ME_DRINK_ROUTE_ID,
-                    requirements
-                }
-            }
-            RegisterRequirement::Food { requirements } => {
-                InputRoutesRequirements{
-                    route_id: GIVE_ME_FOOD_ROUTE_ID,
-                    requirements
-                }
-            }
+            RegisterRequirement::Drink { requirements } => InputRoutesRequirements {
+                route_id: GIVE_ME_DRINK_ROUTE_ID,
+                requirements,
+            },
+            RegisterRequirement::Food { requirements } => InputRoutesRequirements {
+                route_id: GIVE_ME_FOOD_ROUTE_ID,
+                requirements,
+            },
         };
 
-        let register_msg = AvidaVerifierTraitExecMsg::Register { 
-            app_addr: ctx.env.contract.address.to_string(), 
-            route_criteria: vec![route_requirements]
+        let register_msg = AvidaVerifierTraitExecMsg::Register {
+            app_addr: ctx.env.contract.address.to_string(),
+            route_criteria: vec![route_requirements],
         };
 
         let verifier_contract = self.verifier.load(ctx.deps.storage)?;
@@ -70,21 +71,26 @@ impl RestaurantContract <'_> {
                 contract_addr: verifier_contract,
                 msg: to_json_binary(&register_msg)?,
                 funds: vec![],
-            }, 
-            REGISTER_REQUIREMENT_REPLY_ID
+            },
+            REGISTER_REQUIREMENT_REPLY_ID,
         );
-        
+
         Ok(Response::new().add_submessage(sub_msg))
     }
 
     // Ask for the portion
     #[sv::msg(exec)]
-    pub fn give_me_some_drink(&self, ctx: sylvia::types::ExecCtx, msg: GiveMeSomeDrink) -> StdResult<Response> {
+    pub fn give_me_some_drink(
+        &self,
+        ctx: sylvia::types::ExecCtx,
+        msg: GiveMeSomeDrink,
+    ) -> StdResult<Response> {
         // 1. Save the transaction
         // 2. Send the request to verifier
-        self.pending_order_subjects.save(ctx.deps.storage, GIVE_ME_DRINK_ROUTE_ID, &msg.kind)?;
+        self.pending_order_subjects
+            .save(ctx.deps.storage, GIVE_ME_DRINK_ROUTE_ID, &msg.kind)?;
         let verifier_contract = self.verifier.load(ctx.deps.storage)?;
-        
+
         let verify_request = AvidaVerifierTraitExecMsg::Verify {
             presentation: msg.proof,
             route_id: GIVE_ME_DRINK_ROUTE_ID,
@@ -98,18 +104,21 @@ impl RestaurantContract <'_> {
             },
             GIVE_ME_DRINK_ROUTE_ID,
         );
-        
-        Ok(Response::new()
-            .add_submessage(sub_msg)
-        )
+
+        Ok(Response::new().add_submessage(sub_msg))
     }
 
     // Ask for the portion
     #[sv::msg(exec)]
-    pub fn give_me_some_food(&self, ctx: sylvia::types::ExecCtx, msg: GiveMeSomeFood) -> StdResult<Response> {
+    pub fn give_me_some_food(
+        &self,
+        ctx: sylvia::types::ExecCtx,
+        msg: GiveMeSomeFood,
+    ) -> StdResult<Response> {
         // 1. Save the transaction
         // 2. Send the request to verifier
-        self.pending_order_subjects.save(ctx.deps.storage, GIVE_ME_FOOD_ROUTE_ID, &msg.kind)?;
+        self.pending_order_subjects
+            .save(ctx.deps.storage, GIVE_ME_FOOD_ROUTE_ID, &msg.kind)?;
         let verifier_contract = self.verifier.load(ctx.deps.storage)?;
         let verify_request = AvidaVerifierTraitExecMsg::Verify {
             presentation: msg.proof,
@@ -126,22 +135,26 @@ impl RestaurantContract <'_> {
             GIVE_ME_FOOD_ROUTE_ID,
         );
 
-        Ok(Response::new()
-            .add_submessage(sub_msg)
-        )
-
+        Ok(Response::new().add_submessage(sub_msg))
     }
 
     #[sv::msg(query)]
     fn get_verifier_address(&self, ctx: QueryCtx) -> Result<GetVerifierResponse, ContractError> {
         let verifier = self.verifier.load(ctx.deps.storage)?;
-        Ok(GetVerifierResponse {verifier})
+        Ok(GetVerifierResponse { verifier })
     }
 
     #[sv::msg(query)]
-    fn get_route_requirements(&self, ctx: QueryCtx, route_id: RouteId) -> Result<GetRegisteredRequirementResponse, ContractError> {
+    fn get_route_requirements(
+        &self,
+        ctx: QueryCtx,
+        route_id: RouteId,
+    ) -> Result<GetRegisteredRequirementResponse, ContractError> {
         let app_addr = ctx.env.contract.address.to_string();
-        let verifier_addr = ctx.deps.api.addr_validate(self.verifier.load(ctx.deps.storage)?.as_str())?;
+        let verifier_addr = ctx
+            .deps
+            .api
+            .addr_validate(self.verifier.load(ctx.deps.storage)?.as_str())?;
         let remote_contract = Remote::<SdjwtVerifier>::new(verifier_addr);
         let requirements = remote_contract
             .querier(&ctx.deps.querier)
@@ -153,64 +166,68 @@ impl RestaurantContract <'_> {
     #[sv::msg(reply)]
     fn reply(&self, ctx: ReplyCtx, reply: Reply) -> Result<Response, ContractError> {
         match reply.id {
-            REGISTER_REQUIREMENT_REPLY_ID => {
-                match reply.result.into_result() {
-                    Err(err) => Err(ContractError::RegistrationError(err)),
-                    Ok(_) => Ok(Response::new()),
-                }
-            }
-            GIVE_ME_DRINK_ROUTE_ID => {
-                match reply.clone().result.into_result() {
-                    Err(err) => Err(ContractError::VerificationProcessError(err)),
-                    Ok(_) => {
-                        let verification_result = parse_reply_execute_data(reply)?;
-                        match verification_result.data {
-                            Some(data) => {
-                                let verified: bool = from_json(data)?;
-                                if !verified {
-                                    return Err(ContractError::VerificationProcessError("Verification failed".to_string()))
-                                }
-                                let order_subject = self.pending_order_subjects.load(ctx.deps.storage, GIVE_ME_DRINK_ROUTE_ID)?;
-                                
-                                Ok(Response::new()
-                                    .add_attribute("action", "give_me_some_drink")
-                                    .add_attribute("Drink kind", order_subject)
-                                )
+            REGISTER_REQUIREMENT_REPLY_ID => match reply.result.into_result() {
+                Err(err) => Err(ContractError::RegistrationError(err)),
+                Ok(_) => Ok(Response::new()),
+            },
+            GIVE_ME_DRINK_ROUTE_ID => match reply.clone().result.into_result() {
+                Err(err) => Err(ContractError::VerificationProcessError(err)),
+                Ok(_) => {
+                    let verification_result = parse_reply_execute_data(reply)?;
+                    match verification_result.data {
+                        Some(data) => {
+                            let verified: bool = from_json(data)?;
+                            if !verified {
+                                return Err(ContractError::VerificationProcessError(
+                                    "Verification failed".to_string(),
+                                ));
                             }
-                            None => Err(ContractError::VerificationProcessError("Data from reply cannot be empty".to_string())),
+                            let order_subject = self
+                                .pending_order_subjects
+                                .load(ctx.deps.storage, GIVE_ME_DRINK_ROUTE_ID)?;
+
+                            Ok(Response::new()
+                                .add_attribute("action", "give_me_some_drink")
+                                .add_attribute("Drink kind", order_subject))
                         }
+                        None => Err(ContractError::VerificationProcessError(
+                            "Data from reply cannot be empty".to_string(),
+                        )),
                     }
                 }
-            }
-            GIVE_ME_FOOD_ROUTE_ID => {
-                match reply.clone().result.into_result() {
-                    Err(err) => Err(ContractError::VerificationProcessError(err)),
-                    Ok(_) => {
-                        let verification_result = parse_reply_execute_data(reply)?;
-                        match verification_result.data {
-                            Some(data) => {
-                                let verified: bool = from_json(data)?;
-                                if !verified {
-                                    return Err(ContractError::VerificationProcessError("Verification failed".to_string()))
-                                }
-                                let order_subject = self.pending_order_subjects.load(ctx.deps.storage, GIVE_ME_FOOD_ROUTE_ID)?;
-                                Ok(Response::new()
-                                    .add_attribute("action", "give_me_some_food")
-                                    .add_attribute("Food kind", order_subject)
-                                )
+            },
+            GIVE_ME_FOOD_ROUTE_ID => match reply.clone().result.into_result() {
+                Err(err) => Err(ContractError::VerificationProcessError(err)),
+                Ok(_) => {
+                    let verification_result = parse_reply_execute_data(reply)?;
+                    match verification_result.data {
+                        Some(data) => {
+                            let verified: bool = from_json(data)?;
+                            if !verified {
+                                return Err(ContractError::VerificationProcessError(
+                                    "Verification failed".to_string(),
+                                ));
                             }
-                            None => Err(ContractError::VerificationProcessError("Data from reply cannot be empty".to_string())),
+                            let order_subject = self
+                                .pending_order_subjects
+                                .load(ctx.deps.storage, GIVE_ME_FOOD_ROUTE_ID)?;
+                            Ok(Response::new()
+                                .add_attribute("action", "give_me_some_food")
+                                .add_attribute("Food kind", order_subject))
                         }
+                        None => Err(ContractError::VerificationProcessError(
+                            "Data from reply cannot be empty".to_string(),
+                        )),
                     }
                 }
-            }
-            _ => Err(ContractError::InvalidRouteId)
+            },
+            _ => Err(ContractError::InvalidRouteId),
         }
     }
 }
 
-impl Default for RestaurantContract <'_> {
+impl Default for RestaurantContract<'_> {
     fn default() -> Self {
         Self::new()
     }
- }
+}

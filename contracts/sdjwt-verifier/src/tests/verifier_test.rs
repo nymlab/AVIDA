@@ -2,25 +2,24 @@ use cosmwasm_std::{from_json, Binary};
 
 use sylvia::multitest::App;
 
-use avida_common::types::InputRoutesRequirements;
-use avida_common::traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy;
-use serde::{Deserialize, Serialize};
-use crate::errors::SdjwtVerifierError;
 use crate::contract::sv::mt::SdjwtVerifierProxy;
+use crate::errors::SdjwtVerifierError;
+use avida_common::traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy;
+use avida_common::types::InputRoutesRequirements;
+use serde::{Deserialize, Serialize};
 
 use josekit::{self};
 
+use super::fixtures::instantiate_verifier_contract;
 use avida_test_utils::sdjwt::fixtures::{
     FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID, OWNER_ADDR, SECOND_CALLER_APP_ADDR, SECOND_ROUTE_ID,
     THIRD_ROUTE_ID,
 };
-use super::fixtures::instantiate_verifier_contract;
 
 use avida_test_utils::sdjwt::fixtures::{
     claims, get_input_route_requirement, get_route_verification_requirement,
-    get_two_input_routes_requirements, issuer_jwk,
-    make_presentation, PresentationVerificationType, RouteVerificationRequirementsType,
-    MAX_PRESENTATION_LEN,
+    get_two_input_routes_requirements, issuer_jwk, make_presentation, PresentationVerificationType,
+    RouteVerificationRequirementsType, MAX_PRESENTATION_LEN,
 };
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -107,11 +107,9 @@ pub fn make_presentation(
     claims_to_disclosure["active"] = Value::Bool(true);
     claims_to_disclosure["joined_at"] = Value::Bool(true);
 
-    match presentation_verification_type {
-        PresentationVerificationType::RequiredClaimsNotSatisfied => {
-            claims_to_disclosure["age"] = Value::Bool(false);
-        }
-        PresentationVerificationType::Success => todo!(),
+    if let PresentationVerificationType::RequiredClaimsNotSatisfied = presentation_verification_type
+    {
+        claims_to_disclosure["age"] = Value::Bool(false);
     }
 
     let c = claims_to_disclosure.as_object().unwrap().clone();
