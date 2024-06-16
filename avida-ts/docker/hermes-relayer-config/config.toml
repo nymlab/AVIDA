@@ -1,0 +1,120 @@
+[global]
+log_level = 'debug'
+
+# Specify the mode to be used by the relayer. [Required]
+[mode]
+
+# Specify the client mode.
+[mode.clients]
+
+# Whether or not to enable the client workers. [Required]
+enabled = true
+
+# Whether or not to enable periodic refresh of clients. [Default: true]
+# This feature only applies to clients that underlie an open channel.
+# For Tendermint clients, the frequency at which Hermes refreshes them is 2/3 of their
+# trusting period (e.g., refresh every ~9 days if the trusting period is 14 days).
+# Note: Even if this is disabled, clients will be refreshed automatically if
+#      there is activity on a connection or channel they are involved with.
+refresh = true
+
+# Whether or not to enable misbehaviour detection for clients. [Default: true]
+misbehaviour = true
+
+# Specify the connections mode.
+[mode.connections]
+
+# Whether or not to enable the connection workers for handshake completion. [Required]
+enabled = true
+
+# Specify the channels mode.
+[mode.channels]
+
+# Whether or not to enable the channel workers for handshake completion. [Required]
+enabled = true
+
+# Specify the packets mode.
+[mode.packets]
+
+# Whether or not to enable the packet workers. [Required]
+enabled = true
+
+# Parametrize the periodic packet clearing feature.
+# Interval (in number of blocks) at which pending packets
+# should be periodically cleared. A value of '0' will disable
+# periodic packet clearing. [Default: 100]
+clear_interval = 100
+
+# Whether or not to clear packets on start. [Default: true]
+clear_on_start = true
+
+[[chains]]
+id = 'cheqd-local-1'
+type = 'CosmosSdk'
+rpc_addr = 'http://cheqd-node:26657'
+grpc_addr = 'tcp://cheqd-node:9090'
+event_source = { mode = 'push', url = 'ws://cheqd-node:26657/websocket', batch_delay = '500ms' }
+rpc_timeout = '100s'
+account_prefix = 'cheqd'
+key_name = 'cheqd-relayer'
+key_store_type = 'Test'
+store_prefix = 'ibc'
+default_gas = 10000000
+max_gas = 40000000
+gas_multiplier = 1.5
+max_msg_num = 30
+max_tx_size = 2097152
+clock_drift = '5s'
+max_block_time = '30s'
+memo_prefix = ''
+
+[chains.trust_threshold]
+numerator = '1'
+denominator = '3'
+
+[chains.gas_price]
+price = 2000 # the denom decimal place is wrong so we need to do this
+denom = 'ncheq'
+
+[chains.packet_filter]
+policy = 'allowall'
+#list = [['cheqdresource', 'channel-0']]
+
+[chains.address_type]
+derivation = 'cosmos'
+
+[[chains]]
+id = 'neutron-local-1'
+ccv_consumer_chain = true
+type = 'CosmosSdk'
+rpc_addr = 'http://neutron-node:26657'
+grpc_addr = 'tcp://neutron-node:9090'
+event_source = { mode = 'push', url = 'ws://neutron-node:26657/websocket', batch_delay = '500ms' }
+rpc_timeout = '100s'
+account_prefix = 'neutron'
+key_name = 'neutron-relayer'
+key_store_type = 'Test'
+store_prefix = 'ibc'
+default_gas = 10000000
+max_gas = 400000000
+gas_multiplier = 1.5
+max_msg_num = 30
+max_tx_size = 2097152
+clock_drift = '5s'
+max_block_time = '30s'
+memo_prefix = ''
+
+[chains.trust_threshold]
+numerator = '1'
+denominator = '3'
+
+[chains.gas_price]
+price = 10
+denom = 'untrn'
+
+[chains.packet_filter]
+policy = 'allowall'
+#list = [['wasm.neutron1js0jdjmwtzpp32sfz6x44t2mxv5vzk5mku4ckqge46us9erq097qa60waw', 'channel-0']]
+
+[chains.address_type]
+derivation = 'cosmos'
