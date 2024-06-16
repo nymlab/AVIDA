@@ -16,3 +16,10 @@ docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
   $OPTIMIZER
+
+
+for file in ./artifacts/*; do
+  BASENAME=$(basename "$file")
+  NEWNAME=$(echo "$BASENAME" | sed 's/-aarch64//')
+  mv "$file" "./artifacts/$NEWNAME"
+done

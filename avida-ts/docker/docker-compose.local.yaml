@@ -6,8 +6,6 @@ services:
     ports:
       - target: 9090
         published: 9090 # grpc
-      - target: 9091
-        published: 9091 # grpc-web
       - target: 26656
         published: 26656 # Tendermint peer-to-peer (P2P) port
       - target: 26657
@@ -15,6 +13,18 @@ services:
     volumes:
       - ./scripts/:/tmp
     entrypoint: /tmp/cheqd-genesis.sh
+
+  cheqd-resource-uploader:
+    image: ghcr.io/nymlab/cheqd-node:v2.0.1-arm64
+    ports:
+      - target: 26656
+        published: 23356 # Tendermint peer-to-peer (P2P) port
+      - target: 26657
+        published: 23357 # Tendermint RPC port
+    volumes:
+      - ./scripts/:/tmp/scripts/
+      - ./cheqd-resource-artifacts/:/tmp/cheqd-resource-artifacts
+    entrypoint: /tmp/scripts/cheqd-resource-upload.sh
 
   neutron-node:
     image: ghrc.io/nymlab/neutron-standalone:v3.0.5-arm64
@@ -29,7 +39,7 @@ services:
       - RUN_BACKGROUND=0
       - CHAINID=neutron-local-1
 
-  # contract: address with instantiate2 neutron1js0jdjmwtzpp32sfz6x44t2mxv5vzk5mku4ckqge46us9erq097qa60waw
+  # contract: address with instantiate2 neutron1ev8e7z53nm9ncn8jv5efsuv7k5stn7uyt627qmpk9a98netlua0qumsp9n
   # deployer: neutron demo_2
   # salt: ascii avida-local
   neutron-deployer:

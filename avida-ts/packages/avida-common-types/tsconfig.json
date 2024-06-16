@@ -6,13 +6,15 @@
 
     "outDir": "dist",
     "rootDir": "src",
-    "baseUrl": ".",
+    "baseUrl": "./src/",
     "paths": {
-      "@/*": ["src/*"]
+      "*": ["*", "./types/*", "./messages/*"]
     },
 
-    "lib": ["ES2022"]
+    "lib": ["ES2022"],
 
+    "exactOptionalPropertyTypes": false,
+    "verbatimModuleSyntax": false
 
     // types may be required depending on package setup
     // "types": ["node", "vitest/globals"]

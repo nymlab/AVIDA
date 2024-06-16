@@ -126,6 +126,7 @@ dependencies = [
  "jsonwebtoken 9.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sd-jwt-rs 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
+ "serde-json-wasm 0.5.1",
  "serde_json",
  "sylvia",
  "sylvia-derive",
