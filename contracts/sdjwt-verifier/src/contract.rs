@@ -152,7 +152,7 @@ impl SdjwtVerifier<'_> {
 
         let r = req
             .get_mut(&pending_route.route_id)
-            .ok_or(SdjwtVerifierError::RequiredClaimsNotSatisfied)?;
+            .ok_or(SdjwtVerifierError::NoRequirementsForRoute)?;
 
         r.issuer_pubkey = Some(pubkey);
 

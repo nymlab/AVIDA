@@ -1,4 +1,4 @@
-use super::errors::SdjwtVerifierError;
+use super::errors::{SdjwtVerifierError, SdjwtVerifierResultError};
 
 use avida_common::types::InputRoutesRequirements;
 use cosmwasm_schema::cw_serde;
@@ -6,8 +6,18 @@ use cosmwasm_std::from_json;
 use cosmwasm_std::Binary;
 use cosmwasm_std::SubMsg;
 use jsonwebtoken::jwk::Jwk;
-//use sd_jwt_rs::Jwk;
 use serde::{Deserialize, Serialize};
+
+#[cw_serde]
+pub struct VerifyResult {
+    pub result: Result<(), SdjwtVerifierResultError>,
+}
+
+impl From<VerifyResult> for Result<(), SdjwtVerifierResultError> {
+    fn from(verify_result: VerifyResult) -> Self {
+        verify_result.result
+    }
+}
 
 #[cw_serde]
 pub struct InitRegistration {
@@ -83,7 +93,7 @@ pub enum MathsOperator {
 pub fn validate(
     presentation_request: PresentationReq,
     verified_claims: serde_json::Value,
-) -> Result<bool, SdjwtVerifierError> {
+) -> Result<(), SdjwtVerifierResultError> {
     if let serde_json::Value::Object(claims) = verified_claims {
         for (key, criterion) in presentation_request {
             if let Some(value) = claims.get(&key) {
@@ -91,49 +101,63 @@ pub fn validate(
                     // matches the presentation value `p_val` with the criterion value `c_val`
                     (serde_json::Value::String(p_val), Criterion::String(c_val)) => {
                         if p_val != &c_val {
-                            return Ok(false);
+                            return Err(SdjwtVerifierResultError::CriterionValueFailed(key));
                         }
                     }
                     (serde_json::Value::Number(p_val), Criterion::Number(c_val, op)) => {
                         if p_val.is_u64() {
                             let num = p_val.as_u64().unwrap();
-
                             match op {
                                 MathsOperator::GreaterThan => {
                                     if num <= c_val {
-                                        return Ok(false);
-                                    };
+                                        return Err(
+                                            SdjwtVerifierResultError::CriterionValueFailed(key),
+                                        );
+                                    }
                                 }
                                 MathsOperator::LessThan => {
                                     if num >= c_val {
-                                        return Ok(false);
-                                    };
+                                        return Err(
+                                            SdjwtVerifierResultError::CriterionValueFailed(key),
+                                        );
+                                    }
                                 }
                                 MathsOperator::EqualTo => {
                                     if num != c_val {
-                                        return Ok(false);
-                                    };
+                                        return Err(
+                                            SdjwtVerifierResultError::CriterionValueFailed(key),
+                                        );
+                                    }
                                 }
                             }
                         } else {
-                            return Err(SdjwtVerifierError::CriterionValueNumberInvalid);
+                            return Err(SdjwtVerifierResultError::CriterionValueNumberInvalid);
                         }
                     }
                     (serde_json::Value::Bool(bool_val), Criterion::Boolean(c_val)) => {
                         if bool_val != &c_val {
-                            return Ok(false);
+                            return Err(SdjwtVerifierResultError::CriterionValueFailed(key));
                         }
                     }
-                    _ => return Err(SdjwtVerifierError::CriterionValueTypeUnexpected),
+                    _ => return Err(SdjwtVerifierResultError::CriterionValueTypeUnexpected),
                 };
             } else {
-                return Err(SdjwtVerifierError::DisclosedClaimNotFound(key));
+                return Err(SdjwtVerifierResultError::DisclosedClaimNotFound(
+                    key.to_string(),
+                ));
             }
         }
+        // For when there are no dislosure required
+        Ok(())
+    } else if let serde_json::Value::Null = verified_claims {
+        if presentation_request.is_empty() {
+            return Ok(());
+        } else {
+            return Err(SdjwtVerifierResultError::DisclosedClaimNotFound(
+                "null_disclosures".to_string(),
+            ));
+        }
     } else {
-        return Err(SdjwtVerifierError::VerifiedClaimsTypeUnexpected);
-    };
-
-    //When there are no criteria required
-    Ok(true)
+        return Err(SdjwtVerifierResultError::VerifiedClaimsTypeUnexpected);
+    }
 }
