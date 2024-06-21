@@ -35,7 +35,7 @@ pub enum RouteVerificationRequirementsType {
 /// IS used to test different cases for presentation verification
 pub enum PresentationVerificationType {
     Success,
-    RequiredClaimsNotSatisfied,
+    OmitAgeDisclosure,
 }
 
 // Keys generation
@@ -105,8 +105,7 @@ pub fn make_presentation(
     claims_to_disclosure["active"] = Value::Bool(true);
     claims_to_disclosure["joined_at"] = Value::Bool(true);
 
-    if let PresentationVerificationType::RequiredClaimsNotSatisfied = presentation_verification_type
-    {
+    if let PresentationVerificationType::OmitAgeDisclosure = presentation_verification_type {
         claims_to_disclosure["age"] = Value::Bool(false);
     }
 

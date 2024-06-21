@@ -3,7 +3,8 @@ use cosmwasm_std::{from_json, Binary};
 use sylvia::multitest::App;
 
 use crate::contract::sv::mt::SdjwtVerifierProxy;
-use crate::errors::SdjwtVerifierError;
+use crate::errors::{SdjwtVerifierError, SdjwtVerifierResultError};
+use crate::verifier::VerifyResult;
 use avida_common::traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy;
 use avida_common::types::InputRoutesRequirements;
 use serde::{Deserialize, Serialize};
@@ -82,17 +83,21 @@ fn verify_success_validate_success() {
 
     let presentation = make_presentation(claims, PresentationVerificationType::Success);
 
-    let resp = contract
-        .verify(
-            Binary::from(presentation.as_bytes()),
-            FIRST_ROUTE_ID,
-            Some(FIRST_CALLER_APP_ADDR.to_string()),
-        )
-        .call(FIRST_CALLER_APP_ADDR)
-        .unwrap();
+    let res: VerifyResult = from_json(
+        contract
+            .verify(
+                Binary::from(presentation.as_bytes()),
+                FIRST_ROUTE_ID,
+                Some(FIRST_CALLER_APP_ADDR.to_string()),
+            )
+            .call(FIRST_CALLER_APP_ADDR)
+            .unwrap()
+            .data
+            .unwrap(),
+    )
+    .unwrap();
 
-    let validate_result: bool = from_json(resp.data.unwrap()).unwrap();
-    assert!(validate_result);
+    assert!(res.result.is_ok());
 }
 
 #[test]
@@ -108,17 +113,23 @@ fn verify_success_validate_fails() {
 
     let presentation = make_presentation(claims, PresentationVerificationType::Success);
 
-    let resp = contract
-        .verify(
-            Binary::from(presentation.as_bytes()),
-            FIRST_ROUTE_ID,
-            Some(FIRST_CALLER_APP_ADDR.to_string()),
-        )
-        .call(FIRST_CALLER_APP_ADDR)
-        .unwrap();
-
-    let validate_result: bool = from_json(resp.data.unwrap()).unwrap();
-    assert!(!validate_result);
+    let res: VerifyResult = from_json(
+        contract
+            .verify(
+                Binary::from(presentation.as_bytes()),
+                FIRST_ROUTE_ID,
+                Some(FIRST_CALLER_APP_ADDR.to_string()),
+            )
+            .call(FIRST_CALLER_APP_ADDR)
+            .unwrap()
+            .data
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        res.result.unwrap_err(),
+        SdjwtVerifierResultError::CriterionValueFailed("joined_at".to_string())
+    );
 }
 
 #[test]
@@ -129,25 +140,28 @@ fn verify_required_claims_not_satisfied() {
     let (contract, _) =
         instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
 
-    // Make a presentation with a too large claims
     let claims = claims("Alice", 30, true, 2021);
 
-    let presentation = make_presentation(
-        claims,
-        PresentationVerificationType::RequiredClaimsNotSatisfied,
-    );
+    let presentation = make_presentation(claims, PresentationVerificationType::OmitAgeDisclosure);
 
-    // Try verify too large presentation
-    assert!(matches!(
+    let res: VerifyResult = from_json(
         contract
             .verify(
                 Binary::from(presentation.as_bytes()),
                 FIRST_ROUTE_ID,
                 Some(FIRST_CALLER_APP_ADDR.to_string()),
             )
-            .call(FIRST_CALLER_APP_ADDR),
-        Err(SdjwtVerifierError::RequiredClaimsNotSatisfied)
-    ),);
+            .call(FIRST_CALLER_APP_ADDR)
+            .unwrap()
+            .data
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        res.result.unwrap_err(),
+        SdjwtVerifierResultError::DisclosedClaimNotFound("age".to_string())
+    );
 }
 
 #[test]
@@ -159,16 +173,24 @@ fn verify_without_sdjwt() {
         instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
 
     // Try verify presentation without sdjwt
-    assert!(matches!(
+    let res: VerifyResult = from_json(
         contract
             .verify(
                 Binary::from(b""),
                 FIRST_ROUTE_ID,
                 Some(FIRST_CALLER_APP_ADDR.to_string()),
             )
-            .call(FIRST_CALLER_APP_ADDR),
-        Err(SdjwtVerifierError::SdJwt(_))
-    ));
+            .call(FIRST_CALLER_APP_ADDR)
+            .unwrap()
+            .data
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        res.result.unwrap_err(),
+        SdjwtVerifierResultError::SdJwt("invalid input: Invalid SD-JWT length: 1".to_string())
+    );
 }
 
 #[test]
@@ -190,16 +212,24 @@ fn verify_presentation_too_large() {
     let presentation = make_presentation(claims, PresentationVerificationType::Success);
 
     // Try verify too large presentation
-    assert!(matches!(
+    let res: VerifyResult = from_json(
         contract
             .verify(
                 Binary::from(presentation.as_bytes()),
                 FIRST_ROUTE_ID,
                 Some(FIRST_CALLER_APP_ADDR.to_string()),
             )
-            .call(FIRST_CALLER_APP_ADDR),
-        Err(SdjwtVerifierError::PresentationTooLarge)
-    ),);
+            .call(FIRST_CALLER_APP_ADDR)
+            .unwrap()
+            .data
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        res.result.unwrap_err(),
+        SdjwtVerifierResultError::PresentationTooLarge
+    );
 }
 
 #[test]

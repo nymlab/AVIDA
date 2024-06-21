@@ -7,19 +7,22 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
-    #[error("{0}")]
+    #[error("Parse Reply Error {0}")]
     ParseReplyError(#[from] ParseReplyError),
 
-    #[error("{0}")]
+    #[error("Registration Error {0}")]
     RegistrationError(String),
 
-    #[error("{0}")]
+    #[error("Verification Process Error {0}")]
     VerificationProcessError(String),
 
-    #[error("{0}")]
+    #[error("Verification Error {0}")]
+    VerificationError(String),
+
+    #[error("Get Route Requirements Error {0}")]
     GetRouteRequirementsError(String),
 
-    #[error("InvalidRouteId")]
+    #[error("Invalid RouteId")]
     InvalidRouteId,
 }
 
