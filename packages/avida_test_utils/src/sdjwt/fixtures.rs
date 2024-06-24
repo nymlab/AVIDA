@@ -74,7 +74,7 @@ pub fn rsa_issuer_jwk() -> josekit::jwk::Jwk {
 
 pub fn claims(name: &str, age: u8, active: bool, joined_at: u16) -> Value {
     serde_json::json!({
-        "exp": 1234567890,
+        "exp": 12345,
         "iss": "issuer",
         "name": name,
         "age": age,
