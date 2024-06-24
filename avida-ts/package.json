@@ -26,6 +26,7 @@
     "@avida-ts/types": "workspace:*"
   },
   "devDependencies": {
+    "@sd-jwt/types": "^0.7.1",
     "@cosmwasm/ts-codegen": "^0.35.3",
     "@eslint/compat": "^1.0.3",
     "@eslint/js": "^9.4.0",

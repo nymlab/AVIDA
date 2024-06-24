@@ -14,7 +14,7 @@ export async function contractExecTx(
   contractAddr: string,
   msg: { [k: string]: unknown },
   funds: Coin[],
-): Promise<void> {
+): Promise<any> {
   console.info(
     "Executing contract at: ",
     contractAddr,
@@ -44,4 +44,6 @@ export async function contractExecTx(
 
   let { txResponse } = await wallet.pollTx(txHash);
   console.info("Tx response:", JSON.stringify(txResponse.events));
+
+  return txResponse;
 }
