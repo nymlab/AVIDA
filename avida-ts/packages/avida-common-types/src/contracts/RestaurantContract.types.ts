@@ -63,9 +63,6 @@ export type QueryMsg1 = {
     [k: string]: unknown;
   };
 };
-export interface GetRegisteredRequirementResponse {
-  requirements: RouteVerificationRequirements;
-}
 export interface GetVerifierResponse {
   verifier: string;
 }
