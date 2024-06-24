@@ -36,8 +36,3 @@ pub struct GiveMeSomeFood {
 pub struct GetVerifierResponse {
     pub verifier: String,
 }
-
-#[cw_serde]
-pub struct GetRegisteredRequirementResponse {
-    pub requirements: RouteVerificationRequirements,
-}

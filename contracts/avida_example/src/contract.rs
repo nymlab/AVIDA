@@ -1,5 +1,5 @@
 use avida_common::traits::avida_verifier_trait::sv::{AvidaVerifierTraitExecMsg, Querier};
-use avida_common::types::{InputRoutesRequirements, RouteId};
+use avida_common::types::{InputRoutesRequirements, RouteId, RouteVerificationRequirements};
 
 use avida_sdjwt_verifier::{contract::SdjwtVerifier, types::VerifyResult};
 use sylvia::cw_std::{from_json, Reply, Response, StdResult, SubMsg};
@@ -15,8 +15,7 @@ use crate::constants::{
 };
 use crate::error::ContractError;
 use crate::types::{
-    GetRegisteredRequirementResponse, GetVerifierResponse, GiveMeSomeDrink, GiveMeSomeFood,
-    OrderSubject, RegisterRequirement,
+    GetVerifierResponse, GiveMeSomeDrink, GiveMeSomeFood, OrderSubject, RegisterRequirement,
 };
 
 pub struct RestaurantContract<'a> {
@@ -149,7 +148,7 @@ impl RestaurantContract<'_> {
         &self,
         ctx: QueryCtx,
         route_id: RouteId,
-    ) -> Result<GetRegisteredRequirementResponse, ContractError> {
+    ) -> Result<RouteVerificationRequirements, ContractError> {
         let app_addr = ctx.env.contract.address.to_string();
         let verifier_addr = ctx
             .deps
@@ -160,7 +159,7 @@ impl RestaurantContract<'_> {
             .querier(&ctx.deps.querier)
             .get_route_requirements(app_addr, route_id)?;
 
-        Ok(GetRegisteredRequirementResponse { requirements })
+        Ok(requirements)
     }
 
     #[sv::msg(reply)]
@@ -179,7 +178,6 @@ impl RestaurantContract<'_> {
                         match verification_result.data {
                             Some(data) => {
                                 let verify_res: VerifyResult = from_json(data)?;
-                                println!("VERIFY RES {:?}", verify_res);
                                 match verify_res.result {
                                     Ok(_) => {
                                         let order_subject = self

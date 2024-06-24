@@ -13,12 +13,6 @@ pub struct VerifyResult {
     pub result: Result<(), SdjwtVerifierResultError>,
 }
 
-impl From<VerifyResult> for Result<(), SdjwtVerifierResultError> {
-    fn from(verify_result: VerifyResult) -> Self {
-        verify_result.result
-    }
-}
-
 #[cw_serde]
 pub struct InitRegistration {
     pub app_addr: String,
