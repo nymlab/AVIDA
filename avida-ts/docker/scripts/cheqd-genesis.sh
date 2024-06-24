@@ -2,19 +2,17 @@
 
 set -ex
 
-# it can be a sepearte script to add to genesis file
-# we need to add some keys to the genesis file
-# use that file to start the chaink
+# cheqd-node docker file with some predefined keys and genersis account / tx for validation
 
-CHEQD_HOME="./.cheqdnode"
-CHEQD_CHAIN_ID="cheqd-local-1"
-CHEQD_DENOM="ncheq"
-KEYRING_BACKEND="test"
-RELAYER_MNEMONIC="rebuild sand ocean matrix habit trigger total vendor airport once hybrid napkin refuse drive pottery novel misery steel pony sudden vibrant ready witness nation"
-RESOURCE_MNEMONIC="differ coconut rate prosper cabbage depth rich gather myself winner evidence buzz alcohol garment wing soup reform glare attitude parrot sunset peasant affair envelope"
-
-RELAYER_ADDR="cheqd1kd0yrf4p4pm3lfukkx8fj04we87822zkjy2zwe"
-RESOURCE_ADDR="cheqd16kxf0tkkjc6llu072qwkvj5plm7nr0xdhp353q"
+#CHEQD_HOME="./.cheqdnode"
+#CHEQD_CHAIN_ID="cheqd-local-1"
+#CHEQD_DENOM="ncheq"
+#KEYRING_BACKEND="test"
+#RELAYER_MNEMONIC="rebuild sand ocean matrix habit trigger total vendor airport once hybrid napkin refuse drive pottery novel misery steel pony sudden vibrant ready witness nation"
+#RESOURCE_MNEMONIC="differ coconut rate prosper cabbage depth rich gather myself winner evidence buzz alcohol garment wing soup reform glare attitude parrot sunset peasant affair envelope"
+#
+#RELAYER_ADDR="cheqd1kd0yrf4p4pm3lfukkx8fj04we87822zkjy2zwe"
+#RESOURCE_ADDR="cheqd16kxf0tkkjc6llu072qwkvj5plm7nr0xdhp353q"
 
 rm -rf ${CHEQD_HOME}
 

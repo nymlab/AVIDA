@@ -13,6 +13,8 @@ services:
     volumes:
       - ./scripts/:/tmp
     entrypoint: /tmp/cheqd-genesis.sh
+    env_file:
+      - ../local.env
 
   cheqd-resource-uploader:
     image: ghcr.io/nymlab/cheqd-node:v2.0.1-arm64
@@ -25,6 +27,10 @@ services:
       - ./scripts/:/tmp/scripts/
       - ./cheqd-resource-artifacts/:/tmp/cheqd-resource-artifacts
     entrypoint: /tmp/scripts/cheqd-resource-upload.sh
+    env_file:
+      - ../local.env
+    environment:
+      - NODE=http://cheqd-node:26657
 
   neutron-node:
     image: ghrc.io/nymlab/neutron-standalone:v3.0.5-arm64
@@ -47,6 +53,7 @@ services:
     volumes:
       - ./../../artifacts/:/tmp/artifacts/
       - ./scripts/:/tmp/scripts/
+      - ../contract.env:/tmp/contract.env
     depends_on:
       - neutron-node
     ports:
@@ -58,6 +65,7 @@ services:
     environment:
       - RUN_BACKGROUND=0
       - CHAINID=neutron-local-1
+      - CONTRACT_FILE=/tmp/contract.env # path to overwrite contract address
     entrypoint: "bash /tmp/scripts/neutron-deploy.sh"
 
   hermes-relayer:
@@ -66,4 +74,9 @@ services:
     volumes:
       - ./hermes-relayer-config/:/home/hermes/hermes-relayer-config
       - ./scripts/:/home/hermes/scripts/
+      - ../contract.env:/home/hermes/contract.env
     entrypoint: ["sh", "./scripts/relayer-avida-link.sh"]
+    env_file:
+      - ../local.env
+    environment:
+      - CONTRACT_FILE=/home/hermes/contract.env

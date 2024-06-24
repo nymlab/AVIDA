@@ -23,7 +23,6 @@ export async function contractExecTx(
   );
 
   const wallet = getWallet(chainConfigPath, executorMnemonic);
-  console.info("Executor Addr:", wallet.address); // prints the bech32 address
 
   const execMsg = new MsgExecuteContract({
     sender: wallet.address,
@@ -31,19 +30,20 @@ export async function contractExecTx(
     msg,
     funds,
   });
+  console.info("\t Executing Msg: ", JSON.stringify(execMsg), "\n\n");
 
   const storeTx: UnsignedTx = {
     msgs: [execMsg],
   };
 
   let fee = await wallet.estimateFee(storeTx);
-  console.info("Tx fee:", fee);
-
   let txHash = await wallet.broadcastTx(storeTx, fee);
-  console.info("Tx hash:", txHash);
-
   let { txResponse } = await wallet.pollTx(txHash);
-  console.info("Tx response:", JSON.stringify(txResponse.events));
+  console.info(
+    "\t Execute Msg response:",
+    JSON.stringify(txResponse.events),
+    "\n\n",
+  );
 
   return txResponse;
 }

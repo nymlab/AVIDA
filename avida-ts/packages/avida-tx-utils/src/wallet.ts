@@ -20,8 +20,6 @@ export function getWallet(
     fs.readFileSync(chainConfigPath, "utf-8"),
   ) as ChainConfig;
 
-  console.debug("Chain config:", chainConfig);
-
   // Example usage for Osmosis chain
   return new MnemonicWallet({
     mnemonic: deployerMnemonic,
