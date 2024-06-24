@@ -8,5 +8,7 @@ artifacts/
 .vscode
 
 avida-ts/**/dist/
+avida-ts/contract.env
 
 **/node_modules/
+
