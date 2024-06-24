@@ -48,7 +48,7 @@ fn get_route_requirements() {
         .unwrap();
     // Setup requirement
     let fx_route_verification_req = setup_requirement();
-    let _a = contract_restaurant
+    contract_restaurant
         .register_requirement(RegisterRequirement::Drink {
             requirements: fx_route_verification_req.clone(),
         })
@@ -58,5 +58,5 @@ fn get_route_requirements() {
         .get_route_requirements(GIVE_ME_DRINK_ROUTE_ID)
         .unwrap();
 
-    assert_eq!(registered_routes.requirements, fx_route_verification_req);
+    assert_eq!(registered_routes, fx_route_verification_req);
 }

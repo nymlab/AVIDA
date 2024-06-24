@@ -102,7 +102,7 @@ dependencies = [
  "cw2",
  "josekit",
  "jsonwebtoken 9.3.0 (git+https://github.com/nymlab/jsonwebtoken?rev=98763b38713c54f)",
- "sd-jwt-rs 0.7.0 (git+https://github.com/nymlab/sd-jwt-rust?rev=96c0fa43edd56)",
+ "sd-jwt-rs 0.7.0 (git+https://github.com/nymlab/sd-jwt-rust?rev=c05b255790a6b2f702e)",
  "serde",
  "serde-json-wasm 0.5.1",
  "serde_json",
@@ -1221,7 +1221,7 @@ dependencies = [
 [[package]]
 name = "sd-jwt-rs"
 version = "0.7.0"
-source = "git+https://github.com/nymlab/sd-jwt-rust?rev=96c0fa43edd56#96c0fa43edd56b10b00628fa93b7b900fdc182ba"
+source = "git+https://github.com/nymlab/sd-jwt-rust?rev=c05b255790a6b2f702e#c05b255790a6b2f702eaee0af6bd5a6415272add"
 dependencies = [
  "base64 0.21.7",
  "hmac",

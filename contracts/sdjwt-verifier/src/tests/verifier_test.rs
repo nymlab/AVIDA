@@ -83,6 +83,8 @@ fn verify_success_validate_success() {
 
     let presentation = make_presentation(claims, PresentationVerificationType::Success);
 
+    println!("presentation: {}", presentation);
+
     let res: VerifyResult = from_json(
         contract
             .verify(
