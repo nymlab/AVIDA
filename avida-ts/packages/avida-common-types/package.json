@@ -8,8 +8,7 @@
   "scripts": {
     "build": "tsup src/index.ts --config tsup.config.ts",
     "lint": "eslint src",
-    "check": "tsc --noEmit",
-    "build:cosmes": "./postinstall.sh"
+    "check": "tsc --noEmit"
   },
   "exports": "./dist/index.js",
   "devDependencies": {

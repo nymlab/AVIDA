@@ -10,7 +10,7 @@ import fs from "fs";
 
 import { type UnsignedTx } from "cosmes/wallet";
 
-export async function local_deploy(
+export async function deploy(
   chainConfigPath: string,
   contractPath: string,
   deployerMnemonic: string,
@@ -32,7 +32,6 @@ export async function local_deploy(
   // Store wasm MsgStoreCode
   const wasm: Buffer = fs.readFileSync(contractPath);
   const wasmByteCode = new Uint8Array(wasm.buffer);
-
   console.debug("length of wasmByteCode:", wasmByteCode.length);
 
   const storeMsg = new MsgStoreCode({
@@ -46,13 +45,8 @@ export async function local_deploy(
   };
 
   let fee = await deployer.estimateFee(storeTx);
-  console.info("Tx fee:", fee);
-
   let txHash = await deployer.broadcastTx(storeTx, fee);
-  console.info("Tx hash:", txHash);
-
   let { txResponse: storeRes } = await deployer.pollTx(txHash);
-  console.info("Tx response:", JSON.stringify(storeRes.events));
 
   // find the codeId from the events which is in the format:
   // {"type":"store_code","attributes":[{"key":"code_checksum","value":"8d4fb9c2161cf3f3df81a9f401b0540f33bbd70e61a1bb58c45dca6c1a1f772e","index":true},{"key":"code_id","value":"22","index":true}
@@ -64,10 +58,6 @@ export async function local_deploy(
   if (codeIdBigInt === 0n) {
     throw new Error("Code ID not found in tx events");
   }
-
-  console.info("code id:", codeIdBigInt.toString(10));
-
-  console.log(contractInstMsg);
   const instMsg = new MsgInstantiateContract({
     sender: deployer.address,
     admin: deployer.address,
@@ -83,10 +73,7 @@ export async function local_deploy(
   };
 
   fee = await deployer.estimateFee(instTx);
-  console.info("Tx fee:", fee);
-
   txHash = await deployer.broadcastTx(instTx, fee);
-  console.info("Tx hash:", txHash);
 
   let { txResponse: instRes } = await deployer.pollTx(txHash);
 

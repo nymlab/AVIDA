@@ -8,9 +8,9 @@ importers:
 
   .:
     dependencies:
-      '@avida-ts/deployer':
+      '@avida-ts/txutils':
         specifier: workspace:*
-        version: link:packages/deployer
+        version: link:packages/avida-tx-utils
       '@avida-ts/types':
         specifier: workspace:*
         version: link:packages/avida-common-types
@@ -109,7 +109,7 @@ importers:
         specifier: ^5.4.5
         version: 5.4.5
 
-  packages/deployer:
+  packages/avida-tx-utils:
     dependencies:
       '@sd-jwt/core':
         specifier: ^0.7.1

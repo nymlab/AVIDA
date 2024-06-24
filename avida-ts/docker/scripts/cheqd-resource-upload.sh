@@ -2,11 +2,6 @@
 
 set -ex
 
-RESOURCE_ADDR="cheqd16kxf0tkkjc6llu072qwkvj5plm7nr0xdhp353q"
-CHEQD_HOME="./.cheqdnode"
-CHEQD_CHAIN_ID="cheqd-local-1"
-KEYRING_BACKEND="test"
-RESOURCE_MNEMONIC="differ coconut rate prosper cabbage depth rich gather myself winner evidence buzz alcohol garment wing soup reform glare attitude parrot sunset peasant affair envelope"
 NODE=${NODE:-http://cheqd-node:26657}
 
 # add resource key

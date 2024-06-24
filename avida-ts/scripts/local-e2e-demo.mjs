@@ -1,20 +1,21 @@
-import { contractExecTx, local_deploy, get_sdjwt } from "@avida-ts/deployer";
+import {
+  contractExecTx,
+  deploy,
+  get_sdjwt,
+  toWasmBinary,
+} from "@avida-ts/txutils";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { contracts } from "@avida-ts/types";
+import * as types from "@avida-ts/types";
 import { utf8 } from "cosmes/codec";
 import fs from "fs";
-import * as base64js from "base64-js";
-import { Console } from "console";
 
 // This is from https://github.com/neutron-org/neutron/blob/main/network/init.sh
 // We use this in our docker/docker-compose.local.yml
-// neutron1m9l358xunhhwds0568za49mzhvuxx9ux8xafx2
+// addr: neutron1m9l358xunhhwds0568za49mzhvuxx9ux8xafx2
 const NEUTRON_DEPLOYER_MNEMONIC =
   "banner spread envelope side kite person disagree path silver will brother under couch edit food venture squirrel civil budget number acquire point work mass";
-const AVIDA_SDJWT_VERIFIER =
-  "neutron1qt789pxhjdawdetfz4cf8ed09d9gdwlgw7c5u5h4w40lwkudme6qchyhrw";
-
+const AVIDA_SDJWT_VERIFIER = process.env.CONTRACT_ADDRESS;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const neutronChainConfig = join(
   __dirname,
@@ -24,7 +25,6 @@ const avidaExampleContract = join(
   __dirname,
   "../../artifacts/avida_example.wasm",
 );
-
 export const sleep = (milliseconds) => {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 };
@@ -33,10 +33,9 @@ export const sleep = (milliseconds) => {
 // Deploy the example contract and returns contract address
 // 1. MsgStoreCode - store contract code
 // 2. MsgInstantiateContract - instantiate contract with init msg
-/** @type {contracts.SdjwtVerifier.InstantiateMsg} */
+/** @type {types.contracts.SdjwtVerifier.InstantiateMsg} */
 const instMsg = { verifier: AVIDA_SDJWT_VERIFIER };
-
-const exampleContractAddr = await local_deploy(
+const exampleContractAddr = await deploy(
   neutronChainConfig,
   avidaExampleContract,
   NEUTRON_DEPLOYER_MNEMONIC,
@@ -44,49 +43,33 @@ const exampleContractAddr = await local_deploy(
   [],
   "avida_example",
 );
+console.info("\n\n ---> Deployed example dApp at: ", exampleContractAddr);
 
-console.info("Deployed example dApp at: ", exampleContractAddr);
-
-// ========= use the contract registration method to register route on sdjwt-verifier ==================
+// ========= Then, we use the contract registration method to register route on sdjwt-verifier ==================
 // Resource and collection id defined in the cheqd-resource-artifacts data
+// This resource was uploaded to the cheqd node in avida/avida-ts/docker/scripts/upload-cheqd-resource.sh
 const CHEQD_RESOURCE_ID = "9fbb1b86-91f8-4942-97b9-725b7714131c";
 const CHEQD_COLLECTION_ID = "5rjaLzcffhGUH4nt4fyfAg";
+
+/** @type {types.CheqdResourceReq} */
 const CHEQD_RESOURCE_REQ = {
   resourceId: CHEQD_RESOURCE_ID,
   collectionId: CHEQD_COLLECTION_ID,
 };
 
-const jwk = fs
-  .readFileSync(
-    join(__dirname, "../docker/cheqd-resource-artifacts/jwk.json"),
-    "ascii",
-  )
-  .trim();
-
-// MathOperatiosn can be "equal_to", "greater_than", "less_than"
-// in rust: `pub type PresentationReq = Vec<(CriterionKey, Criterion)>`
-//const req = [["age", { number: [30, "equal_to"] }]];
+/** @type {types.PresentationReq} */
 const req = [["age", { number: [18, "greater_than"] }]];
 
-const encoder = new TextEncoder();
-/** @type {contracts.SdjwtVerifier.RouteVerificationRequirements} */
+/** @type {types.contracts.SdjwtVerifier.RouteVerificationRequirements} */
 const routeVerificationRequirements = {
-  // This is Binary type
-  presentation_request: base64js.fromByteArray(
-    new TextEncoder().encode(JSON.stringify(req)),
-  ),
+  presentation_request: toWasmBinary(req),
   verification_source: {
-    // Binary type
-    data_or_location: base64js.fromByteArray(
-      new TextEncoder().encode(JSON.stringify(CHEQD_RESOURCE_REQ)),
-    ),
+    data_or_location: toWasmBinary(CHEQD_RESOURCE_REQ),
     source: "cheqd",
   },
 };
 
-console.log("Route verification requirements: ", routeVerificationRequirements);
-
-/** @type {contracts.SdjwtVerifier.ExecMsg} */
+/** @type {types.contracts.SdjwtVerifier.ExecMsg} */
 const registerRequirementMsg = {
   register_requirement: {
     msg: {
@@ -97,6 +80,11 @@ const registerRequirementMsg = {
   },
 };
 
+console.info(
+  "\n\n ---> Registering route requirements on sdjwt-verifier: ",
+  registerRequirementMsg,
+);
+
 await contractExecTx(
   neutronChainConfig,
   NEUTRON_DEPLOYER_MNEMONIC,
@@ -105,11 +93,24 @@ await contractExecTx(
   [],
 );
 
-// ========= sleep to wait for relayer ============
+// ========= sleep to wait for relayer to relay the resource from cheqd ============
+console.log(
+  "\n\n ---> Sleeping for 30 seconds to wait for relayer to relay the resource from cheqd",
+);
 await sleep(30000);
 
-// ========= create sdjwt presentation btw issue with req disclosed ==================
+//Issue a signed JWT credential with the specified claims and disclosures
+//Return a Encoded SD JWT. Issuer send the credential to the holder
+const privatePEM = `-----BEGIN PRIVATE KEY-----
+MC4CAQAwBQYDK2VwBCIEIFu/3i9WC60gVD1RkdN04HQRq6ht0ahpFMs37i4Qqhib
+-----END PRIVATE KEY-----`;
+const sdjwtInstance = await get_sdjwt(privatePEM);
+// Issuer Define the disclosure frame to specify which claims can be disclosed
+const disclosureFrame = {
+  _sd: ["firstname", "lastname", "age"],
+};
 
+// ========= Success case: create sdjwt presentation and issue with req disclosed ==================
 // Issuer Define the claims object with the user's information
 const claims = {
   firstname: "John",
@@ -117,20 +118,12 @@ const claims = {
   age: 30,
 };
 
-// Issuer Define the disclosure frame to specify which claims can be disclosed
-const disclosureFrame = {
-  _sd: ["firstname", "lastname", "age"],
-};
+console.info(
+  "\n\n --> Issuing credential with claims that satisfied example route: ",
+  claims,
+);
 
-//Issue a signed JWT credential with the specified claims and disclosures
-//Return a Encoded SD JWT. Issuer send the credential to the holder
-const privatePEM = `-----BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VwBCIEIFu/3i9WC60gVD1RkdN04HQRq6ht0ahpFMs37i4Qqhib
------END PRIVATE KEY-----`;
-
-const sdjwt = await get_sdjwt(privatePEM);
-
-const credential = await sdjwt.issue(
+const credential = await sdjwtInstance.issue(
   {
     iss: "issuer",
     iat: new Date().getTime(),
@@ -148,15 +141,14 @@ const presentationFrame = { age: true };
 
 // Create a presentation using the issued credential and the presentation frame
 // return a Encoded SD JWT. Holder send the presentation to the verifier
-const presentation = await sdjwt.present(credential, presentationFrame);
+const presentation = await sdjwtInstance.present(credential, presentationFrame);
 
-console.log("Presentation: ", presentation);
 // ========= holder present with age disclosed to example dApp ==================
 
 /** @type {contracts.RestaurantContract.GiveMeSomeDrink} */
 const drinkMsg = {
   kind: "vc_required",
-  proof: base64js.fromByteArray(new TextEncoder().encode(presentation)),
+  proof: toWasmBinary(presentation),
 };
 
 /** @type {contracts.RestaurantContract.ExecMsg} */
@@ -174,16 +166,20 @@ await contractExecTx(
   [],
 );
 
-// ========= holder present with incorrect age disclosed, should fail ==================
+// ========= Fail case, holder present with incorrect age disclosed, should fail ==================
 
-// Issuer Define the claims object with the user's information
 const invalid_claims = {
   firstname: "John",
   lastname: "Doe2",
   age: 10,
 };
 
-const invalid_credential = await sdjwt.issue(
+console.info(
+  "\n\n ---> Issuing invalid credential with AGE not satisfying example route requirements: ",
+  claims,
+);
+
+const invalid_credential = await sdjwtInstance.issue(
   {
     iss: "issuer",
     iat: new Date().getTime(),
@@ -194,7 +190,7 @@ const invalid_credential = await sdjwt.issue(
   disclosureFrame,
 );
 
-const invalid_presentation = await sdjwt.present(
+const invalid_presentation = await sdjwtInstance.present(
   invalid_credential,
   presentationFrame,
 );
@@ -202,7 +198,7 @@ const invalid_presentation = await sdjwt.present(
 /** @type {contracts.RestaurantContract.GiveMeSomeDrink} */
 const drinkMsg_with_invalid_credentials = {
   kind: "vc_required",
-  proof: base64js.fromByteArray(new TextEncoder().encode(invalid_presentation)),
+  proof: toWasmBinary(invalid_presentation),
 };
 
 try {
@@ -218,5 +214,5 @@ try {
     [],
   );
 } catch (err) {
-  console.error("Invalid presentation failed as expected: ", err);
+  console.error("---> Invalid presentation failed as expected: ", err);
 }
