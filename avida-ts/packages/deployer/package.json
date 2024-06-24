@@ -17,6 +17,10 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
+    "@sd-jwt/core": "^0.7.1",
+    "@sd-jwt/crypto-nodejs": "^0.7.1",
+    "@sd-jwt/sd-jwt-vc": "^0.7.1",
+    "@sd-jwt/types": "^0.7.1",
     "cosmes": "nymlab/cosmes#f9c4e4ef3f"
   }
 }
