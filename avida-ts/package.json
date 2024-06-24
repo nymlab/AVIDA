@@ -10,10 +10,10 @@
     "reset": "pnpm dlx rimraf --glob ./**/node_modules",
     "build": "NODE_ENV=production pnpm run --recursive --stream build",
     "gen-contract-types": "node ./scripts/gen-contract-types.mjs",
-    "deploy-contracts": "node ./scripts/deploy-avida.mjs",
-    "build:deployer": "tsc -p ./packages/deployer && tsc-alias -p ./packages/deployer/tsconfig.json",
-    "build:types": "tsc -p ./packages/avida-common-types",
-    "build:packages": "pnpm run build:deployer && pnpm run build:types",
+    "local-demo": "node --env-file=./contract.env ./scripts/local-e2e-demo.mjs",
+    "build:txutils": "tsc -p ./packages/avida-tx-utils && tsc-alias -p ./packages/avida-tx-utils/tsconfig.json",
+    "build:types": "tsc -p ./packages/avida-common-types && tsc-alias -p ./packages/avida-common-types/tsconfig.json",
+    "build:packages": "pnpm run build:txutils && pnpm run build:types",
     "lint": "eslint --config eslint.config.js --max-warnings 0",
     "lint:fix": "eslint --config eslint.config.js . --fix",
     "format": "prettier --config prettier.config.js --write . && pnpm run lint:fix",
@@ -22,7 +22,7 @@
   },
   "type": "module",
   "dependencies": {
-    "@avida-ts/deployer": "workspace:*",
+    "@avida-ts/txutils": "workspace:*",
     "@avida-ts/types": "workspace:*"
   },
   "devDependencies": {
