@@ -1,5 +1,14 @@
 # sd-jwt onchain verifier
 
+## Features
+
+### Expiration Check
+
+For sdjwt that has an expiration, instead of using the standard epoch time,
+for cosmwasm, we use the key `crate::types::CW_EXPIRATION` (`cw_exp`) as opposed to `exp`,
+which expects the value to be the serialised value of `cw_util::Expiration`.
+If the route requires expiration check, the caller must include, in their `Criterion` - `Criterion::Expires(true)`
+
 ## Keys generation
 
 ### The keys encoding should be ASN1

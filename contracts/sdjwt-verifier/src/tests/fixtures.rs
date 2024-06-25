@@ -1,7 +1,7 @@
-use avida_test_utils::sdjwt::fixtures::RouteVerificationRequirementsType;
 use avida_test_utils::sdjwt::fixtures::{
-    get_route_verification_requirement, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID,
-    MAX_PRESENTATION_LEN, OWNER_ADDR, VERIFIER_CONTRACT_LABEL,
+    get_route_verification_requirement, ExpirationCheck, RouteVerificationRequirementsType,
+    FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID, MAX_PRESENTATION_LEN, OWNER_ADDR,
+    VERIFIER_CONTRACT_LABEL,
 };
 use sylvia::multitest::{App, Proxy};
 
@@ -21,8 +21,10 @@ pub fn instantiate_verifier_contract(
     Proxy<'_, MtApp, SdjwtVerifier<'_>>,
     RouteVerificationRequirements,
 ) {
-    let fx_route_verification_req =
-        get_route_verification_requirement(route_verification_requirements_type);
+    let fx_route_verification_req = get_route_verification_requirement(
+        ExpirationCheck::NoExpiry,
+        route_verification_requirements_type,
+    );
     let code_id = CodeId::store_code(app);
 
     // String, // Admin
