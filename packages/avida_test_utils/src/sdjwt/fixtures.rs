@@ -1,3 +1,5 @@
+use cosmwasm_std::BlockInfo;
+use cw_utils::Expiration;
 use jsonwebtoken::EncodingKey;
 use sd_jwt_rs::issuer;
 use sd_jwt_rs::SDJWTIssuer;
@@ -5,12 +7,12 @@ use sd_jwt_rs::{SDJWTHolder, SDJWTSerializationFormat};
 use serde_json::Value;
 use std::{fs, path::PathBuf};
 
-use cosmwasm_std::Binary;
+use cosmwasm_std::{Binary, Timestamp};
 
 use avida_common::types::{
     InputRoutesRequirements, RouteVerificationRequirements, VerificationSource,
 };
-use avida_sdjwt_verifier::types::{Criterion, MathsOperator, PresentationReq};
+use avida_sdjwt_verifier::types::{Criterion, MathsOperator, PresentationReq, CW_EXPIRATION};
 use josekit::{self};
 
 /// Test constants
@@ -26,13 +28,26 @@ pub const THIRD_ROUTE_ID: u64 = 3;
 
 pub const MAX_PRESENTATION_LEN: usize = 3000;
 
-/// Is used to test different cases for route verification requirements
+// This is the default in multitest env.block
+pub const DEFAULT_TEST_BLOCKINFO: BlockInfo = BlockInfo {
+    height: 12345,
+    time: Timestamp::from_nanos(1571797419879305533),
+    chain_id: String::new(), // default is "cosmos-testnet-14002"}
+};
+
+// This is used to define if sdjwt presentation should be expired or not
+pub enum ExpirationCheck {
+    Expires,
+    NoExpiry,
+}
+
+/// This is used to test different cases for route verification requirements
 pub enum RouteVerificationRequirementsType {
     Supported,
     UnsupportedKeyType,
 }
 
-/// IS used to test different cases for presentation verification
+/// This is used to test different cases for presentation verification
 pub enum PresentationVerificationType {
     Success,
     OmitAgeDisclosure,
@@ -72,9 +87,13 @@ pub fn rsa_issuer_jwk() -> josekit::jwk::Jwk {
     key_pair.to_jwk_public_key()
 }
 
-pub fn claims(name: &str, age: u8, active: bool, joined_at: u16) -> Value {
+pub fn claims(name: &str, age: u8, active: bool, joined_at: u16, exp: Option<Expiration>) -> Value {
+    let exp = match exp {
+        Some(exp) => serde_json_wasm::to_string(&exp).unwrap(),
+        None => "".to_string(),
+    };
     serde_json::json!({
-        "exp": 12345,
+        CW_EXPIRATION: exp,
         "iss": "issuer",
         "name": name,
         "age": age,
@@ -132,14 +151,6 @@ pub fn make_route_verification_requirements(
         }
     };
 
-    let jsonwebtoken_jwk: jsonwebtoken::jwk::Jwk =
-        serde_json_wasm::from_slice(data_or_location.as_bytes()).unwrap();
-
-    println!(
-        "jwk: {}",
-        serde_json_wasm::to_string(&jsonwebtoken_jwk).unwrap()
-    );
-
     // Add some default criteria as presentation request
     RouteVerificationRequirements {
         verification_source: VerificationSource {
@@ -170,9 +181,6 @@ pub fn get_two_input_routes_requirements() -> Vec<InputRoutesRequirements> {
         ("active".to_string(), Criterion::Boolean(true)),
     ];
 
-    let strreq = serde_json_wasm::to_string(&second_presentation_req).unwrap();
-    println!("strreq: {}", strreq);
-
     vec![
         InputRoutesRequirements {
             route_id: SECOND_ROUTE_ID,
@@ -193,9 +201,10 @@ pub fn get_two_input_routes_requirements() -> Vec<InputRoutesRequirements> {
 
 /// Is used to get route verification requirements for a single route
 pub fn get_route_verification_requirement(
+    expiration_check: ExpirationCheck,
     route_verification_requirements_type: RouteVerificationRequirementsType,
 ) -> RouteVerificationRequirements {
-    let presentation_req: PresentationReq = vec![
+    let mut presentation_req: PresentationReq = vec![
         (
             "age".to_string(),
             Criterion::Number(30, MathsOperator::EqualTo),
@@ -206,6 +215,9 @@ pub fn get_route_verification_requirement(
             Criterion::Number(2020, MathsOperator::GreaterThan),
         ),
     ];
+    if let ExpirationCheck::Expires = expiration_check {
+        presentation_req.push((CW_EXPIRATION.to_string(), Criterion::Expires(true)))
+    };
 
     make_route_verification_requirements(presentation_req, route_verification_requirements_type)
 }
@@ -232,4 +244,8 @@ pub fn get_input_route_requirement(
             route_verification_requirements_type,
         ),
     }
+}
+
+pub fn get_default_block_info() -> BlockInfo {
+    DEFAULT_TEST_BLOCKINFO
 }

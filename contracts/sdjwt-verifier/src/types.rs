@@ -2,11 +2,12 @@ use super::errors::{SdjwtVerifierError, SdjwtVerifierResultError};
 
 use avida_common::types::InputRoutesRequirements;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::from_json;
-use cosmwasm_std::Binary;
-use cosmwasm_std::SubMsg;
+use cosmwasm_std::{from_json, Binary, BlockInfo, SubMsg};
+use cw_utils::Expiration;
 use jsonwebtoken::jwk::Jwk;
 use serde::{Deserialize, Serialize};
+
+pub const CW_EXPIRATION: &str = "cw_exp";
 
 #[cw_serde]
 pub struct VerifyResult {
@@ -75,6 +76,7 @@ pub enum Criterion {
     String(String),
     Number(u64, MathsOperator),
     Boolean(bool),
+    Expires(bool),
 }
 
 #[cw_serde]
@@ -84,13 +86,36 @@ pub enum MathsOperator {
     EqualTo,
 }
 
+/// Validate the verified claims against the presentation request
 pub fn validate(
     presentation_request: PresentationReq,
     verified_claims: serde_json::Value,
+    block_info: &BlockInfo,
 ) -> Result<(), SdjwtVerifierResultError> {
     if let serde_json::Value::Object(claims) = verified_claims {
         for (key, criterion) in presentation_request {
-            if let Some(value) = claims.get(&key) {
+            // For every requested key, the value must be present in the verified claims
+            if key == CW_EXPIRATION && criterion == Criterion::Expires(true) {
+                if let Some(value) = claims.get(&key) {
+                    let exp = match value {
+                        serde_json::Value::String(exp) => {
+                            let expiration: Expiration =
+                                serde_json_wasm::from_str(exp).map_err(|_| {
+                                    SdjwtVerifierResultError::ExpirationStringInvalid(exp.clone())
+                                })?;
+                            expiration
+                        }
+                        _ => return Err(SdjwtVerifierResultError::CriterionValueTypeUnexpected),
+                    };
+                    if exp.is_expired(block_info) {
+                        return Err(SdjwtVerifierResultError::PresentationExpired(exp));
+                    }
+                } else {
+                    return Err(SdjwtVerifierResultError::DisclosedClaimNotFound(
+                        key.to_string(),
+                    ));
+                }
+            } else if let Some(value) = claims.get(&key) {
                 match (value, criterion) {
                     // matches the presentation value `p_val` with the criterion value `c_val`
                     (serde_json::Value::String(p_val), Criterion::String(c_val)) => {

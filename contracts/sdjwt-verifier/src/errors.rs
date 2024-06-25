@@ -17,6 +17,8 @@ pub enum SdjwtVerifierResultError {
     JwtError(String),
     StringConversion(String),
     SdJwt(String),
+    ExpirationStringInvalid(String),
+    PresentationExpired(cw_utils::Expiration),
 }
 
 #[derive(Error, Debug, PartialEq)]
