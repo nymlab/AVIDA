@@ -21,7 +21,8 @@ use avida_common::{
 
 //  CosmWasm / Sylvia lib
 use cosmwasm_std::{
-    ensure, from_json, to_json_binary, Addr, CosmosMsg, Env, IbcTimeout, Response, Storage, SubMsg,
+    ensure, from_json, to_json_binary, Addr, BlockInfo, CosmosMsg, Env, IbcTimeout, Response,
+    Storage, SubMsg,
 };
 
 use sylvia::{
@@ -43,7 +44,7 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
 
     #[sv::msg(sudo)]
     fn sudo(&self, ctx: SudoCtx, msg: AvidaVerifierSudoMsg) -> Result<Response, Self::Error> {
-        let SudoCtx { deps, env: _ } = ctx;
+        let SudoCtx { deps, env } = ctx;
         match msg {
             AvidaVerifierSudoMsg::Verify {
                 app_addr,
@@ -61,7 +62,7 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
 
                 // In `Sudo`, the app address may be the `moduleAccount`
                 Ok(self
-                    ._verify(presentation, requirements, max_len)
+                    ._verify(presentation, requirements, max_len, &env.block)
                     .map(|_| Response::default())
                     .map_err(SdjwtVerifierError::SdjwtVerifierResultError)?)
             }
@@ -102,7 +103,7 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         route_id: RouteId,
         app_addr: Option<String>,
     ) -> Result<Response, Self::Error> {
-        let ExecCtx { deps, info, .. } = ctx;
+        let ExecCtx { deps, info, env } = ctx;
         let app_addr = app_addr.unwrap_or_else(|| info.sender.to_string());
         let app_addr = deps.api.addr_validate(&app_addr)?;
 
@@ -115,7 +116,7 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
             .clone();
         let max_len = self.max_presentation_len.load(deps.storage)?;
         // Performs the verification of the provided presentation within the context of the given route
-        let res = self._verify(presentation, requirements, max_len);
+        let res = self._verify(presentation, requirements, max_len, &env.block);
 
         //:we response with the error so that it can be propagated
         Ok(Response::default().set_data(to_json_binary(&VerifyResult { result: res })?))
@@ -228,6 +229,7 @@ impl SdjwtVerifier<'_> {
         presentation: VerfiablePresentation,
         requirements: VerificationReq,
         max_presentation_len: usize,
+        block_info: &BlockInfo,
     ) -> Result<(), SdjwtVerifierResultError> {
         // Ensure the presentation is not too large
         ensure!(
@@ -256,7 +258,11 @@ impl SdjwtVerifier<'_> {
         .verified_claims;
 
         // We validate the verified claims against the requirements
-        validate(requirements.presentation_required, verified_claims)
+        validate(
+            requirements.presentation_required,
+            verified_claims,
+            block_info,
+        )
     }
 
     /// Performs a registration of an application and all its routes
@@ -337,7 +343,6 @@ impl SdjwtVerifier<'_> {
         let mut response: Response = Response::default();
 
         // On registration we check if the dApp has request for IBC data
-        // FIXME: add IBC submessages
         if let Some(route_criteria) = route_criteria {
             data_sources.insert(route_id, route_criteria.verification_source.clone());
 
