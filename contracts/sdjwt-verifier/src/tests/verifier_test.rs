@@ -13,14 +13,11 @@ use josekit::{self};
 
 use super::fixtures::instantiate_verifier_contract;
 use avida_test_utils::sdjwt::fixtures::{
-    FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID, OWNER_ADDR, SECOND_CALLER_APP_ADDR, SECOND_ROUTE_ID,
-    THIRD_ROUTE_ID,
-};
-
-use avida_test_utils::sdjwt::fixtures::{
-    claims, get_input_route_requirement, get_route_verification_requirement,
-    get_two_input_routes_requirements, issuer_jwk, make_presentation, PresentationVerificationType,
-    RouteVerificationRequirementsType, MAX_PRESENTATION_LEN,
+    claims, get_default_block_info, get_input_route_requirement,
+    get_route_verification_requirement, get_two_input_routes_requirements, issuer_jwk,
+    make_presentation, ExpirationCheck, PresentationVerificationType,
+    RouteVerificationRequirementsType, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID, MAX_PRESENTATION_LEN,
+    OWNER_ADDR, SECOND_CALLER_APP_ADDR, SECOND_ROUTE_ID, THIRD_ROUTE_ID,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -71,7 +68,7 @@ fn instantiate_success() {
 }
 
 #[test]
-fn verify_success_validate_success() {
+fn verify_success_no_exp_validate_success() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
@@ -79,11 +76,9 @@ fn verify_success_validate_success() {
         instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
 
     // Make a presentation with some claims
-    let claims = claims("Alice", 30, true, 2021);
+    let claims = claims("Alice", 30, true, 2021, None);
 
     let presentation = make_presentation(claims, PresentationVerificationType::Success);
-
-    println!("presentation: {}", presentation);
 
     let res: VerifyResult = from_json(
         contract
@@ -103,6 +98,229 @@ fn verify_success_validate_success() {
 }
 
 #[test]
+fn verify_success_exp_validate_success() {
+    let app: App<_> = App::default();
+
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
+
+    // Get route verification requirements for a single route with expiration
+    let route_verification_req = get_route_verification_requirement(
+        ExpirationCheck::Expires,
+        RouteVerificationRequirementsType::Supported,
+    );
+
+    //Register the app with exp requirements
+    contract
+        .register(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            vec![InputRoutesRequirements {
+                route_id: SECOND_ROUTE_ID,
+                requirements: route_verification_req,
+            }],
+        )
+        .call(OWNER_ADDR)
+        .unwrap();
+
+    // Make a presentation with some claims with block time
+    let valid_timestamp_claims = claims(
+        "Alice",
+        30,
+        true,
+        2021,
+        Some(cw_utils::Expiration::AtTime(
+            get_default_block_info().time.plus_days(1),
+        )),
+    );
+
+    let presentation = make_presentation(
+        valid_timestamp_claims,
+        PresentationVerificationType::Success,
+    );
+
+    let res: VerifyResult = from_json(
+        contract
+            .verify(
+                Binary::from(presentation.as_bytes()),
+                SECOND_ROUTE_ID,
+                Some(SECOND_CALLER_APP_ADDR.to_string()),
+            )
+            .call(SECOND_CALLER_APP_ADDR)
+            .unwrap()
+            .data
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert!(res.result.is_ok());
+
+    // Make a presentation with some claims with block height
+    let valid_blockheigh_claims = claims(
+        "Alice",
+        30,
+        true,
+        2021,
+        Some(cw_utils::Expiration::AtHeight(
+            get_default_block_info().height + 1,
+        )),
+    );
+
+    let presentation = make_presentation(
+        valid_blockheigh_claims,
+        PresentationVerificationType::Success,
+    );
+
+    let res: VerifyResult = from_json(
+        contract
+            .verify(
+                Binary::from(presentation.as_bytes()),
+                SECOND_ROUTE_ID,
+                Some(SECOND_CALLER_APP_ADDR.to_string()),
+            )
+            .call(SECOND_CALLER_APP_ADDR)
+            .unwrap()
+            .data
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert!(res.result.is_ok());
+}
+
+#[test]
+fn verify_failed_on_expired_claim() {
+    let app: App<_> = App::default();
+
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
+
+    // Get route verification requirements for a single route with expiration
+    let route_verification_req = get_route_verification_requirement(
+        ExpirationCheck::Expires,
+        RouteVerificationRequirementsType::Supported,
+    );
+
+    //Register the app with exp requirements
+    contract
+        .register(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            vec![InputRoutesRequirements {
+                route_id: SECOND_ROUTE_ID,
+                requirements: route_verification_req,
+            }],
+        )
+        .call(OWNER_ADDR)
+        .unwrap();
+
+    // Make a presentation with some claims that has expired
+    let exp = cw_utils::Expiration::AtTime(get_default_block_info().time.minus_days(1));
+    let invalid_timestamp_claims = claims("Alice", 30, true, 2021, Some(exp));
+
+    let presentation = make_presentation(
+        invalid_timestamp_claims,
+        PresentationVerificationType::Success,
+    );
+
+    let res: VerifyResult = from_json(
+        contract
+            .verify(
+                Binary::from(presentation.as_bytes()),
+                SECOND_ROUTE_ID,
+                Some(SECOND_CALLER_APP_ADDR.to_string()),
+            )
+            .call(SECOND_CALLER_APP_ADDR)
+            .unwrap()
+            .data
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        res.result.unwrap_err(),
+        SdjwtVerifierResultError::PresentationExpired(exp)
+    );
+
+    // Make a presentation with some claims that has expired
+    let exp = cw_utils::Expiration::AtHeight(get_default_block_info().height - 10);
+    let invalid_blockheight_claims = claims("Alice", 30, true, 2021, Some(exp));
+
+    let presentation = make_presentation(
+        invalid_blockheight_claims,
+        PresentationVerificationType::Success,
+    );
+
+    let res: VerifyResult = from_json(
+        contract
+            .verify(
+                Binary::from(presentation.as_bytes()),
+                SECOND_ROUTE_ID,
+                Some(SECOND_CALLER_APP_ADDR.to_string()),
+            )
+            .call(SECOND_CALLER_APP_ADDR)
+            .unwrap()
+            .data
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        res.result.unwrap_err(),
+        SdjwtVerifierResultError::PresentationExpired(exp)
+    );
+}
+
+#[test]
+fn verify_sucess_on_no_expiration_check_for_expired_claims() {
+    let app: App<_> = App::default();
+
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
+
+    // Get route verification requirements for a single route with expiration
+    let route_verification_req = get_route_verification_requirement(
+        ExpirationCheck::NoExpiry,
+        RouteVerificationRequirementsType::Supported,
+    );
+
+    //Register the app with exp requirements
+    contract
+        .register(
+            SECOND_CALLER_APP_ADDR.to_string(),
+            vec![InputRoutesRequirements {
+                route_id: SECOND_ROUTE_ID,
+                requirements: route_verification_req,
+            }],
+        )
+        .call(OWNER_ADDR)
+        .unwrap();
+
+    // Make a presentation with some claims that has expired
+    let exp = cw_utils::Expiration::AtTime(get_default_block_info().time.minus_days(1));
+    let invalid_timestamp_claims = claims("Alice", 30, true, 2021, Some(exp));
+
+    let presentation = make_presentation(
+        invalid_timestamp_claims,
+        PresentationVerificationType::Success,
+    );
+
+    let res: VerifyResult = from_json(
+        contract
+            .verify(
+                Binary::from(presentation.as_bytes()),
+                SECOND_ROUTE_ID,
+                Some(SECOND_CALLER_APP_ADDR.to_string()),
+            )
+            .call(SECOND_CALLER_APP_ADDR)
+            .unwrap()
+            .data
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert!(res.result.is_ok());
+}
+
+#[test]
 fn verify_success_validate_fails() {
     let app: App<_> = App::default();
 
@@ -111,7 +329,7 @@ fn verify_success_validate_fails() {
         instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
 
     // Make a presentation with some claims that does not match presentation requirements
-    let claims = claims("Alice", 30, true, 2014);
+    let claims = claims("Alice", 30, true, 2014, None);
 
     let presentation = make_presentation(claims, PresentationVerificationType::Success);
 
@@ -142,7 +360,7 @@ fn verify_required_claims_not_satisfied() {
     let (contract, _) =
         instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
 
-    let claims = claims("Alice", 30, true, 2021);
+    let claims = claims("Alice", 30, true, 2021, None);
 
     let presentation = make_presentation(claims, PresentationVerificationType::OmitAgeDisclosure);
 
@@ -209,6 +427,7 @@ fn verify_presentation_too_large() {
         30,
         true,
         2021,
+        None,
     );
 
     let presentation = make_presentation(claims, PresentationVerificationType::Success);
@@ -243,7 +462,7 @@ fn verify_route_not_registered() {
         instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
 
     // Make a presentation with some claims
-    let claims = claims("Alice", 30, true, 2021);
+    let claims = claims("Alice", 30, true, 2021, None);
 
     let presentation = make_presentation(claims, PresentationVerificationType::Success);
 
@@ -527,8 +746,10 @@ fn update_success() {
         .is_ok());
 
     // Get route verification requirements for a single route
-    let updated_route_verification_req =
-        get_route_verification_requirement(RouteVerificationRequirementsType::Supported);
+    let updated_route_verification_req = get_route_verification_requirement(
+        ExpirationCheck::Expires,
+        RouteVerificationRequirementsType::Supported,
+    );
 
     // Update the route verification requirements
     assert!(contract
@@ -575,8 +796,10 @@ fn update_app_not_registered() {
         instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
 
     // Get route verification requirements for a single route
-    let updated_route_verification_req =
-        get_route_verification_requirement(RouteVerificationRequirementsType::Supported);
+    let updated_route_verification_req = get_route_verification_requirement(
+        ExpirationCheck::NoExpiry,
+        RouteVerificationRequirementsType::Supported,
+    );
 
     // Try update the route verification requirements of the not registered app
     assert!(matches!(
@@ -612,8 +835,10 @@ fn update_unathorized() {
         .is_ok());
 
     // Get route verification requirements for a single route
-    let updated_route_verification_req =
-        get_route_verification_requirement(RouteVerificationRequirementsType::Supported);
+    let updated_route_verification_req = get_route_verification_requirement(
+        ExpirationCheck::NoExpiry,
+        RouteVerificationRequirementsType::Supported,
+    );
 
     // Update the route verification requirements using unathorized caller address
     assert!(matches!(
@@ -649,8 +874,10 @@ fn update_serde_json_error() {
         .is_ok());
 
     // Get route verification requirements for a single route
-    let mut updated_route_verification_req =
-        get_route_verification_requirement(RouteVerificationRequirementsType::Supported);
+    let mut updated_route_verification_req = get_route_verification_requirement(
+        ExpirationCheck::NoExpiry,
+        RouteVerificationRequirementsType::Supported,
+    );
 
     // Try update the route verification requirements with invalid presentation request
     updated_route_verification_req.presentation_request = Binary::from(b"invalid");
@@ -676,8 +903,10 @@ fn update_unsupported_key_type() {
         instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
 
     // Get route verification requirements for a single route
-    let route_verification_req =
-        get_route_verification_requirement(RouteVerificationRequirementsType::Supported);
+    let route_verification_req = get_route_verification_requirement(
+        ExpirationCheck::NoExpiry,
+        RouteVerificationRequirementsType::Supported,
+    );
 
     // Register the app with the two routes
     assert!(contract
