@@ -1,23 +1,23 @@
 import { SDJwtVcInstance } from "@sd-jwt/sd-jwt-vc";
 import { generateSalt, digest } from "@sd-jwt/crypto-nodejs";
-import { subtle, createPrivateKey, sign } from "node:crypto";
+import { createPrivateKey, sign } from "node:crypto";
 
 export const EdDSA = {
   alg: "EdDSA",
 
-  async getSigner(privateKeyPEM: string) {
+  getSigner(privateKeyPEM: string): (data: string) => string {
     const privateKey = createPrivateKey(privateKeyPEM);
 
-    return async (data: any) => {
+    return (data: string) => {
       const encoder = new TextEncoder();
-      const signature = await sign(null, encoder.encode(data), privateKey);
+      const signature = sign(null, encoder.encode(data), privateKey);
       return Buffer.from(signature).toString("base64url");
     };
   },
 };
 
-export async function get_sdjwt(privatePEM: string): Promise<SDJwtVcInstance> {
-  const signer = await EdDSA.getSigner(privatePEM);
+export function getSdJwt(privatePEM: string): SDJwtVcInstance {
+  const signer = EdDSA.getSigner(privatePEM);
 
   return new SDJwtVcInstance({
     signer,

@@ -1,10 +1,5 @@
 import { MsgStoreCode, MsgInstantiateContract } from "cosmes/client";
-import {
-  CosmosBaseV1beta1Coin as Coin,
-  CosmosTxV1beta1Fee as Fee,
-  CosmosBaseAbciV1beta1GasInfo as GasInfo,
-} from "cosmes/protobufs";
-
+import type { CosmosBaseV1beta1Coin as Coin } from "cosmes/protobufs";
 import { getWallet } from "./wallet";
 import fs from "fs";
 
@@ -46,7 +41,7 @@ export async function deploy(
 
   let fee = await deployer.estimateFee(storeTx);
   let txHash = await deployer.broadcastTx(storeTx, fee);
-  let { txResponse: storeRes } = await deployer.pollTx(txHash);
+  const { txResponse: storeRes } = await deployer.pollTx(txHash);
 
   // find the codeId from the events which is in the format:
   // {"type":"store_code","attributes":[{"key":"code_checksum","value":"8d4fb9c2161cf3f3df81a9f401b0540f33bbd70e61a1bb58c45dca6c1a1f772e","index":true},{"key":"code_id","value":"22","index":true}
@@ -75,7 +70,7 @@ export async function deploy(
   fee = await deployer.estimateFee(instTx);
   txHash = await deployer.broadcastTx(instTx, fee);
 
-  let { txResponse: instRes } = await deployer.pollTx(txHash);
+  const { txResponse: instRes } = await deployer.pollTx(txHash);
 
   const contractAddr =
     instRes.events

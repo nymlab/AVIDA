@@ -1,11 +1,9 @@
 import { MsgExecuteContract } from "cosmes/client";
-import {
-  CosmosBaseV1beta1Coin as Coin,
-  CosmosTxV1beta1Fee as Fee,
-  CosmosBaseAbciV1beta1GasInfo as GasInfo,
-} from "cosmes/protobufs";
 import { getWallet } from "./wallet";
-
+import type {
+  CosmosBaseV1beta1Coin as Coin,
+  CosmosBaseAbciV1beta1TxResponse as TxResponse,
+} from "cosmes/protobufs";
 import { type UnsignedTx } from "cosmes/wallet";
 
 export async function contractExecTx(
@@ -14,7 +12,7 @@ export async function contractExecTx(
   contractAddr: string,
   msg: { [k: string]: unknown },
   funds: Coin[],
-): Promise<any> {
+): Promise<TxResponse> {
   console.info(
     "Executing contract at: ",
     contractAddr,
@@ -36,14 +34,14 @@ export async function contractExecTx(
     msgs: [execMsg],
   };
 
-  let fee = await wallet.estimateFee(storeTx);
-  let txHash = await wallet.broadcastTx(storeTx, fee);
-  let { txResponse } = await wallet.pollTx(txHash);
+  const fee = await wallet.estimateFee(storeTx);
+  const txHash = await wallet.broadcastTx(storeTx, fee);
+  const { txResponse } = await wallet.pollTx(txHash);
   console.info(
     "\t Execute Msg response:",
     JSON.stringify(txResponse.events),
     "\n\n",
   );
 
-  return txResponse;
+  return txResponse as TxResponse;
 }

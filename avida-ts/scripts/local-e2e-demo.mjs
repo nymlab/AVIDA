@@ -1,14 +1,14 @@
+// @ts-check
+
 import {
   contractExecTx,
   deploy,
-  get_sdjwt,
+  getSdJwt,
   toWasmBinary,
 } from "@avida-ts/txutils";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import * as types from "@avida-ts/types";
-import { utf8 } from "cosmes/codec";
-import fs from "fs";
+import * as avidaTypes from "@avida-ts/types";
 
 // This is from https://github.com/neutron-org/neutron/blob/main/network/init.sh
 // We use this in our docker/docker-compose.local.yml
@@ -33,7 +33,7 @@ export const sleep = (milliseconds) => {
 // Deploy the example contract and returns contract address
 // 1. MsgStoreCode - store contract code
 // 2. MsgInstantiateContract - instantiate contract with init msg
-/** @type {types.contracts.SdjwtVerifier.InstantiateMsg} */
+/** @type {avidaTypes.contracts.SdjwtVerifier.InstantiateMsg} */
 const instMsg = { verifier: AVIDA_SDJWT_VERIFIER };
 const exampleContractAddr = await deploy(
   neutronChainConfig,
@@ -51,16 +51,16 @@ console.info("\n\n ---> Deployed example dApp at: ", exampleContractAddr);
 const CHEQD_RESOURCE_ID = "9fbb1b86-91f8-4942-97b9-725b7714131c";
 const CHEQD_COLLECTION_ID = "5rjaLzcffhGUH4nt4fyfAg";
 
-/** @type {types.CheqdResourceReq} */
+/** @type {avidaTypes.CheqdResourceReq} */
 const CHEQD_RESOURCE_REQ = {
   resourceId: CHEQD_RESOURCE_ID,
   collectionId: CHEQD_COLLECTION_ID,
 };
 
-/** @type {types.PresentationReq} */
+/** @type {avidaTypes.PresentationReq} */
 const req = [["age", { number: [18, "greater_than"] }]];
 
-/** @type {types.contracts.SdjwtVerifier.RouteVerificationRequirements} */
+/** @type {SdjwtVerifier} */
 const routeVerificationRequirements = {
   presentation_request: toWasmBinary(req),
   verification_source: {
@@ -69,7 +69,7 @@ const routeVerificationRequirements = {
   },
 };
 
-/** @type {types.contracts.SdjwtVerifier.ExecMsg} */
+/** @type {SdjwtVerifier} */
 const registerRequirementMsg = {
   register_requirement: {
     msg: {
@@ -104,8 +104,10 @@ await sleep(30000);
 const privatePEM = `-----BEGIN PRIVATE KEY-----
 MC4CAQAwBQYDK2VwBCIEIFu/3i9WC60gVD1RkdN04HQRq6ht0ahpFMs37i4Qqhib
 -----END PRIVATE KEY-----`;
-const sdjwtInstance = await get_sdjwt(privatePEM);
+const sdjwtInstance = getSdJwt(privatePEM);
 // Issuer Define the disclosure frame to specify which claims can be disclosed
+
+/** @type {SdjwtVerifier} */
 const disclosureFrame = {
   _sd: ["firstname", "lastname", "age"],
 };
@@ -145,13 +147,13 @@ const presentation = await sdjwtInstance.present(credential, presentationFrame);
 
 // ========= holder present with age disclosed to example dApp ==================
 
-/** @type {contracts.RestaurantContract.GiveMeSomeDrink} */
+/** @type {RestaurantContract} */
 const drinkMsg = {
   kind: "vc_required",
   proof: toWasmBinary(presentation),
 };
 
-/** @type {contracts.RestaurantContract.ExecMsg} */
+/** @type {RestaurantContract} */
 const getDrinkMsg = {
   give_me_some_drink: {
     msg: drinkMsg,
@@ -195,7 +197,7 @@ const invalid_presentation = await sdjwtInstance.present(
   presentationFrame,
 );
 
-/** @type {contracts.RestaurantContract.GiveMeSomeDrink} */
+/** @type {RestaurantContract} */
 const drinkMsg_with_invalid_credentials = {
   kind: "vc_required",
   proof: toWasmBinary(invalid_presentation),
