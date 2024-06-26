@@ -52,6 +52,7 @@
 
     // allow JavaScript files to be imported (for example supports autocompletion in *.config.mjs files)
     "allowJs": true,
+    "checkJs": true,
 
     // allow JSX files (or files that are internally considered JSX such as Astro files) to be imported inside `.js` and `.ts` files.
     "jsx": "preserve",
@@ -99,7 +100,7 @@
   },
 
   // include @total-typescript reset for global type enhancements
-  "include": ["reset.d.ts"],
+  "include": ["reset.d.ts", "**/*.mjs"],
 
   // "exclude": []
   // "exclude": ["node_modules", "cdk.out", "tmp", "wip", "notes"]
