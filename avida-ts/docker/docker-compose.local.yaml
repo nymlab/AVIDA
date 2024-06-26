@@ -33,7 +33,7 @@ services:
       - NODE=http://cheqd-node:26657
 
   neutron-node:
-    image: ghrc.io/nymlab/neutron-standalone:v3.0.5-arm64
+    image: ghcr.io/nymlab/neutron-standalone:v3.0.5-arm64
     ports:
       - target: 9090
         published: 9080 # grpc
@@ -49,7 +49,7 @@ services:
   # deployer: neutron demo_2
   # salt: ascii avida-local
   neutron-deployer:
-    image: ghrc.io/nymlab/neutron-standalone:v3.0.5-arm64
+    image: ghcr.io/nymlab/neutron-standalone:v3.0.5-arm64
     volumes:
       - ./../../artifacts/:/tmp/artifacts/
       - ../:/tmp/app/
