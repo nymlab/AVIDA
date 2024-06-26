@@ -6,9 +6,9 @@
     "strictBindCallApply": true,
     "noImplicitAny": true,
 
-    "lib": ["ES2020", "DOM"],
-    "target": "ES2020",
-    "module": "ES2020",
+    "lib": ["ES2022", "DOM"],
+    "target": "ES2022",
+    "module": "ES2022",
 
 
     // emit types and source maps for debugging and intellisense
