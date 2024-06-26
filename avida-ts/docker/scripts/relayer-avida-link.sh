@@ -2,9 +2,9 @@
 
 set -ex
 
-RELAYER_CONFIG="/home/hermes/hermes-relayer-config/config.toml"
-NEUTRON_RELAYER="/home/hermes/hermes-relayer-config/neutron-relayer"
-CHEQD_RELAYER="/home/hermes/hermes-relayer-config/cheqd-relayer"
+RELAYER_CONFIG="/home/hermes/app/docker/hermes-relayer-config/config.toml"
+NEUTRON_RELAYER="/home/hermes/app/docker/hermes-relayer-config/neutron-relayer"
+CHEQD_RELAYER="/home/hermes/app/docker/hermes-relayer-config/cheqd-relayer"
 
 CHEQD_CHAIN_ID="cheqd-local-1"
 NEUTRON_CHAIN_ID="neutron-local-1"
@@ -33,14 +33,13 @@ check_contract_file() {
 
 # Wait until the file is not empty and contains CONTRACT_ADDRESS with a non-empty value
 while ! check_contract_file; do
-  echo "Waiting for .contract.env to have a non-empty CONTRACT_ADDRESS..."
+  echo "Waiting for local.contract to have a non-empty CONTRACT_ADDRESS..."
   sleep 5  # Wait for 5 seconds before checking again
 done
 
 AVIDA_SDJWT_PORT="$AVIDA_SDJWT_PORT_BASE$CONTRACT_ADDRESS"
 
-
-cat $RELAYER_CONFIG
+echo "HERMES: Got contract, starting to create channel on path $PATH_NAME with port $AVIDA_SDJWT_PORT..."
 
 hermes --config $RELAYER_CONFIG \
   keys add \
@@ -65,5 +64,8 @@ hermes --config $RELAYER_CONFIG \
   --order ORDER_UNORDERED \
   --channel-version $CHANNEL_VERSION \
   --yes
+
+echo "AVIDA Path created! ($PATH_NAME)"
+
 
 hermes --config $RELAYER_CONFIG start
