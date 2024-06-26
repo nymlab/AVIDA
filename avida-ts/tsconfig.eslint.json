@@ -4,5 +4,5 @@
     // ensure this tsconfig cannot accidentally be used for a build
     "noEmit": true
   },
-  "include": [ "packages/**/*", "reset.d.ts", "*.config.ts", "*.config.js"]
+  "include": [ "packages/**/*", "reset.d.ts", "*.config.ts", "*.config.js", "**/*.mjs"]
 }

@@ -33,7 +33,7 @@ export const sleep = (milliseconds) => {
 // Deploy the example contract and returns contract address
 // 1. MsgStoreCode - store contract code
 // 2. MsgInstantiateContract - instantiate contract with init msg
-/** @type {avidaTypes.contracts.SdjwtVerifier.InstantiateMsg} */
+/** @type {avidaTypes.contracts.SdjwtVerifier} */
 const instMsg = { verifier: AVIDA_SDJWT_VERIFIER };
 const exampleContractAddr = await deploy(
   neutronChainConfig,
@@ -60,7 +60,7 @@ const CHEQD_RESOURCE_REQ = {
 /** @type {avidaTypes.PresentationReq} */
 const req = [["age", { number: [18, "greater_than"] }]];
 
-/** @type {SdjwtVerifier} */
+/** @type {avidaTypes.contracts.SdjwtVerifier} */
 const routeVerificationRequirements = {
   presentation_request: toWasmBinary(req),
   verification_source: {
@@ -69,7 +69,7 @@ const routeVerificationRequirements = {
   },
 };
 
-/** @type {SdjwtVerifier} */
+/** @type {avidaTypes.contracts.SdjwtVerifier} */
 const registerRequirementMsg = {
   register_requirement: {
     msg: {
@@ -147,7 +147,7 @@ const presentation = await sdjwtInstance.present(credential, presentationFrame);
 
 // ========= holder present with age disclosed to example dApp ==================
 
-/** @type {RestaurantContract} */
+/** @type {avidaTypes.contracts.RestaurantContract} */
 const drinkMsg = {
   kind: "vc_required",
   proof: toWasmBinary(presentation),
