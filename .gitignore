@@ -1,5 +1,5 @@
 /target
-.env
+**.env
 **/.cheqdnode
 **/.relayer
 
@@ -8,7 +8,6 @@ artifacts/
 .vscode
 
 avida-ts/**/dist/
-avida-ts/contract.env
+avida-ts/env/*.contract
 
 **/node_modules/
-

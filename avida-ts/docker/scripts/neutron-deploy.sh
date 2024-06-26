@@ -5,7 +5,7 @@ BASE_DIR=./data
 CHAINID=${CHAINID:-test-1}
 NODE=${NODE:-http://neutron-node:26657}
 CHAIN_DIR="$BASE_DIR/$CHAINID"
-CONTRACT_FILE=${CONTRACT_FILE:-/tmp/.contract.env}
+CONTRACT_FILE=${CONTRACT_FILE:-/tmp/app/docker/env/local.contract}
 
 /opt/neutron/network/init.sh
 
@@ -44,12 +44,16 @@ $BINARY tx wasm instantiate2 19 '{"max_presentation_len": 30000, "init_registrat
 sleep 6
 
 NEW_CONTRACT_ADDRESS=$($BINARY query wasm list-contract-by-code 19 --node $NODE --output json | jq -r '.contracts[-1]')
-# Check if CONTRACT_ADDRESS exists in the file
-if grep -q "^CONTRACT_ADDRESS=" "$CONTRACT_FILE"; then
-  # If it exists, replace it
-  sed -i "s/^CONTRACT_ADDRESS=.*/CONTRACT_ADDRESS=\"$NEW_CONTRACT_ADDRESS\"/" "$CONTRACT_FILE"
-else
-  # If it does not exist, add it to the end of the file
-  echo "CONTRACT_ADDRESS=\"$NEW_CONTRACT_ADDRESS\"" >> "$CONTRACT_FILE"
+
+# Check if the CONTRACT_FILE exists, if not create it
+if [ ! -f "$CONTRACT_FILE" ]; then
+  touch "$CONTRACT_FILE"
+  echo CONTRACT_ADDRESS=\"\" > $CONTRACT_FILE
 fi
-echo "CONTRACT_ADDRESS has been updated in $CONTRACT_FILE"
+
+# copy the env file and update the CONTRACT_ADDRESS
+cp $CONTRACT_FILE $CONTRACT_FILE.tmp
+sed -i.bak -e "s/^CONTRACT_ADDRESS=.*/CONTRACT_ADDRESS=\"$NEW_CONTRACT_ADDRESS\"/" $CONTRACT_FILE.tmp
+# using cat here to avoid permission issues
+cat $CONTRACT_FILE.tmp > $CONTRACT_FILE
+rm $CONTRACT_FILE.tmp $CONTRACT_FILE.tmp.bak
