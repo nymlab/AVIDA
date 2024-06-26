@@ -12,6 +12,7 @@
     "local-demo": "node --env-file=./env/local.contract ./scripts/local-e2e-demo.mjs",
     "build:txutils": "tsc -p ./packages/avida-tx-utils && tsc-alias -p ./packages/avida-tx-utils/tsconfig.json",
     "build:types": "node ./scripts/gen-contract-types.mjs && tsc -p ./packages/avida-common-types && tsc-alias -p ./packages/avida-common-types/tsconfig.json",
+    "scripts-type-check": "tsc --pretty --noEmit --project tsconfig.base.json",
     "lint": "eslint --config eslint.config.js --max-warnings 0",
     "lint:fix": "eslint --config eslint.config.js . --fix",
     "format": "prettier --config prettier.config.js --write . && pnpm run lint:fix",
