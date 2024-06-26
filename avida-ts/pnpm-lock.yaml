@@ -44,7 +44,7 @@ importers:
         version: 1.5.1
       cosmes:
         specifier: nymlab/cosmes#f9c4e4ef3f
-        version: https://codeload.github.com/nymlab/cosmes/tar.gz/f9c4e4ef3f(@bufbuild/protobuf@1.2.0)(@noble/hashes@1.4.0)(@noble/secp256k1@2.1.0)(@scure/base@1.1.6)(@scure/bip32@1.4.0)(@scure/bip39@1.3.0)(@walletconnect/legacy-client@2.0.0)(@walletconnect/sign-client@2.8.6)(lodash-es@4.17.21)
+        version: https://codeload.github.com/nymlab/cosmes/tar.gz/f9c4e4ef3f(@bufbuild/protobuf@1.10.0)(@noble/hashes@1.4.0)(@noble/secp256k1@2.1.0)(@scure/base@1.1.6)(@scure/bip32@1.4.0)(@scure/bip39@1.3.0)(@walletconnect/legacy-client@2.0.0)(@walletconnect/sign-client@2.8.6)(lodash-es@4.17.21)
       esbuild:
         specifier: ^0.21.4
         version: 0.21.4
@@ -125,7 +125,7 @@ importers:
         version: 0.7.1
       cosmes:
         specifier: nymlab/cosmes#f9c4e4ef3f
-        version: https://codeload.github.com/nymlab/cosmes/tar.gz/f9c4e4ef3f(@bufbuild/protobuf@1.2.0)(@noble/hashes@1.4.0)(@noble/secp256k1@2.1.0)(@scure/base@1.1.6)(@scure/bip32@1.4.0)(@scure/bip39@1.3.0)(@walletconnect/legacy-client@2.0.0)(@walletconnect/sign-client@2.8.6)(lodash-es@4.17.21)
+        version: https://codeload.github.com/nymlab/cosmes/tar.gz/f9c4e4ef3f(@bufbuild/protobuf@1.10.0)(@noble/hashes@1.4.0)(@noble/secp256k1@2.1.0)(@scure/base@1.1.6)(@scure/bip32@1.4.0)(@scure/bip39@1.3.0)(@walletconnect/legacy-client@2.0.0)(@walletconnect/sign-client@2.8.6)(lodash-es@4.17.21)
     devDependencies:
       tsup:
         specifier: ^8.1.0
@@ -755,8 +755,8 @@ packages:
     resolution: {integrity: sha512-XEFXSlxiG5td2EJRe8vOmRbaXVgfcBlszKujvVmWIK/UpywWljQCfzAv3RQCGujWQ1RD4YYWEAqDXfuJiy8f5Q==}
     engines: {node: '>=6.9.0'}
 
-  '@bufbuild/protobuf@1.2.0':
-    resolution: {integrity: sha512-MBVuQMOBHxgGnZ9XCUIi8WOy5O/T4ma3TduCRhRvndv3UDbG9cHgd8h6nOYSGyBYPEvXf1z9nTwhp8mVIDbq2g==}
+  '@bufbuild/protobuf@1.10.0':
+    resolution: {integrity: sha512-QDdVFLoN93Zjg36NoQPZfsVH9tZew7wKDKyV5qRdj8ntT4wQCOradQjRaTdwMhWUYsgKsvCINKKm87FdEk96Ag==}
 
   '@cosmwasm/ts-codegen@0.35.7':
     resolution: {integrity: sha512-qbOAYJPe5O5AjoWytZcsVvM0SBA39sMpiqnVIIgjJiqp4G4D5GjR2/UV3ePpygnIxxKZWMnOpPPUvLMjflblCw==}
@@ -4792,7 +4792,7 @@ snapshots:
       '@babel/helper-validator-identifier': 7.24.7
       to-fast-properties: 2.0.0
 
-  '@bufbuild/protobuf@1.2.0': {}
+  '@bufbuild/protobuf@1.10.0': {}
 
   '@cosmwasm/ts-codegen@0.35.7':
     dependencies:
@@ -6056,9 +6056,9 @@ snapshots:
     dependencies:
       browserslist: 4.23.0
 
-  cosmes@https://codeload.github.com/nymlab/cosmes/tar.gz/f9c4e4ef3f(@bufbuild/protobuf@1.2.0)(@noble/hashes@1.4.0)(@noble/secp256k1@2.1.0)(@scure/base@1.1.6)(@scure/bip32@1.4.0)(@scure/bip39@1.3.0)(@walletconnect/legacy-client@2.0.0)(@walletconnect/sign-client@2.8.6)(lodash-es@4.17.21):
+  cosmes@https://codeload.github.com/nymlab/cosmes/tar.gz/f9c4e4ef3f(@bufbuild/protobuf@1.10.0)(@noble/hashes@1.4.0)(@noble/secp256k1@2.1.0)(@scure/base@1.1.6)(@scure/bip32@1.4.0)(@scure/bip39@1.3.0)(@walletconnect/legacy-client@2.0.0)(@walletconnect/sign-client@2.8.6)(lodash-es@4.17.21):
     dependencies:
-      '@bufbuild/protobuf': 1.2.0
+      '@bufbuild/protobuf': 1.10.0
       '@noble/hashes': 1.4.0
       '@noble/secp256k1': 2.1.0
       '@scure/base': 1.1.6

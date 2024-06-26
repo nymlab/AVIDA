@@ -7,7 +7,6 @@
 
 import { default as codegen } from "@cosmwasm/ts-codegen";
 import fs from "fs";
-import { mkdirSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 

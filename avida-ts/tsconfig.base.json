@@ -23,7 +23,7 @@
     "removeComments": false,
 
     // enable module resolution without file extensions on relative paths for things like npm package imports.
-    "moduleResolution": "bundler",
+    "moduleResolution": "Bundler",
 
     // allow importing TypeScript files using their native extension (.ts(x)). -- astro rule
     // "allowImportingTsExtensions": true,
