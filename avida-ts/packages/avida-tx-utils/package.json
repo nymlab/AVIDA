@@ -10,7 +10,14 @@
     "lint": "eslint src",
     "check": "tsc --noEmit"
   },
-  "exports": "./dist/index.js",
+  "exports": {
+		".": {
+			"default": "./dist/index.js"
+		},
+		"./*": {
+			"default": "./dist/*.js"
+		}
+	},
   "devDependencies": {
     "tsup": "^8.1.0",
     "typescript": "^5.4.5"

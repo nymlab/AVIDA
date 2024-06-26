@@ -25,6 +25,7 @@ const avidaExampleContract = join(
   __dirname,
   "../../artifacts/avida_example.wasm",
 );
+// @ts-ignore: Type annotations are used only in TS code
 export const sleep = (milliseconds) => {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 };
@@ -107,7 +108,7 @@ MC4CAQAwBQYDK2VwBCIEIFu/3i9WC60gVD1RkdN04HQRq6ht0ahpFMs37i4Qqhib
 const sdjwtInstance = getSdJwt(privatePEM);
 // Issuer Define the disclosure frame to specify which claims can be disclosed
 
-/** @type {SdjwtVerifier} */
+/** @type {avidaTypes.contracts.SdjwtVerifier} */
 const disclosureFrame = {
   _sd: ["firstname", "lastname", "age"],
 };
@@ -153,7 +154,7 @@ const drinkMsg = {
   proof: toWasmBinary(presentation),
 };
 
-/** @type {RestaurantContract} */
+/** @type {avidaTypes.contracts.RestaurantContract} */
 const getDrinkMsg = {
   give_me_some_drink: {
     msg: drinkMsg,
@@ -197,7 +198,7 @@ const invalid_presentation = await sdjwtInstance.present(
   presentationFrame,
 );
 
-/** @type {RestaurantContract} */
+/** @type {avidaTypes.contracts.RestaurantContract} */
 const drinkMsg_with_invalid_credentials = {
   kind: "vc_required",
   proof: toWasmBinary(invalid_presentation),
