@@ -50,24 +50,26 @@ console.log("OUT_DIR", OUT_DIR);
 console.log("Generating TS files from JSON schema files...");
 
 // @ts-ignore: Strange  module importing
-codegen.default({
-  contracts: CONTRACTS.map(({ path, name }) => ({
-    name,
-    dir: join(CONTRACT_DIR, path),
-  })),
-  outPath: OUT_DIR,
-  options: {
-    bundle: {
-      enabled: true,
-      bundleFile: "contracts.ts",
+codegen
+  .default({
+    contracts: CONTRACTS.map(({ path, name }) => ({
+      name,
+      dir: join(CONTRACT_DIR, path),
+    })),
+    outPath: OUT_DIR,
+    options: {
+      bundle: {
+        enabled: true,
+        bundleFile: "contracts.ts",
+      },
+      client: {
+        enabled: false,
+      },
+      messageBuilder: {
+        enabled: false,
+      },
     },
-    client: {
-      enabled: false,
-    },
-    messageBuilder: {
-      enabled: false,
-    },
-  },               
-}).then(() => {
+  })
+  .then(() => {
     console.log("Contract ts generation completed successfully!");
   });

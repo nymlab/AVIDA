@@ -2,8 +2,20 @@ import { MsgStoreCode, MsgInstantiateContract } from "cosmes/client";
 import type { CosmosBaseV1beta1Coin as Coin } from "cosmes/protobufs";
 import { getWallet } from "./wallet";
 import fs from "fs";
+import { type Result, ok, err } from "neverthrow";
 
 import { type UnsignedTx } from "cosmes/wallet";
+import {
+  feePromise,
+  broadcastTxPromise,
+  pollTxPromise,
+  type TxUtilError,
+} from "./index";
+
+export interface DeployError {
+  StoreCodeError: string;
+  InstantiateError: string;
+}
 
 export async function deploy(
   chainConfigPath: string,
@@ -13,7 +25,7 @@ export async function deploy(
   initFund: Coin[],
   contractLabel: string,
   memo: string | undefined = undefined,
-): Promise<string> {
+): Promise<Result<string, TxUtilError | DeployError>> {
   console.info(
     "Deploying contract at: ",
     contractPath,
@@ -39,19 +51,23 @@ export async function deploy(
     memo,
   };
 
-  let fee = await deployer.estimateFee(storeTx);
-  let txHash = await deployer.broadcastTx(storeTx, fee);
-  const { txResponse: storeRes } = await deployer.pollTx(txHash);
-
+  const storeRes = await feePromise(storeTx, deployer)
+    .andThen((fee) => broadcastTxPromise(storeTx, deployer, fee))
+    .andThen((txHash) => pollTxPromise(txHash, deployer));
+  if (storeRes.isErr()) {
+    return err(storeRes.error);
+  }
   // find the codeId from the events which is in the format:
   // {"type":"store_code","attributes":[{"key":"code_checksum","value":"8d4fb9c2161cf3f3df81a9f401b0540f33bbd70e61a1bb58c45dca6c1a1f772e","index":true},{"key":"code_id","value":"22","index":true}
   const codeIdBigInt = BigInt(
-    storeRes.events
+    storeRes.value.events
       .find((e) => e.type === "store_code")
       ?.attributes.find((a) => a.key === "code_id")?.value ?? 0n,
   );
   if (codeIdBigInt === 0n) {
-    throw new Error("Code ID not found in tx events");
+    return err({
+      StoreCodeError: "Code ID not found in the tx events",
+    } as DeployError);
   }
   const instMsg = new MsgInstantiateContract({
     sender: deployer.address,
@@ -67,21 +83,24 @@ export async function deploy(
     memo,
   };
 
-  fee = await deployer.estimateFee(instTx);
-  txHash = await deployer.broadcastTx(instTx, fee);
-
-  const { txResponse: instRes } = await deployer.pollTx(txHash);
+  const instRes = await feePromise(instTx, deployer)
+    .andThen((fee) => broadcastTxPromise(instTx, deployer, fee))
+    .andThen((txHash) => pollTxPromise(txHash, deployer));
+  if (instRes.isErr()) {
+    return err(instRes.error);
+  }
 
   const contractAddr =
-    instRes.events
+    instRes.value.events
       .find((e) => e.type === "instantiate")
       ?.attributes.find((a) => a.key === "_contract_address")?.value ??
     undefined;
 
   if (!contractAddr) {
-    console.error("Contract address not found in the tx events");
-    throw new Error("Contract address not found in the tx events");
+    return err({
+      InstantiateError: "Contract address not found in the tx events",
+    } as DeployError);
   }
 
-  return contractAddr;
+  return ok(contractAddr);
 }

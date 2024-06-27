@@ -25,7 +25,8 @@ const avidaExampleContract = join(
   __dirname,
   "../../artifacts/avida_example.wasm",
 );
-// @ts-ignore: Type annotations are used only in TS code
+
+/** @param {number} [milliseconds] */
 export const sleep = (milliseconds) => {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 };
@@ -36,7 +37,7 @@ export const sleep = (milliseconds) => {
 // 2. MsgInstantiateContract - instantiate contract with init msg
 /** @type {avidaTypes.contracts.SdjwtVerifier} */
 const instMsg = { verifier: AVIDA_SDJWT_VERIFIER };
-const exampleContractAddr = await deploy(
+const deployRes = await deploy(
   neutronChainConfig,
   avidaExampleContract,
   NEUTRON_DEPLOYER_MNEMONIC,
@@ -44,6 +45,12 @@ const exampleContractAddr = await deploy(
   [],
   "avida_example",
 );
+
+if (deployRes.isErr()) {
+  console.error("Error deploying example contract: ", deployRes.error);
+  process.exit(1);
+}
+const exampleContractAddr = deployRes.value;
 console.info("\n\n ---> Deployed example dApp at: ", exampleContractAddr);
 
 // ========= Then, we use the contract registration method to register route on sdjwt-verifier ==================
@@ -86,12 +93,24 @@ console.info(
   registerRequirementMsg,
 );
 
-await contractExecTx(
+const registerRes = await contractExecTx(
   neutronChainConfig,
   NEUTRON_DEPLOYER_MNEMONIC,
   exampleContractAddr,
   registerRequirementMsg,
   [],
+);
+
+registerRes.match(
+  (tx) => {
+    console.info(
+      "\n\n ---> Register Route successfully: ",
+      JSON.stringify(tx.events),
+    );
+  },
+  (err) => {
+    console.error("\n\n ---> Register Reout failed: ", err);
+  },
 );
 
 // ========= sleep to wait for relayer to relay the resource from cheqd ============
@@ -161,12 +180,24 @@ const getDrinkMsg = {
   },
 };
 
-await contractExecTx(
+const validRes = await contractExecTx(
   neutronChainConfig,
   NEUTRON_DEPLOYER_MNEMONIC,
   exampleContractAddr,
   getDrinkMsg,
   [],
+);
+
+validRes.match(
+  (tx) => {
+    console.info(
+      "\n\n ---> Valid presentation succeeded: ",
+      JSON.stringify(tx.events),
+    );
+  },
+  (err) => {
+    console.error("\n\n ---> Valid presentation failed: ", err);
+  },
 );
 
 // ========= Fail case, holder present with incorrect age disclosed, should fail ==================
@@ -204,18 +235,21 @@ const drinkMsg_with_invalid_credentials = {
   proof: toWasmBinary(invalid_presentation),
 };
 
-try {
-  await contractExecTx(
-    neutronChainConfig,
-    NEUTRON_DEPLOYER_MNEMONIC,
-    exampleContractAddr,
-    {
-      give_me_some_drink: {
-        msg: drinkMsg_with_invalid_credentials,
-      },
+const invalidRes = await contractExecTx(
+  neutronChainConfig,
+  NEUTRON_DEPLOYER_MNEMONIC,
+  exampleContractAddr,
+  {
+    give_me_some_drink: {
+      msg: drinkMsg_with_invalid_credentials,
     },
-    [],
+  },
+  [],
+);
+
+if (invalidRes.isErr()) {
+  console.info(
+    "\n\n ---> Invalid presentation failed as expected (uncomment for error): ",
+    //invalidRes.error,
   );
-} catch (err) {
-  console.error("---> Invalid presentation failed as expected: ", err);
 }
