@@ -11,13 +11,13 @@
     "check": "tsc --noEmit"
   },
   "exports": {
-		".": {
-			"default": "./dist/index.js"
-		},
-		"./*": {
-			"default": "./dist/*.js"
-		}
-	},
+    ".": {
+      "default": "./dist/index.js"
+    },
+    "./*": {
+      "default": "./dist/*.js"
+    }
+  },
   "devDependencies": {
     "tsup": "^8.1.0",
     "typescript": "^5.4.5"
@@ -27,6 +27,7 @@
     "@sd-jwt/crypto-nodejs": "^0.7.1",
     "@sd-jwt/sd-jwt-vc": "^0.7.1",
     "@sd-jwt/types": "^0.7.1",
-    "cosmes": "nymlab/cosmes#f9c4e4ef3f"
+    "cosmes": "nymlab/cosmes#f9c4e4ef3f",
+    "neverthrow": "^6.2.2"
   }
 }
