@@ -8,7 +8,7 @@ use sylvia::types::{QueryCtx, Remote, ReplyCtx};
 use sylvia::{contract, entry_points, schemars, types::InstantiateCtx};
 
 use cw_storage_plus::{Item, Map};
-use cw_utils::parse_reply_execute_data;
+use cw_utils::{parse_execute_response_data, MsgExecuteContractResponse};
 
 use crate::constants::{
     GIVE_ME_DRINK_ROUTE_ID, GIVE_ME_FOOD_ROUTE_ID, REGISTER_REQUIREMENT_REPLY_ID,
@@ -164,46 +164,41 @@ impl RestaurantContract<'_> {
 
     #[sv::msg(reply)]
     fn reply(&self, ctx: ReplyCtx, reply: Reply) -> Result<Response, ContractError> {
-        let rid = reply.id;
-        match rid {
-            REGISTER_REQUIREMENT_REPLY_ID => match reply.result.into_result() {
-                Err(err) => Err(ContractError::RegistrationError(err)),
-                Ok(_) => Ok(Response::new()),
-            },
-            GIVE_ME_DRINK_ROUTE_ID | GIVE_ME_FOOD_ROUTE_ID => {
-                match reply.clone().result.into_result() {
-                    Err(err) => Err(ContractError::VerificationProcessError(err)),
-                    Ok(_) => {
-                        let verification_result = parse_reply_execute_data(reply)?;
-                        match verification_result.data {
-                            Some(data) => {
-                                let verify_res: VerifyResult = from_json(data)?;
-                                match verify_res.result {
-                                    Ok(_) => {
-                                        let order_subject = self
-                                            .pending_order_subjects
-                                            .load(ctx.deps.storage, rid)?;
-
-                                        if rid == GIVE_ME_DRINK_ROUTE_ID {
-                                            Ok(Response::new()
-                                                .add_attribute("action", "give_me_some_drink")
-                                                .add_attribute("Drink kind", order_subject))
-                                        } else {
-                                            Ok(Response::new()
-                                                .add_attribute("action", "give_me_some_food")
-                                                .add_attribute("Food kind", order_subject))
-                                        }
-                                    }
-                                    Err(err) => {
-                                        Err(ContractError::VerificationError(format!("{:?}", err)))
-                                    }
-                                }
-                            }
-                            None => Err(ContractError::VerificationProcessError(
-                                "Data from reply cannot be empty".to_string(),
+        match (reply.id, reply.result.into_result()) {
+            (REGISTER_REQUIREMENT_REPLY_ID, Err(err)) => Err(ContractError::RegistrationError(err)),
+            (REGISTER_REQUIREMENT_REPLY_ID, Ok(_)) => Ok(Response::new()),
+            (GIVE_ME_DRINK_ROUTE_ID | GIVE_ME_FOOD_ROUTE_ID, Err(err)) => {
+                Err(ContractError::VerificationProcessError(err))
+            }
+            (rid @ GIVE_ME_DRINK_ROUTE_ID, Ok(res)) | (rid @ GIVE_ME_FOOD_ROUTE_ID, Ok(res)) => {
+                if let MsgExecuteContractResponse {
+                    data: Some(verify_result_bz),
+                } = parse_execute_response_data(&res.data.ok_or(
+                    ContractError::VerificationProcessError("VerifyResult not set".to_string()),
+                )?)? {
+                    let verify_result: VerifyResult = from_json(verify_result_bz)?;
+                    match verify_result.result {
+                        Ok(_) if rid == GIVE_ME_DRINK_ROUTE_ID => Ok(Response::new()
+                            .add_attribute("action", "give_me_some_drink")
+                            .add_attribute(
+                                "Drink kind",
+                                self.pending_order_subjects.load(ctx.deps.storage, rid)?,
                             )),
-                        }
+                        Ok(_) => Ok(Response::new()
+                            .add_attribute("action", "give_me_some_food")
+                            .add_attribute(
+                                "Food kind",
+                                self.pending_order_subjects.load(ctx.deps.storage, rid)?,
+                            )),
+                        Err(err) => Err(ContractError::VerificationProcessError(format!(
+                            "{:?}",
+                            err
+                        ))),
                     }
+                } else {
+                    Err(ContractError::VerificationProcessError(
+                        "VerifyResult not set".to_string(),
+                    ))
                 }
             }
             _ => Err(ContractError::InvalidRouteId),
