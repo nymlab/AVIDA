@@ -92,57 +92,58 @@ pub fn validate(
     verified_claims: serde_json::Value,
     block_info: &BlockInfo,
 ) -> Result<(), SdjwtVerifierResultError> {
-    if let serde_json::Value::Object(claims) = verified_claims {
-        for (key, criterion) in presentation_request {
-            // For every requested key, the value must be present in the verified claims
-            if key == CW_EXPIRATION && criterion == Criterion::Expires(true) {
-                if let Some(value) = claims.get(&key) {
-                    let exp = match value {
-                        serde_json::Value::String(exp) => {
-                            let expiration: Expiration =
-                                serde_json_wasm::from_str(exp).map_err(|_| {
-                                    SdjwtVerifierResultError::ExpirationStringInvalid(exp.clone())
-                                })?;
-                            expiration
+    match verified_claims {
+        serde_json::Value::Null if presentation_request.is_empty() => Ok(()),
+        serde_json::Value::Null => Err(SdjwtVerifierResultError::DisclosedClaimNotFound(
+            "null_disclosures".to_string(),
+        )),
+        serde_json::Value::Object(claims) => {
+            for (key, criterion) in presentation_request {
+                match (&criterion, claims.get(&key)) {
+                    (Criterion::Expires(true), Some(serde_json::Value::String(exp)))
+                        if key == CW_EXPIRATION =>
+                    {
+                        let expiration: Expiration =
+                            serde_json_wasm::from_str(exp).map_err(|_| {
+                                SdjwtVerifierResultError::ExpirationStringInvalid(exp.clone())
+                            })?;
+                        if expiration.is_expired(block_info) {
+                            return Err(SdjwtVerifierResultError::PresentationExpired(expiration));
                         }
-                        _ => return Err(SdjwtVerifierResultError::CriterionValueTypeUnexpected),
-                    };
-                    if exp.is_expired(block_info) {
-                        return Err(SdjwtVerifierResultError::PresentationExpired(exp));
                     }
-                } else {
-                    return Err(SdjwtVerifierResultError::DisclosedClaimNotFound(
-                        key.to_string(),
-                    ));
-                }
-            } else if let Some(value) = claims.get(&key) {
-                match (value, criterion) {
-                    // matches the presentation value `p_val` with the criterion value `c_val`
-                    (serde_json::Value::String(p_val), Criterion::String(c_val)) => {
-                        if p_val != &c_val {
+                    // if `Criterion::Expires(true)` is requested, then
+                    // - the key must be `CW_EXPIRATION`
+                    // - the value must be a string
+                    (Criterion::Expires(true), invalid_val) => {
+                        return Err(SdjwtVerifierResultError::ExpirationKeyOrValueInvalid(
+                            key.to_string(),
+                            format!("{:?}", invalid_val),
+                        ));
+                    }
+                    (Criterion::String(c_val), Some(serde_json::Value::String(p_val))) => {
+                        if p_val != c_val {
                             return Err(SdjwtVerifierResultError::CriterionValueFailed(key));
                         }
                     }
-                    (serde_json::Value::Number(p_val), Criterion::Number(c_val, op)) => {
-                        if p_val.is_u64() {
-                            let num = p_val.as_u64().unwrap();
+                    (Criterion::Number(c_val, op), Some(serde_json::Value::Number(p_val))) => {
+                        if let Some(num) = p_val.as_u64() {
                             match op {
                                 MathsOperator::GreaterThan => {
-                                    if num <= c_val {
+                                    if &num <= c_val {
                                         return Err(
                                             SdjwtVerifierResultError::CriterionValueFailed(key),
                                         );
                                     }
                                 }
                                 MathsOperator::LessThan => {
-                                    if num >= c_val {
+                                    if &num >= c_val {
                                         return Err(
                                             SdjwtVerifierResultError::CriterionValueFailed(key),
                                         );
                                     }
                                 }
                                 MathsOperator::EqualTo => {
-                                    if num != c_val {
+                                    if &num != c_val {
                                         return Err(
                                             SdjwtVerifierResultError::CriterionValueFailed(key),
                                         );
@@ -153,30 +154,22 @@ pub fn validate(
                             return Err(SdjwtVerifierResultError::CriterionValueNumberInvalid);
                         }
                     }
-                    (serde_json::Value::Bool(bool_val), Criterion::Boolean(c_val)) => {
-                        if bool_val != &c_val {
+                    (Criterion::Boolean(c_val), Some(serde_json::Value::Bool(bool_val))) => {
+                        if bool_val != c_val {
                             return Err(SdjwtVerifierResultError::CriterionValueFailed(key));
                         }
                     }
-                    _ => return Err(SdjwtVerifierResultError::CriterionValueTypeUnexpected),
-                };
-            } else {
-                return Err(SdjwtVerifierResultError::DisclosedClaimNotFound(
-                    key.to_string(),
-                ));
+                    _ => {
+                        return Err(SdjwtVerifierResultError::DisclosedClaimNotFound(format!(
+                            "Expects claim to be: {:?} for key: {}",
+                            criterion, &key
+                        )));
+                    }
+                }
             }
+            // For when there are no dislosure required
+            Ok(())
         }
-        // For when there are no dislosure required
-        Ok(())
-    } else if let serde_json::Value::Null = verified_claims {
-        if presentation_request.is_empty() {
-            return Ok(());
-        } else {
-            return Err(SdjwtVerifierResultError::DisclosedClaimNotFound(
-                "null_disclosures".to_string(),
-            ));
-        }
-    } else {
-        return Err(SdjwtVerifierResultError::VerifiedClaimsTypeUnexpected);
+        _ => Err(SdjwtVerifierResultError::VerifiedClaimsTypeUnexpected),
     }
 }
