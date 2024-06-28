@@ -92,7 +92,10 @@ pub fn flow_drink_verification_underage_fails() {
         kind: "beer".to_string(),
         proof: Binary::from(presentation.as_bytes()),
     };
-    let _ = contract_restaurant.give_me_some_drink(msg).call(caller);
+    contract_restaurant
+        .give_me_some_drink(msg)
+        .call(caller)
+        .unwrap();
 }
 
 #[test]
@@ -198,7 +201,8 @@ pub fn flow_drink_expired_verification() {
         proof: Binary::from(invalid_presentation.as_bytes()),
     };
     // This panics becasue error downcasting failed
-    let _ = contract_restaurant
+    contract_restaurant
         .give_me_some_drink(invalid_msg)
-        .call(caller);
+        .call(caller)
+        .unwrap();
 }
