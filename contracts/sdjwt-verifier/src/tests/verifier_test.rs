@@ -380,7 +380,9 @@ fn verify_required_claims_not_satisfied() {
 
     assert_eq!(
         res.result.unwrap_err(),
-        SdjwtVerifierResultError::DisclosedClaimNotFound("age".to_string())
+        SdjwtVerifierResultError::DisclosedClaimNotFound(
+            "Expects claim to be: Number(30, EqualTo) for key: age".to_string()
+        )
     );
 }
 
