@@ -128,27 +128,24 @@ pub fn validate(
                     (Criterion::Number(c_val, op), Some(serde_json::Value::Number(p_val))) => {
                         if let Some(num) = p_val.as_u64() {
                             match op {
-                                MathsOperator::GreaterThan => {
-                                    if &num <= c_val {
-                                        return Err(
-                                            SdjwtVerifierResultError::CriterionValueFailed(key),
-                                        );
-                                    }
+                                MathsOperator::GreaterThan if &num <= c_val => {
+                                    return Err(SdjwtVerifierResultError::CriterionValueFailed(
+                                        key,
+                                    ));
                                 }
-                                MathsOperator::LessThan => {
-                                    if &num >= c_val {
-                                        return Err(
-                                            SdjwtVerifierResultError::CriterionValueFailed(key),
-                                        );
-                                    }
+
+                                MathsOperator::LessThan if &num >= c_val => {
+                                    return Err(SdjwtVerifierResultError::CriterionValueFailed(
+                                        key,
+                                    ));
                                 }
-                                MathsOperator::EqualTo => {
-                                    if &num != c_val {
-                                        return Err(
-                                            SdjwtVerifierResultError::CriterionValueFailed(key),
-                                        );
-                                    }
+
+                                MathsOperator::EqualTo if &num != c_val => {
+                                    return Err(SdjwtVerifierResultError::CriterionValueFailed(
+                                        key,
+                                    ));
                                 }
+                                _ => {}
                             }
                         } else {
                             return Err(SdjwtVerifierResultError::CriterionValueNumberInvalid);
