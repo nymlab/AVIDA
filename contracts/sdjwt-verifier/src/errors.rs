@@ -52,6 +52,10 @@ pub enum SdjwtVerifierError {
     RouteNotRegistered,
     #[error("No Requirements For Route")]
     NoRequirementsForRoute,
+    #[error("IDX Not In Requirement")]
+    IDXNotInRequirement,
+    #[error("Revocation List type")]
+    RevocationListType,
 }
 
 impl From<SdjwtVerifierError> for StdError {

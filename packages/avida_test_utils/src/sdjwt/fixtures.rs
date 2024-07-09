@@ -1,3 +1,4 @@
+use avida_sdjwt_verifier::types::IDX;
 use cosmwasm_std::BlockInfo;
 use cw_utils::Expiration;
 use jsonwebtoken::EncodingKey;
@@ -158,6 +159,26 @@ pub fn make_route_verification_requirements(
             data_or_location: Binary::from(data_or_location.as_bytes()),
         },
         presentation_required: Binary::from(re.as_bytes()),
+    }
+}
+
+pub fn get_route_requirement_with_empty_revocation_list(route_id: u64) -> RegisterRouteRequest {
+    let first_presentation_req: PresentationReq = vec![
+        ("name".to_string(), Criterion::String("John".to_string())),
+        (
+            "age".to_string(),
+            Criterion::Number(24, MathsOperator::EqualTo),
+        ),
+        ("active".to_string(), Criterion::Boolean(true)),
+        (IDX.to_string(), Criterion::NotContainedIn(vec![])),
+    ];
+
+    RegisterRouteRequest {
+        route_id,
+        requirements: make_route_verification_requirements(
+            first_presentation_req,
+            RouteVerificationRequirementsType::Supported,
+        ),
     }
 }
 
