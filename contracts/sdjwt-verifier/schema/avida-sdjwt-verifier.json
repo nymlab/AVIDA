@@ -45,65 +45,13 @@
           "routes": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/InputRoutesRequirements"
+              "$ref": "#/definitions/RegisterRouteRequest"
             }
           }
         },
         "additionalProperties": false
       },
-      "InputRoutesRequirements": {
-        "description": "Routes Requiments used in Registration (and Initiation)",
-        "type": "object",
-        "required": [
-          "requirements",
-          "route_id"
-        ],
-        "properties": {
-          "requirements": {
-            "$ref": "#/definitions/RouteVerificationRequirements"
-          },
-          "route_id": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          }
-        },
-        "additionalProperties": false
-      },
-      "RouteVerificationRequirements": {
-        "description": "Specific verification requirements for the route, by `route_id`",
-        "type": "object",
-        "required": [
-          "presentation_request",
-          "verification_source"
-        ],
-        "properties": {
-          "presentation_request": {
-            "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationReq.presentation_required` on sdjwtVerifier",
-            "allOf": [
-              {
-                "$ref": "#/definitions/Binary"
-              }
-            ]
-          },
-          "verification_source": {
-            "description": "This defines where the source data for verification is",
-            "allOf": [
-              {
-                "$ref": "#/definitions/VerificationSource"
-              }
-            ]
-          }
-        },
-        "additionalProperties": false
-      },
-      "TrustRegistry": {
-        "type": "string",
-        "enum": [
-          "cheqd"
-        ]
-      },
-      "VerificationSource": {
+      "IssuerSourceOrData": {
         "description": "Location to obtain the verification data from",
         "type": "object",
         "required": [
@@ -131,6 +79,58 @@
           }
         },
         "additionalProperties": false
+      },
+      "RegisterRouteRequest": {
+        "description": "Routes Requiments used in Registration (and Initiation)",
+        "type": "object",
+        "required": [
+          "requirements",
+          "route_id"
+        ],
+        "properties": {
+          "requirements": {
+            "$ref": "#/definitions/RouteVerificationRequirements"
+          },
+          "route_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "additionalProperties": false
+      },
+      "RouteVerificationRequirements": {
+        "description": "Specific verification requirements for the route, by `route_id`",
+        "type": "object",
+        "required": [
+          "issuer_source_or_data",
+          "presentation_required"
+        ],
+        "properties": {
+          "issuer_source_or_data": {
+            "description": "This defines where the source data for verification is",
+            "allOf": [
+              {
+                "$ref": "#/definitions/IssuerSourceOrData"
+              }
+            ]
+          },
+          "presentation_required": {
+            "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier",
+            "allOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "TrustRegistry": {
+        "type": "string",
+        "enum": [
+          "cheqd"
+        ]
       }
     }
   },
@@ -158,16 +158,16 @@
                 "type": "object",
                 "required": [
                   "app_addr",
-                  "route_criteria"
+                  "requests"
                 ],
                 "properties": {
                   "app_addr": {
                     "type": "string"
                   },
-                  "route_criteria": {
+                  "requests": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/definitions/InputRoutesRequirements"
+                      "$ref": "#/definitions/RegisterRouteRequest"
                     }
                   }
                 }
@@ -188,6 +188,16 @@
                   "route_id"
                 ],
                 "properties": {
+                  "additional_requirements": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/Binary"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "app_addr": {
                     "type": [
                       "string",
@@ -270,62 +280,34 @@
         "type": "string"
       },
       "ExecMsg": {
-        "type": "string",
-        "enum": []
-      },
-      "InputRoutesRequirements": {
-        "description": "Routes Requiments used in Registration (and Initiation)",
-        "type": "object",
-        "required": [
-          "requirements",
-          "route_id"
-        ],
-        "properties": {
-          "requirements": {
-            "$ref": "#/definitions/RouteVerificationRequirements"
-          },
-          "route_id": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          }
-        },
-        "additionalProperties": false
-      },
-      "RouteVerificationRequirements": {
-        "description": "Specific verification requirements for the route, by `route_id`",
-        "type": "object",
-        "required": [
-          "presentation_request",
-          "verification_source"
-        ],
-        "properties": {
-          "presentation_request": {
-            "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationReq.presentation_required` on sdjwtVerifier",
-            "allOf": [
-              {
-                "$ref": "#/definitions/Binary"
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "update_revocation_list"
+            ],
+            "properties": {
+              "update_revocation_list": {
+                "type": "object",
+                "required": [
+                  "app_addr",
+                  "request"
+                ],
+                "properties": {
+                  "app_addr": {
+                    "type": "string"
+                  },
+                  "request": {
+                    "$ref": "#/definitions/UpdateRevocationListRequest"
+                  }
+                }
               }
-            ]
-          },
-          "verification_source": {
-            "description": "This defines where the source data for verification is",
-            "allOf": [
-              {
-                "$ref": "#/definitions/VerificationSource"
-              }
-            ]
+            },
+            "additionalProperties": false
           }
-        },
-        "additionalProperties": false
-      },
-      "TrustRegistry": {
-        "type": "string",
-        "enum": [
-          "cheqd"
         ]
       },
-      "VerificationSource": {
+      "IssuerSourceOrData": {
         "description": "Location to obtain the verification data from",
         "type": "object",
         "required": [
@@ -350,6 +332,91 @@
                 "type": "null"
               }
             ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "RegisterRouteRequest": {
+        "description": "Routes Requiments used in Registration (and Initiation)",
+        "type": "object",
+        "required": [
+          "requirements",
+          "route_id"
+        ],
+        "properties": {
+          "requirements": {
+            "$ref": "#/definitions/RouteVerificationRequirements"
+          },
+          "route_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "additionalProperties": false
+      },
+      "RouteVerificationRequirements": {
+        "description": "Specific verification requirements for the route, by `route_id`",
+        "type": "object",
+        "required": [
+          "issuer_source_or_data",
+          "presentation_required"
+        ],
+        "properties": {
+          "issuer_source_or_data": {
+            "description": "This defines where the source data for verification is",
+            "allOf": [
+              {
+                "$ref": "#/definitions/IssuerSourceOrData"
+              }
+            ]
+          },
+          "presentation_required": {
+            "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier",
+            "allOf": [
+              {
+                "$ref": "#/definitions/Binary"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "TrustRegistry": {
+        "type": "string",
+        "enum": [
+          "cheqd"
+        ]
+      },
+      "UpdateRevocationListRequest": {
+        "description": "A Sd-jwt specific requirement for revocation list update using Criterion::NotContainedIn",
+        "type": "object",
+        "required": [
+          "revoke",
+          "route_id",
+          "unrevoke"
+        ],
+        "properties": {
+          "revoke": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "route_id": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "unrevoke": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
           }
         },
         "additionalProperties": false
@@ -459,23 +526,23 @@
       "description": "Specific verification requirements for the route, by `route_id`",
       "type": "object",
       "required": [
-        "presentation_request",
-        "verification_source"
+        "issuer_source_or_data",
+        "presentation_required"
       ],
       "properties": {
-        "presentation_request": {
-          "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationReq.presentation_required` on sdjwtVerifier",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Binary"
-            }
-          ]
-        },
-        "verification_source": {
+        "issuer_source_or_data": {
           "description": "This defines where the source data for verification is",
           "allOf": [
             {
-              "$ref": "#/definitions/VerificationSource"
+              "$ref": "#/definitions/IssuerSourceOrData"
+            }
+          ]
+        },
+        "presentation_required": {
+          "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Binary"
             }
           ]
         }
@@ -486,13 +553,7 @@
           "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
           "type": "string"
         },
-        "TrustRegistry": {
-          "type": "string",
-          "enum": [
-            "cheqd"
-          ]
-        },
-        "VerificationSource": {
+        "IssuerSourceOrData": {
           "description": "Location to obtain the verification data from",
           "type": "object",
           "required": [
@@ -520,6 +581,12 @@
             }
           },
           "additionalProperties": false
+        },
+        "TrustRegistry": {
+          "type": "string",
+          "enum": [
+            "cheqd"
+          ]
         }
       }
     },

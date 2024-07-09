@@ -37,10 +37,10 @@ export type RegisterRequirement = {
 export type Binary = string;
 export type TrustRegistry = "cheqd";
 export interface RouteVerificationRequirements {
-  presentation_request: Binary;
-  verification_source: VerificationSource;
+  issuer_source_or_data: IssuerSourceOrData;
+  presentation_required: Binary;
 }
-export interface VerificationSource {
+export interface IssuerSourceOrData {
   data_or_location: Binary;
   source?: TrustRegistry | null;
 }

@@ -4,23 +4,23 @@
   "description": "Specific verification requirements for the route, by `route_id`",
   "type": "object",
   "required": [
-    "presentation_request",
-    "verification_source"
+    "issuer_source_or_data",
+    "presentation_required"
   ],
   "properties": {
-    "presentation_request": {
-      "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationReq.presentation_required` on sdjwtVerifier",
-      "allOf": [
-        {
-          "$ref": "#/definitions/Binary"
-        }
-      ]
-    },
-    "verification_source": {
+    "issuer_source_or_data": {
       "description": "This defines where the source data for verification is",
       "allOf": [
         {
-          "$ref": "#/definitions/VerificationSource"
+          "$ref": "#/definitions/IssuerSourceOrData"
+        }
+      ]
+    },
+    "presentation_required": {
+      "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Binary"
         }
       ]
     }
@@ -31,13 +31,7 @@
       "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
       "type": "string"
     },
-    "TrustRegistry": {
-      "type": "string",
-      "enum": [
-        "cheqd"
-      ]
-    },
-    "VerificationSource": {
+    "IssuerSourceOrData": {
       "description": "Location to obtain the verification data from",
       "type": "object",
       "required": [
@@ -65,6 +59,12 @@
         }
       },
       "additionalProperties": false
+    },
+    "TrustRegistry": {
+      "type": "string",
+      "enum": [
+        "cheqd"
+      ]
     }
   }
 }

@@ -24,7 +24,7 @@ Then we can bring up docker containers:
 
 ```bash
 # starting in ./avida-ts
-docker-compose -f ./docker/docker-compose.local.yaml up -d
+docker-compose -f ./docker/docker-compose.local.yaml up --remove-orphans
 ```
 This does several things
 1. `scripts/cheqd-genesis.sh` creates a cheqd node with a genesis tx to pre-fund the relayer and resource owner accounts.
@@ -35,6 +35,7 @@ This does several things
 
 
 > The local network takes a few mins to start up, please wait for the relayer to start before running the demo.
+> You can check the logs of the relayer to see when it is ready by looking for `AVIDA Path created!`
 
 ## Run demo
 
@@ -43,7 +44,10 @@ This does several things
 > The local network takes a few mins to start up, please wait for the relayer to start before running the demo.
 
 ```
-pnpm i
-pnpm run build:packages
+pnpm setup
+pnpm run build
+echo CONTRACT_ADDRESS= > ./env/local.contract
+docker-compose -f ./docker/docker-compose.local.yaml up --remove-orphans
+# wait until you get the message "AVIDA Path created!" or follow `hermer-relayer-1` logs
 pnpm run local-demo
 ```

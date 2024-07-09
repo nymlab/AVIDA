@@ -14,17 +14,17 @@ export interface InstantiateMsg {
 export interface InitRegistration {
   app_addr: string;
   app_admin: string;
-  routes: InputRoutesRequirements[];
+  routes: RegisterRouteRequest[];
 }
-export interface InputRoutesRequirements {
+export interface RegisterRouteRequest {
   requirements: RouteVerificationRequirements;
   route_id: number;
 }
 export interface RouteVerificationRequirements {
-  presentation_request: Binary;
-  verification_source: VerificationSource;
+  issuer_source_or_data: IssuerSourceOrData;
+  presentation_required: Binary;
 }
-export interface VerificationSource {
+export interface IssuerSourceOrData {
   data_or_location: Binary;
   source?: TrustRegistry | null;
 }
@@ -32,11 +32,12 @@ export type ExecuteMsg = AvidaVerifierTraitExecMsg | ExecMsg;
 export type AvidaVerifierTraitExecMsg = {
   register: {
     app_addr: string;
-    route_criteria: InputRoutesRequirements[];
+    requests: RegisterRouteRequest[];
     [k: string]: unknown;
   };
 } | {
   verify: {
+    additional_requirements?: Binary | null;
     app_addr?: string | null;
     presentation: Binary;
     route_id: number;
@@ -55,7 +56,18 @@ export type AvidaVerifierTraitExecMsg = {
     [k: string]: unknown;
   };
 };
-export type ExecMsg = string;
+export type ExecMsg = {
+  update_revocation_list: {
+    app_addr: string;
+    request: UpdateRevocationListRequest;
+    [k: string]: unknown;
+  };
+};
+export interface UpdateRevocationListRequest {
+  revoke: number[];
+  route_id: number;
+  unrevoke: number[];
+}
 export type QueryMsg = AvidaVerifierTraitQueryMsg | QueryMsg1;
 export type AvidaVerifierTraitQueryMsg = {
   get_routes: {

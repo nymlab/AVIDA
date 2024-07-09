@@ -1,10 +1,10 @@
-use avida_common::traits::avida_verifier_trait::sv::{AvidaVerifierTraitExecMsg, Querier};
-use avida_common::types::{RegisterRouteRequest, RouteId, RouteVerificationRequirements};
+use avida_common::traits::avida_verifier_trait::sv::AvidaVerifierTraitExecMsg;
+use avida_common::types::RegisterRouteRequest;
 
-use avida_sdjwt_verifier::{contract::SdjwtVerifier, types::VerifyResult};
+use avida_sdjwt_verifier::types::VerifyResult;
 use sylvia::cw_std::{from_json, Reply, Response, StdResult, SubMsg};
 use sylvia::cw_std::{to_json_binary, WasmMsg};
-use sylvia::types::{QueryCtx, Remote, ReplyCtx};
+use sylvia::types::{QueryCtx, ReplyCtx};
 use sylvia::{contract, entry_points, schemars, types::InstantiateCtx};
 
 use cw_storage_plus::{Item, Map};
@@ -145,25 +145,6 @@ impl RestaurantContract<'_> {
         Ok(GetVerifierResponse { verifier })
     }
 
-    #[sv::msg(query)]
-    fn get_route_requirements(
-        &self,
-        ctx: QueryCtx,
-        route_id: RouteId,
-    ) -> Result<RouteVerificationRequirements, ContractError> {
-        let app_addr = ctx.env.contract.address.to_string();
-        let verifier_addr = ctx
-            .deps
-            .api
-            .addr_validate(self.verifier.load(ctx.deps.storage)?.as_str())?;
-        let remote_contract = Remote::<SdjwtVerifier>::new(verifier_addr);
-        let requirements = remote_contract
-            .querier(&ctx.deps.querier)
-            .get_route_requirements(app_addr, route_id)?;
-
-        Ok(requirements)
-    }
-
     #[sv::msg(reply)]
     fn reply(&self, ctx: ReplyCtx, reply: Reply) -> Result<Response, ContractError> {
         match (reply.id, reply.result.into_result()) {
@@ -177,7 +158,9 @@ impl RestaurantContract<'_> {
                     data: Some(verify_result_bz),
                 } = parse_execute_response_data(&res.data.ok_or(
                     ContractError::VerificationProcessError("VerifyResult not set".to_string()),
-                )?)? {
+                )?)
+                .map_err(|_| ContractError::ParseReplyError)?
+                {
                     let verify_result: VerifyResult = from_json(verify_result_bz)?;
                     match verify_result.result {
                         Ok(_) if rid == GIVE_ME_DRINK_ROUTE_ID => Ok(Response::new()
@@ -207,7 +190,6 @@ impl RestaurantContract<'_> {
         }
     }
 }
-
 impl Default for RestaurantContract<'_> {
     fn default() -> Self {
         Self::new()
