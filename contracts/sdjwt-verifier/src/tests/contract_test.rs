@@ -3,16 +3,16 @@ use cosmwasm_std::{from_json, Binary};
 use sylvia::multitest::App;
 
 use crate::contract::sv::mt::SdjwtVerifierProxy;
-use crate::types::{Criterion, PresentationReq};
+use crate::errors::SdjwtVerifierResultError;
+use crate::types::{Criterion, PresentationReq, VerifyResult};
 use avida_common::traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy;
 use serde::{Deserialize, Serialize};
 
 use super::fixtures::instantiate_verifier_contract;
 use avida_test_utils::sdjwt::fixtures::{
-    claims, get_default_block_info, get_input_route_requirement,
-    get_route_requirement_with_empty_revocation_list, get_route_verification_requirement,
-    get_two_input_routes_requirements, issuer_jwk, make_presentation, ExpirationCheck,
-    PresentationVerificationType, RouteVerificationRequirementsType, FIRST_CALLER_APP_ADDR,
+    claims_with_revocation_idx, get_route_requirement_with_empty_revocation_list,
+    make_presentation, PresentationVerificationType, RouteVerificationRequirementsType,
+    FIRST_CALLER_APP_ADDR,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -99,4 +99,84 @@ fn test_update_revocation_list() {
 
     let revocation_list = req.iter().find(|(k, _)| k == "idx").unwrap();
     assert_eq!(revocation_list.1, Criterion::NotContainedIn(vec![1, 3, 7]));
+}
+
+#[test]
+fn test_revoked_presentation_cannot_be_used() {
+    let revoked_idx = 111;
+    let unrevoked_idx = 222;
+
+    let app: App<_> = App::default();
+
+    // Instantiate verifier contract with some predefined parameters
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
+
+    // Get route verification requirements for a single route with expiration
+    let route_verification_req =
+        get_route_requirement_with_empty_revocation_list(REVOCATION_ROUTE_ID);
+
+    //Register the app with exp requirements
+    contract
+        .register(
+            REVOCATION_TEST_CALLER.to_string(),
+            vec![route_verification_req.clone()],
+        )
+        .call(REVOCATION_TEST_CALLER)
+        .unwrap();
+
+    contract
+        .update_revocation_list(
+            REVOCATION_TEST_CALLER.to_string(),
+            crate::types::UpdateRevocationListRequest {
+                route_id: REVOCATION_ROUTE_ID,
+                revoke: vec![revoked_idx],
+                unrevoke: vec![unrevoked_idx],
+            },
+        )
+        .call(REVOCATION_TEST_CALLER)
+        .unwrap();
+
+    // Make a presentation with some claims
+    let revoked_claims = claims_with_revocation_idx("Alice", 30, true, 2021, None, revoked_idx);
+
+    let unrevoked_claims = claims_with_revocation_idx("Alice", 30, true, 2021, None, unrevoked_idx);
+
+    let revoked_presentation =
+        make_presentation(revoked_claims, PresentationVerificationType::Success);
+    let valid_presentation =
+        make_presentation(unrevoked_claims, PresentationVerificationType::Success);
+
+    let res: VerifyResult = from_json(
+        contract
+            .verify(
+                Binary::from(revoked_presentation.as_bytes()),
+                REVOCATION_ROUTE_ID,
+                Some(REVOCATION_TEST_CALLER.to_string()),
+            )
+            .call(FIRST_CALLER_APP_ADDR)
+            .unwrap()
+            .data
+            .unwrap(),
+    )
+    .unwrap();
+    let err = res.result.unwrap_err();
+
+    assert_eq!(err, SdjwtVerifierResultError::IdxRevoked(revoked_idx));
+
+    let res: VerifyResult = from_json(
+        contract
+            .verify(
+                Binary::from(valid_presentation.as_bytes()),
+                REVOCATION_ROUTE_ID,
+                Some(REVOCATION_TEST_CALLER.to_string()),
+            )
+            .call(FIRST_CALLER_APP_ADDR)
+            .unwrap()
+            .data
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert!(res.result.is_ok());
 }
