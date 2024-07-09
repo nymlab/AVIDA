@@ -1,2 +1,3 @@
+mod contract_test;
 mod fixtures;
-pub mod verifier_test;
+mod verifier_test;

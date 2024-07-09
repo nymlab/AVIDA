@@ -1,6 +1,9 @@
 use crate::{
     errors::SdjwtVerifierError,
-    types::{InitRegistration, PendingRoute, VerificationRequirements},
+    types::{
+        Criterion, InitRegistration, PendingRoute, UpdateRevocationListRequest,
+        VerificationRequirements, IDX,
+    },
 };
 
 // AVIDA specific
@@ -23,7 +26,7 @@ use cw_storage_plus::{Item, Map};
 use sylvia::entry_points;
 use sylvia::{
     contract, schemars,
-    types::{InstantiateCtx, QueryCtx},
+    types::{ExecCtx, InstantiateCtx, QueryCtx},
 };
 
 use jsonwebtoken::jwk::Jwk;
@@ -90,6 +93,58 @@ impl SdjwtVerifier<'_> {
             let app_addr = deps.api.addr_validate(&app.app_addr)?;
             self._register(deps.storage, &env, &admin, app_addr.as_str(), app.routes)?;
         }
+
+        Ok(Response::default())
+    }
+
+    #[sv::msg(exec)]
+    fn update_revocation_list(
+        &self,
+        ctx: ExecCtx,
+        app_addr: String,
+        request: UpdateRevocationListRequest,
+    ) -> Result<Response, SdjwtVerifierError> {
+        let UpdateRevocationListRequest {
+            route_id,
+            revoke,
+            unrevoke,
+        } = request;
+
+        let mut all_routes_requirements = self
+            .app_routes_requirements
+            .load(ctx.deps.storage, &app_addr)?;
+
+        let mut route_requirements = all_routes_requirements
+            .get(&route_id)
+            .ok_or(SdjwtVerifierError::RouteNotRegistered)?
+            .clone();
+
+        route_requirements
+            .presentation_required
+            .iter_mut()
+            .find(|(key, _)| key == IDX)
+            .map(|(_, criterion)| -> Result<_, SdjwtVerifierError> {
+                if let Criterion::NotContainedIn(revocation_list) = criterion {
+                    for r in revoke {
+                        if !revocation_list.contains(&r) {
+                            revocation_list.push(r);
+                        }
+                    }
+
+                    for r in unrevoke {
+                        revocation_list.retain(|&x| x != r);
+                    }
+                    Ok(())
+                } else {
+                    Err(SdjwtVerifierError::RevocationListType)
+                }
+            })
+            .ok_or(SdjwtVerifierError::IDXNotInRequirement)??;
+
+        all_routes_requirements.insert(route_id, route_requirements);
+
+        self.app_routes_requirements
+            .save(ctx.deps.storage, &app_addr, &all_routes_requirements)?;
 
         Ok(Response::default())
     }

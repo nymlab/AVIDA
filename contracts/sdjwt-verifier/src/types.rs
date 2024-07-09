@@ -7,7 +7,11 @@ use cw_utils::Expiration;
 use jsonwebtoken::jwk::Jwk;
 use serde::{Deserialize, Serialize};
 
+/// This is the key to be used in claims that specifies expiration using `cw_util::Expiration`
 pub const CW_EXPIRATION: &str = "cw_exp";
+
+/// This is the  key to be used in revocation_list in Criterion::NotContainedIn(revocation_list)
+pub const IDX: &str = "idx";
 
 #[cw_serde]
 pub struct VerifyResult {
@@ -82,6 +86,9 @@ pub enum Criterion {
     Number(u64, MathsOperator),
     Boolean(bool),
     Expires(bool),
+    /// this can be used in any form,
+    /// but it is designed to be used with key IDX as a revocationlist
+    NotContainedIn(Vec<u64>),
 }
 
 #[cw_serde]
@@ -89,6 +96,15 @@ pub enum MathsOperator {
     GreaterThan,
     LessThan,
     EqualTo,
+}
+
+/// A Sd-jwt specific requirement for revocation list update
+/// using Criterion::NotContainedIn
+#[cw_serde]
+pub struct UpdateRevocationListRequest {
+    pub route_id: u64,
+    pub revoke: Vec<u64>,
+    pub unrevoke: Vec<u64>,
 }
 
 /// Validate the verified claims against the presentation request
