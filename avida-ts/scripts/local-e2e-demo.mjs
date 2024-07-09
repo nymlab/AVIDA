@@ -31,6 +31,8 @@ export const sleep = (milliseconds) => {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 };
 
+console.log("types", avidaTypes.contracts);
+
 // ================== First we deploy the example dApp contract ==================
 // Deploy the example contract and returns contract address
 // 1. MsgStoreCode - store contract code
@@ -53,6 +55,8 @@ if (deployRes.isErr()) {
 const exampleContractAddr = deployRes.value;
 console.info("\n\n ---> Deployed example dApp at: ", exampleContractAddr);
 
+console.log(avidaTypes);
+
 // ========= Then, we use the contract registration method to register route on sdjwt-verifier ==================
 // Resource and collection id defined in the cheqd-resource-artifacts data
 // This resource was uploaded to the cheqd node in avida/avida-ts/docker/scripts/upload-cheqd-resource.sh
@@ -70,8 +74,8 @@ const req = [["age", { number: [18, "greater_than"] }]];
 
 /** @type {avidaTypes.contracts.SdjwtVerifier} */
 const routeVerificationRequirements = {
-  presentation_request: toWasmBinary(req),
-  verification_source: {
+  presentation_required: toWasmBinary(req),
+  issuer_source_or_data: {
     data_or_location: toWasmBinary(CHEQD_RESOURCE_REQ),
     source: "cheqd",
   },

@@ -107,6 +107,35 @@
       },
       "additionalProperties": false
     },
+    "IssuerSourceOrData": {
+      "description": "Location to obtain the verification data from",
+      "type": "object",
+      "required": [
+        "data_or_location"
+      ],
+      "properties": {
+        "data_or_location": {
+          "description": "The data or location of the verification data at the trust registry For TrustRegistry::Cheqd, it is the `ResourceReqPacket` in avida-cheqd For data, the contracts should have the expected type In Sdjwt-Verifier, this is expected to be jwk",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Binary"
+            }
+          ]
+        },
+        "source": {
+          "description": "If `None`, this means data is directly provided",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TrustRegistry"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
     "RegisterRequirement": {
       "oneOf": [
         {
@@ -157,23 +186,23 @@
       "description": "Specific verification requirements for the route, by `route_id`",
       "type": "object",
       "required": [
-        "presentation_request",
-        "verification_source"
+        "issuer_source_or_data",
+        "presentation_required"
       ],
       "properties": {
-        "presentation_request": {
-          "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationReq.presentation_required` on sdjwtVerifier",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Binary"
-            }
-          ]
-        },
-        "verification_source": {
+        "issuer_source_or_data": {
           "description": "This defines where the source data for verification is",
           "allOf": [
             {
-              "$ref": "#/definitions/VerificationSource"
+              "$ref": "#/definitions/IssuerSourceOrData"
+            }
+          ]
+        },
+        "presentation_required": {
+          "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Binary"
             }
           ]
         }
@@ -185,35 +214,6 @@
       "enum": [
         "cheqd"
       ]
-    },
-    "VerificationSource": {
-      "description": "Location to obtain the verification data from",
-      "type": "object",
-      "required": [
-        "data_or_location"
-      ],
-      "properties": {
-        "data_or_location": {
-          "description": "The data or location of the verification data at the trust registry For TrustRegistry::Cheqd, it is the `ResourceReqPacket` in avida-cheqd For data, the contracts should have the expected type In Sdjwt-Verifier, this is expected to be jwk",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Binary"
-            }
-          ]
-        },
-        "source": {
-          "description": "If `None`, this means data is directly provided",
-          "anyOf": [
-            {
-              "$ref": "#/definitions/TrustRegistry"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "additionalProperties": false
     }
   }
 }
