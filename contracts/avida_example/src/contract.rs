@@ -94,6 +94,7 @@ impl RestaurantContract<'_> {
             presentation: msg.proof,
             route_id: GIVE_ME_DRINK_ROUTE_ID,
             app_addr: Some(ctx.env.contract.address.to_string()),
+            additional_requirements: None,
         };
         let sub_msg = SubMsg::reply_always(
             WasmMsg::Execute {
@@ -123,6 +124,7 @@ impl RestaurantContract<'_> {
             presentation: msg.proof,
             route_id: GIVE_ME_FOOD_ROUTE_ID,
             app_addr: Some(ctx.env.contract.address.to_string()),
+            additional_requirements: None,
         };
 
         let sub_msg = SubMsg::reply_always(

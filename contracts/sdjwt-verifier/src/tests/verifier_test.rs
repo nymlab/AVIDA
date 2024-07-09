@@ -86,6 +86,7 @@ fn verify_success_no_exp_validate_success() {
                 Binary::from(presentation.as_bytes()),
                 FIRST_ROUTE_ID,
                 Some(FIRST_CALLER_APP_ADDR.to_string()),
+                None,
             )
             .call(FIRST_CALLER_APP_ADDR)
             .unwrap()
@@ -144,6 +145,7 @@ fn verify_success_exp_validate_success() {
                 Binary::from(presentation.as_bytes()),
                 SECOND_ROUTE_ID,
                 Some(SECOND_CALLER_APP_ADDR.to_string()),
+                None,
             )
             .call(SECOND_CALLER_APP_ADDR)
             .unwrap()
@@ -176,6 +178,7 @@ fn verify_success_exp_validate_success() {
                 Binary::from(presentation.as_bytes()),
                 SECOND_ROUTE_ID,
                 Some(SECOND_CALLER_APP_ADDR.to_string()),
+                None,
             )
             .call(SECOND_CALLER_APP_ADDR)
             .unwrap()
@@ -227,6 +230,7 @@ fn verify_failed_on_expired_claim() {
                 Binary::from(presentation.as_bytes()),
                 SECOND_ROUTE_ID,
                 Some(SECOND_CALLER_APP_ADDR.to_string()),
+                None,
             )
             .call(SECOND_CALLER_APP_ADDR)
             .unwrap()
@@ -255,6 +259,7 @@ fn verify_failed_on_expired_claim() {
                 Binary::from(presentation.as_bytes()),
                 SECOND_ROUTE_ID,
                 Some(SECOND_CALLER_APP_ADDR.to_string()),
+                None,
             )
             .call(SECOND_CALLER_APP_ADDR)
             .unwrap()
@@ -309,6 +314,7 @@ fn verify_sucess_on_no_expiration_check_for_expired_claims() {
                 Binary::from(presentation.as_bytes()),
                 SECOND_ROUTE_ID,
                 Some(SECOND_CALLER_APP_ADDR.to_string()),
+                None,
             )
             .call(SECOND_CALLER_APP_ADDR)
             .unwrap()
@@ -339,6 +345,7 @@ fn verify_success_validate_fails() {
                 Binary::from(presentation.as_bytes()),
                 FIRST_ROUTE_ID,
                 Some(FIRST_CALLER_APP_ADDR.to_string()),
+                None,
             )
             .call(FIRST_CALLER_APP_ADDR)
             .unwrap()
@@ -370,6 +377,7 @@ fn verify_required_claims_not_satisfied() {
                 Binary::from(presentation.as_bytes()),
                 FIRST_ROUTE_ID,
                 Some(FIRST_CALLER_APP_ADDR.to_string()),
+                None,
             )
             .call(FIRST_CALLER_APP_ADDR)
             .unwrap()
@@ -401,6 +409,7 @@ fn verify_without_sdjwt() {
                 Binary::from(b""),
                 FIRST_ROUTE_ID,
                 Some(FIRST_CALLER_APP_ADDR.to_string()),
+                None,
             )
             .call(FIRST_CALLER_APP_ADDR)
             .unwrap()
@@ -441,6 +450,7 @@ fn verify_presentation_too_large() {
                 Binary::from(presentation.as_bytes()),
                 FIRST_ROUTE_ID,
                 Some(FIRST_CALLER_APP_ADDR.to_string()),
+                None,
             )
             .call(FIRST_CALLER_APP_ADDR)
             .unwrap()
@@ -475,6 +485,7 @@ fn verify_route_not_registered() {
                 Binary::from(presentation.as_bytes()),
                 SECOND_ROUTE_ID,
                 Some(FIRST_CALLER_APP_ADDR.to_string()),
+                None,
             )
             .call(FIRST_CALLER_APP_ADDR),
         Err(SdjwtVerifierError::RouteNotRegistered)

@@ -144,10 +144,8 @@ pub fn make_presentation(
         )
         .unwrap();
 
+    // default all claims are disclosed
     let mut claims_to_disclosure = claims;
-    claims_to_disclosure["age"] = Value::Bool(true);
-    claims_to_disclosure["active"] = Value::Bool(true);
-    claims_to_disclosure["joined_at"] = Value::Bool(true);
 
     if let PresentationVerificationType::OmitAgeDisclosure = presentation_verification_type {
         claims_to_disclosure["age"] = Value::Bool(false);

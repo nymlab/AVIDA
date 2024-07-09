@@ -2,7 +2,7 @@ use crate::types::{
     AvidaVerifierSudoMsg, RegisterRouteRequest, RouteId, RouteVerificationRequirements,
     VerfiablePresentation,
 };
-use cosmwasm_std::{Response, StdError};
+use cosmwasm_std::{Binary, Response, StdError};
 use sylvia::types::{ExecCtx, QueryCtx, SudoCtx};
 use sylvia::{interface, schemars};
 
@@ -27,6 +27,8 @@ pub mod avida_verifier_trait {
         ) -> Result<Response, Self::Error>;
 
         /// Verifiable Presentation Verifier for dApp contracts
+        /// additional_requirements is the dynamic added (per tx) requirements that can be passed to the verifier at the
+        /// time of verification, for sdjwt, it is requirement for claims kv pair
         #[sv::msg(exec)]
         fn verify(
             &self,
@@ -34,6 +36,7 @@ pub mod avida_verifier_trait {
             presentation: VerfiablePresentation,
             route_id: RouteId,
             app_addr: Option<String>,
+            additional_requirements: Option<Binary>,
         ) -> Result<Response, Self::Error>;
 
         // For dApp to update their criteria verification criteria
