@@ -4,9 +4,9 @@ use sylvia::multitest::App;
 
 use crate::contract::sv::mt::SdjwtVerifierProxy;
 use crate::errors::{SdjwtVerifierError, SdjwtVerifierResultError};
-use crate::verifier::VerifyResult;
+use crate::types::VerifyResult;
 use avida_common::traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy;
-use avida_common::types::InputRoutesRequirements;
+use avida_common::types::RegisterRouteRequest;
 use serde::{Deserialize, Serialize};
 
 use josekit::{self};
@@ -47,13 +47,13 @@ fn instantiate_success() {
         .unwrap();
 
     assert_eq!(
-        registered_req.verification_source,
-        fx_route_verification_req.verification_source
+        registered_req.issuer_source_or_data,
+        fx_route_verification_req.issuer_source_or_data
     );
 
     assert_eq!(
-        registered_req.presentation_request,
-        fx_route_verification_req.presentation_request
+        registered_req.presentation_required,
+        fx_route_verification_req.presentation_required
     );
 
     let route_verification_key = contract
@@ -114,7 +114,7 @@ fn verify_success_exp_validate_success() {
     contract
         .register(
             SECOND_CALLER_APP_ADDR.to_string(),
-            vec![InputRoutesRequirements {
+            vec![RegisterRouteRequest {
                 route_id: SECOND_ROUTE_ID,
                 requirements: route_verification_req,
             }],
@@ -204,7 +204,7 @@ fn verify_failed_on_expired_claim() {
     contract
         .register(
             SECOND_CALLER_APP_ADDR.to_string(),
-            vec![InputRoutesRequirements {
+            vec![RegisterRouteRequest {
                 route_id: SECOND_ROUTE_ID,
                 requirements: route_verification_req,
             }],
@@ -286,7 +286,7 @@ fn verify_sucess_on_no_expiration_check_for_expired_claims() {
     contract
         .register(
             SECOND_CALLER_APP_ADDR.to_string(),
-            vec![InputRoutesRequirements {
+            vec![RegisterRouteRequest {
                 route_id: SECOND_ROUTE_ID,
                 requirements: route_verification_req,
             }],
@@ -513,17 +513,17 @@ fn register_success() {
         .unwrap();
 
     assert_eq!(
-        second_registered_req.verification_source,
+        second_registered_req.issuer_source_or_data,
         two_routes_verification_req[0]
             .requirements
-            .verification_source
+            .issuer_source_or_data
     );
 
     assert_eq!(
-        second_registered_req.presentation_request,
+        second_registered_req.presentation_required,
         two_routes_verification_req[0]
             .requirements
-            .presentation_request
+            .presentation_required
     );
 
     let route_verification_key = contract
@@ -541,17 +541,17 @@ fn register_success() {
         .unwrap();
 
     assert_eq!(
-        third_registered_req.verification_source,
+        third_registered_req.issuer_source_or_data,
         two_routes_verification_req[1]
             .requirements
-            .verification_source
+            .issuer_source_or_data
     );
 
     assert_eq!(
-        third_registered_req.presentation_request,
+        third_registered_req.presentation_required,
         two_routes_verification_req[1]
             .requirements
-            .presentation_request
+            .presentation_required
     );
 
     let route_verification_key = contract
@@ -611,7 +611,7 @@ fn register_serde_json_error() {
     // Make invalid presentation request
     two_routes_verification_req[0]
         .requirements
-        .presentation_request = Binary::from(b"invalid");
+        .presentation_required = Binary::from(b"invalid");
 
     // Try register the app with the two routes and invalid presentation request
     assert!(matches!(
@@ -769,13 +769,13 @@ fn update_success() {
         .unwrap();
 
     assert_eq!(
-        updated_registered_req.verification_source,
-        updated_route_verification_req.verification_source
+        updated_registered_req.issuer_source_or_data,
+        updated_route_verification_req.issuer_source_or_data
     );
 
     assert_eq!(
-        updated_registered_req.presentation_request,
-        updated_route_verification_req.presentation_request
+        updated_registered_req.presentation_required,
+        updated_route_verification_req.presentation_required
     );
 
     // Ensure that the route verification requirements are updated
@@ -882,7 +882,7 @@ fn update_serde_json_error() {
     );
 
     // Try update the route verification requirements with invalid presentation request
-    updated_route_verification_req.presentation_request = Binary::from(b"invalid");
+    updated_route_verification_req.presentation_required = Binary::from(b"invalid");
 
     assert!(matches!(
         contract
@@ -914,7 +914,7 @@ fn update_unsupported_key_type() {
     assert!(contract
         .register(
             SECOND_CALLER_APP_ADDR.to_string(),
-            vec![InputRoutesRequirements {
+            vec![RegisterRouteRequest {
                 route_id: SECOND_ROUTE_ID,
                 requirements: route_verification_req
             }]

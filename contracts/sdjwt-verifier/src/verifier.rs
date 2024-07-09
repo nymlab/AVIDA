@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-pub use crate::{
+use crate::{
     contract::SdjwtVerifier,
     errors::{SdjwtVerifierError, SdjwtVerifierResultError},
-    types::{validate, PendingRoute, VerificationReq, VerificationRequest, VerifyResult},
+    types::{validate, PendingRoute, VerificationRequirements, VerifyResult, _RegistrationRequest},
 };
 
 // AVIDA specific
@@ -14,8 +14,8 @@ use avida_cheqd::{
 use avida_common::{
     traits::AvidaVerifierTrait,
     types::{
-        AvidaVerifierSudoMsg, InputRoutesRequirements, RouteId, RouteVerificationRequirements,
-        TrustRegistry, VerfiablePresentation, VerificationSource,
+        AvidaVerifierSudoMsg, IssuerSourceOrData, RegisterRouteRequest, RouteId,
+        RouteVerificationRequirements, TrustRegistry, VerfiablePresentation,
     },
 };
 
@@ -76,12 +76,12 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         &self,
         ctx: ExecCtx,
         app_addr: String,
-        route_criteria: Vec<InputRoutesRequirements>,
+        requests: Vec<RegisterRouteRequest>,
     ) -> Result<Response, Self::Error> {
         let ExecCtx { deps, env, info } = ctx;
         let app_addr = deps.api.addr_validate(&app_addr)?;
 
-        deps.api.debug(&format!("{:?}", route_criteria));
+        deps.api.debug(&format!("{:?}", requests));
 
         // Complete registration
         self._register(
@@ -89,7 +89,7 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
             &env,
             &info.sender,
             app_addr.as_str(),
-            route_criteria,
+            requests,
         )
     }
 
@@ -216,8 +216,8 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
             .ok_or(SdjwtVerifierError::RouteNotRegistered)?;
 
         Ok(RouteVerificationRequirements {
-            verification_source: route_td.clone(),
-            presentation_request: to_json_binary(&route_req.presentation_required)?,
+            issuer_source_or_data: route_td.clone(),
+            presentation_required: to_json_binary(&route_req.presentation_required)?,
         })
     }
 }
@@ -227,7 +227,7 @@ impl SdjwtVerifier<'_> {
     pub fn _verify(
         &self,
         presentation: VerfiablePresentation,
-        requirements: VerificationReq,
+        requirements: VerificationRequirements,
         max_presentation_len: usize,
         block_info: &BlockInfo,
     ) -> Result<(), SdjwtVerifierResultError> {
@@ -272,7 +272,7 @@ impl SdjwtVerifier<'_> {
         env: &Env,
         admin: &Addr,
         app_addr: &str,
-        route_criteria: Vec<InputRoutesRequirements>,
+        route_criteria: Vec<RegisterRouteRequest>,
     ) -> Result<Response, SdjwtVerifierError> {
         if self.app_trust_data_source.has(storage, app_addr)
             || self.app_routes_requirements.has(storage, app_addr)
@@ -280,25 +280,31 @@ impl SdjwtVerifier<'_> {
             return Err(SdjwtVerifierError::AppAlreadyRegistered);
         }
 
-        let mut req_map: HashMap<u64, VerificationReq> = HashMap::new();
-        let mut data_sources: HashMap<u64, VerificationSource> = HashMap::new();
+        let mut req_map: HashMap<u64, VerificationRequirements> = HashMap::new();
+        let mut data_sources: HashMap<u64, IssuerSourceOrData> = HashMap::new();
 
         let mut response = Response::default();
 
-        for InputRoutesRequirements {
+        for RegisterRouteRequest {
             route_id,
             requirements,
         } in route_criteria
         {
-            data_sources.insert(route_id, requirements.verification_source.clone());
+            data_sources.insert(route_id, requirements.issuer_source_or_data.clone());
             // On registration we check if the dApp has request for IBC data
             // Make a verification request for specified app addr and route id with a provided route criteria
-            let VerificationRequest {
-                verification_request,
+            let _RegistrationRequest {
+                verification_requirements,
                 ibc_msg,
-            } = self.make_verification_request(storage, env, app_addr, route_id, requirements)?;
+            } = self.make_internal_registration_request(
+                storage,
+                env,
+                app_addr,
+                route_id,
+                requirements,
+            )?;
 
-            req_map.insert(route_id, verification_request);
+            req_map.insert(route_id, verification_requirements);
 
             if let Some(ibc_msg) = ibc_msg {
                 response = response.add_submessage(ibc_msg);
@@ -344,15 +350,21 @@ impl SdjwtVerifier<'_> {
 
         // On registration we check if the dApp has request for IBC data
         if let Some(route_criteria) = route_criteria {
-            data_sources.insert(route_id, route_criteria.verification_source.clone());
+            data_sources.insert(route_id, route_criteria.issuer_source_or_data.clone());
 
             // Make a verification request for specified app addr and route id with a provided route criteria
-            let VerificationRequest {
-                verification_request,
+            let _RegistrationRequest {
+                verification_requirements,
                 ibc_msg,
-            } = self.make_verification_request(storage, env, app_addr, route_id, route_criteria)?;
+            } = self.make_internal_registration_request(
+                storage,
+                env,
+                app_addr,
+                route_id,
+                route_criteria,
+            )?;
 
-            req_map.insert(route_id, verification_request);
+            req_map.insert(route_id, verification_requirements);
 
             if let Some(ibc_msg) = ibc_msg {
                 response = response.add_submessage(ibc_msg);
@@ -376,21 +388,21 @@ impl SdjwtVerifier<'_> {
         }
     }
 
-    /// Creates a verification request for specified app addr and route id and provided route criteria
-    fn make_verification_request(
+    /// Creates a _RegitrationRequest for specified app addr and route id and provided route criteria
+    fn make_internal_registration_request(
         &self,
         storage: &mut dyn Storage,
         env: &Env,
         app_addr: &str,
         route_id: RouteId,
         route_criteria: RouteVerificationRequirements,
-    ) -> Result<VerificationRequest, SdjwtVerifierError> {
-        if let Some(registry) = route_criteria.verification_source.source {
+    ) -> Result<_RegistrationRequest, SdjwtVerifierError> {
+        if let Some(registry) = route_criteria.issuer_source_or_data.source {
             match registry {
                 TrustRegistry::Cheqd => {
                     // For Cheqd, the data is in the ResourceReqPacket
                     let resource_req_packat: ResourceReqPacket =
-                        from_json(&route_criteria.verification_source.data_or_location)?;
+                        from_json(&route_criteria.issuer_source_or_data.data_or_location)?;
 
                     let ibc_msg = SubMsg::new(CosmosMsg::Ibc(cosmwasm_std::IbcMsg::SendPacket {
                         channel_id: self.channel_id.load(storage)?,
@@ -410,24 +422,26 @@ impl SdjwtVerifier<'_> {
                         },
                     )?;
 
-                    let verification_req: VerificationReq =
-                        VerificationReq::new(route_criteria.presentation_request, None)?;
-                    Ok(VerificationRequest::new(verification_req, Some(ibc_msg)))
+                    let verification_req =
+                        VerificationRequirements::new(route_criteria.presentation_required, None)?;
+                    Ok(_RegistrationRequest::new(verification_req, Some(ibc_msg)))
                 }
             }
         } else {
             let issuer_pubkey: Jwk =
-                from_json(&route_criteria.verification_source.data_or_location)?;
+                from_json(&route_criteria.issuer_source_or_data.data_or_location)?;
 
             if let AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
                 curve: EllipticCurve::Ed25519,
                 ..
             }) = issuer_pubkey.algorithm
             {
-                let verification_req: VerificationReq =
-                    VerificationReq::new(route_criteria.presentation_request, Some(issuer_pubkey))?;
+                let verification_req = VerificationRequirements::new(
+                    route_criteria.presentation_required,
+                    Some(issuer_pubkey),
+                )?;
 
-                Ok(VerificationRequest::new(verification_req, None))
+                Ok(_RegistrationRequest::new(verification_req, None))
             } else {
                 Err(SdjwtVerifierError::UnsupportedKeyType)
             }

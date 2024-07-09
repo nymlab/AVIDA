@@ -5,7 +5,7 @@ use avida_test_utils::sdjwt::fixtures::{
 };
 use sylvia::multitest::{App, Proxy};
 
-use avida_common::types::{InputRoutesRequirements, RouteVerificationRequirements};
+use avida_common::types::{RegisterRouteRequest, RouteVerificationRequirements};
 
 use cw_multi_test::App as MtApp;
 
@@ -33,7 +33,7 @@ pub fn instantiate_verifier_contract(
     let init_registrations = vec![InitRegistration {
         app_admin: FIRST_CALLER_APP_ADDR.to_string(),
         app_addr: FIRST_CALLER_APP_ADDR.to_string(),
-        routes: vec![InputRoutesRequirements {
+        routes: vec![RegisterRouteRequest {
             route_id: FIRST_ROUTE_ID,
             requirements: fx_route_verification_req.clone(),
         }],
