@@ -133,13 +133,25 @@ pub fn validate(
                         }
                     }
                     // if `Criterion::Expires(true)` is requested, then
-                    // - the key must be `CW_EXPIRATION`
+                    // - the key must be `CW_EXPIRATION`, this avoid clashing with `exp` / `iat`
+                    // type claims
                     // - the value must be a string
                     (Criterion::Expires(true), invalid_val) => {
                         return Err(SdjwtVerifierResultError::ExpirationKeyOrValueInvalid(
                             key.to_string(),
                             format!("{:?}", invalid_val),
                         ));
+                    }
+                    (
+                        Criterion::NotContainedIn(revocation_list),
+                        Some(serde_json::Value::Number(idx)),
+                    ) => {
+                        let idx_u64 = idx
+                            .as_u64()
+                            .ok_or(SdjwtVerifierResultError::CriterionValueNumberInvalid)?;
+                        if revocation_list.contains(&idx_u64) {
+                            return Err(SdjwtVerifierResultError::IdxRevoked(idx_u64));
+                        }
                     }
                     (Criterion::String(c_val), Some(serde_json::Value::String(p_val))) => {
                         if p_val != c_val {

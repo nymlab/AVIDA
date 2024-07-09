@@ -103,6 +103,30 @@ pub fn claims(name: &str, age: u8, active: bool, joined_at: u16, exp: Option<Exp
     })
 }
 
+pub fn claims_with_revocation_idx(
+    name: &str,
+    age: u8,
+    active: bool,
+    joined_at: u16,
+    exp: Option<Expiration>,
+    idx: u64,
+) -> Value {
+    let exp = match exp {
+        Some(exp) => serde_json_wasm::to_string(&exp).unwrap(),
+        None => "".to_string(),
+    };
+    serde_json::json!({
+        CW_EXPIRATION: exp,
+        "iss": "issuer",
+        "name": name,
+        "age": age,
+        "active": active,
+        "joined_at": joined_at,
+        IDX: idx
+
+    })
+}
+
 /// Make a presentation corresponding to the claims provided and the presentation verification error type
 pub fn make_presentation(
     claims: Value,
@@ -163,15 +187,8 @@ pub fn make_route_verification_requirements(
 }
 
 pub fn get_route_requirement_with_empty_revocation_list(route_id: u64) -> RegisterRouteRequest {
-    let first_presentation_req: PresentationReq = vec![
-        ("name".to_string(), Criterion::String("John".to_string())),
-        (
-            "age".to_string(),
-            Criterion::Number(24, MathsOperator::EqualTo),
-        ),
-        ("active".to_string(), Criterion::Boolean(true)),
-        (IDX.to_string(), Criterion::NotContainedIn(vec![])),
-    ];
+    let first_presentation_req: PresentationReq =
+        vec![(IDX.to_string(), Criterion::NotContainedIn(vec![]))];
 
     RegisterRouteRequest {
         route_id,

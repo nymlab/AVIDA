@@ -20,6 +20,7 @@ pub enum SdjwtVerifierResultError {
     ExpirationStringInvalid(String),
     ExpirationKeyOrValueInvalid(String, String),
     PresentationExpired(cw_utils::Expiration),
+    IdxRevoked(u64),
 }
 
 #[derive(Error, Debug, PartialEq)]
