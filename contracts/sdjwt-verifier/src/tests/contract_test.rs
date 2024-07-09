@@ -1,4 +1,4 @@
-use cosmwasm_std::{from_json, Binary};
+use cosmwasm_std::{from_json, to_json_binary, Binary};
 
 use sylvia::multitest::App;
 
@@ -12,7 +12,7 @@ use super::fixtures::instantiate_verifier_contract;
 use avida_test_utils::sdjwt::fixtures::{
     claims_with_revocation_idx, get_route_requirement_with_empty_revocation_list,
     make_presentation, PresentationVerificationType, RouteVerificationRequirementsType,
-    FIRST_CALLER_APP_ADDR,
+    FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -153,6 +153,7 @@ fn test_revoked_presentation_cannot_be_used() {
                 Binary::from(revoked_presentation.as_bytes()),
                 REVOCATION_ROUTE_ID,
                 Some(REVOCATION_TEST_CALLER.to_string()),
+                None,
             )
             .call(FIRST_CALLER_APP_ADDR)
             .unwrap()
@@ -170,6 +171,67 @@ fn test_revoked_presentation_cannot_be_used() {
                 Binary::from(valid_presentation.as_bytes()),
                 REVOCATION_ROUTE_ID,
                 Some(REVOCATION_TEST_CALLER.to_string()),
+                None,
+            )
+            .call(FIRST_CALLER_APP_ADDR)
+            .unwrap()
+            .data
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert!(res.result.is_ok());
+}
+
+#[test]
+fn test_addition_requirements_with_revocation_list() {
+    let revoked_idx = 111;
+
+    let app: App<_> = App::default();
+
+    // Instantiate verifier contract with some predefined parameters
+    // By default there is no revocation list
+    let (contract, _) =
+        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
+
+    // Now we create additional requirements for the route
+    let addition_requirement = vec![(
+        "idx".to_string(),
+        Criterion::NotContainedIn(vec![revoked_idx]),
+    )];
+
+    // Make a presentation with some claims
+    let revoked_claims = claims_with_revocation_idx("Alice", 30, true, 2021, None, revoked_idx);
+
+    let revoked_presentation =
+        make_presentation(revoked_claims, PresentationVerificationType::Success);
+
+    // Additional requirements should be checked if revoked_claims is revoked and should error
+    let res: VerifyResult = from_json(
+        contract
+            .verify(
+                Binary::from(revoked_presentation.as_bytes()),
+                FIRST_ROUTE_ID,
+                Some(FIRST_CALLER_APP_ADDR.to_string()),
+                Some(to_json_binary(&addition_requirement).unwrap()),
+            )
+            .call(FIRST_CALLER_APP_ADDR)
+            .unwrap()
+            .data
+            .unwrap(),
+    )
+    .unwrap();
+    let err = res.result.unwrap_err();
+    assert_eq!(err, SdjwtVerifierResultError::IdxRevoked(revoked_idx));
+
+    // Additional requirements not present, revoked_claims is not checked and should ok
+    let res: VerifyResult = from_json(
+        contract
+            .verify(
+                Binary::from(revoked_presentation.as_bytes()),
+                FIRST_ROUTE_ID,
+                Some(FIRST_CALLER_APP_ADDR.to_string()),
+                None,
             )
             .call(FIRST_CALLER_APP_ADDR)
             .unwrap()

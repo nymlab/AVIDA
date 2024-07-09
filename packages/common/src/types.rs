@@ -25,7 +25,7 @@ pub struct RouteVerificationRequirements {
     pub issuer_source_or_data: IssuerSourceOrData,
     /// The presentation request is the criteria required for the presentation,
     /// for example required certains claims to be disclosed
-    /// This value is stored as `VerificationReq.presentation_required` on sdjwtVerifier
+    /// This value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier
     pub presentation_required: Binary,
 }
 
@@ -52,5 +52,6 @@ pub enum AvidaVerifierSudoMsg {
         route_id: RouteId,
         presentation: Binary,
         app_addr: String,
+        additional_requirements: Option<Binary>,
     },
 }
