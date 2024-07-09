@@ -51,13 +51,13 @@ fn register_requirement() {
         .unwrap();
 
     assert_eq!(
-        registered_req.verification_source,
-        fx_route_verification_req.verification_source
+        registered_req.issuer_source_or_data,
+        fx_route_verification_req.issuer_source_or_data
     );
 
     assert_eq!(
-        registered_req.presentation_request,
-        fx_route_verification_req.presentation_request
+        registered_req.presentation_required,
+        fx_route_verification_req.presentation_required
     );
 
     let route_verification_key = contract_verifier

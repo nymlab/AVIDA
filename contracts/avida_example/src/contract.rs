@@ -1,5 +1,5 @@
 use avida_common::traits::avida_verifier_trait::sv::{AvidaVerifierTraitExecMsg, Querier};
-use avida_common::types::{InputRoutesRequirements, RouteId, RouteVerificationRequirements};
+use avida_common::types::{RegisterRouteRequest, RouteId, RouteVerificationRequirements};
 
 use avida_sdjwt_verifier::{contract::SdjwtVerifier, types::VerifyResult};
 use sylvia::cw_std::{from_json, Reply, Response, StdResult, SubMsg};
@@ -47,12 +47,12 @@ impl RestaurantContract<'_> {
         ctx: sylvia::types::ExecCtx,
         msg: RegisterRequirement,
     ) -> StdResult<Response> {
-        let route_requirements: InputRoutesRequirements = match msg {
-            RegisterRequirement::Drink { requirements } => InputRoutesRequirements {
+        let route_requirements: RegisterRouteRequest = match msg {
+            RegisterRequirement::Drink { requirements } => RegisterRouteRequest {
                 route_id: GIVE_ME_DRINK_ROUTE_ID,
                 requirements,
             },
-            RegisterRequirement::Food { requirements } => InputRoutesRequirements {
+            RegisterRequirement::Food { requirements } => RegisterRouteRequest {
                 route_id: GIVE_ME_FOOD_ROUTE_ID,
                 requirements,
             },
@@ -60,7 +60,7 @@ impl RestaurantContract<'_> {
 
         let register_msg = AvidaVerifierTraitExecMsg::Register {
             app_addr: ctx.env.contract.address.to_string(),
-            route_criteria: vec![route_requirements],
+            requests: vec![route_requirements],
         };
 
         let verifier_contract = self.verifier.load(ctx.deps.storage)?;

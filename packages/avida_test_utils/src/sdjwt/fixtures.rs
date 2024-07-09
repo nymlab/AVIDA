@@ -10,7 +10,7 @@ use std::{fs, path::PathBuf};
 use cosmwasm_std::{Binary, Timestamp};
 
 use avida_common::types::{
-    InputRoutesRequirements, RouteVerificationRequirements, VerificationSource,
+    IssuerSourceOrData, RegisterRouteRequest, RouteVerificationRequirements,
 };
 use avida_sdjwt_verifier::types::{Criterion, MathsOperator, PresentationReq, CW_EXPIRATION};
 use josekit::{self};
@@ -153,16 +153,16 @@ pub fn make_route_verification_requirements(
 
     // Add some default criteria as presentation request
     RouteVerificationRequirements {
-        verification_source: VerificationSource {
+        issuer_source_or_data: IssuerSourceOrData {
             source: None,
             data_or_location: Binary::from(data_or_location.as_bytes()),
         },
-        presentation_request: Binary::from(re.as_bytes()),
+        presentation_required: Binary::from(re.as_bytes()),
     }
 }
 
 /// Is used to get input verification requirements for 2 routes
-pub fn get_two_input_routes_requirements() -> Vec<InputRoutesRequirements> {
+pub fn get_two_input_routes_requirements() -> Vec<RegisterRouteRequest> {
     let first_presentation_req: PresentationReq = vec![
         ("name".to_string(), Criterion::String("John".to_string())),
         (
@@ -182,14 +182,14 @@ pub fn get_two_input_routes_requirements() -> Vec<InputRoutesRequirements> {
     ];
 
     vec![
-        InputRoutesRequirements {
+        RegisterRouteRequest {
             route_id: SECOND_ROUTE_ID,
             requirements: make_route_verification_requirements(
                 first_presentation_req,
                 RouteVerificationRequirementsType::Supported,
             ),
         },
-        InputRoutesRequirements {
+        RegisterRouteRequest {
             route_id: THIRD_ROUTE_ID,
             requirements: make_route_verification_requirements(
                 second_presentation_req,
@@ -225,7 +225,7 @@ pub fn get_route_verification_requirement(
 /// Is used to get route verification requirements for a single route
 pub fn get_input_route_requirement(
     route_verification_requirements_type: RouteVerificationRequirementsType,
-) -> InputRoutesRequirements {
+) -> RegisterRouteRequest {
     let presentation_req: PresentationReq = vec![
         (
             "age".to_string(),
@@ -237,7 +237,7 @@ pub fn get_input_route_requirement(
             Criterion::Number(2020, MathsOperator::GreaterThan),
         ),
     ];
-    InputRoutesRequirements {
+    RegisterRouteRequest {
         route_id: SECOND_ROUTE_ID,
         requirements: make_route_verification_requirements(
             presentation_req,

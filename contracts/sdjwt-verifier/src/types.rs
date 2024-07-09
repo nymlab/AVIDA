@@ -1,6 +1,6 @@
 use super::errors::{SdjwtVerifierError, SdjwtVerifierResultError};
 
-use avida_common::types::InputRoutesRequirements;
+use avida_common::types::RegisterRouteRequest;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{from_json, Binary, BlockInfo, SubMsg};
 use cw_utils::Expiration;
@@ -18,7 +18,7 @@ pub struct VerifyResult {
 pub struct InitRegistration {
     pub app_addr: String,
     pub app_admin: String,
-    pub routes: Vec<InputRoutesRequirements>,
+    pub routes: Vec<RegisterRouteRequest>,
 }
 
 #[cw_serde]
@@ -27,17 +27,22 @@ pub struct PendingRoute {
     pub app_addr: String,
 }
 
-/// The verification request type, which consists of the verification request and the ibc message
-pub struct VerificationRequest {
-    pub verification_request: VerificationReq,
+/// This is an internal struct that is used to organised the input RegisterRouteRequest to handle
+/// 1. if issuer data is on trust registry, it will contain an ibc_msg
+/// 2. if issuer data is directly provided, it will validate the jwk
+pub(crate) struct _RegistrationRequest {
+    pub verification_requirements: VerificationRequirements,
     pub ibc_msg: Option<SubMsg>,
 }
 
-impl VerificationRequest {
+impl _RegistrationRequest {
     /// Create a new verification request
-    pub fn new(verification_request: VerificationReq, ibc_msg: Option<SubMsg>) -> Self {
-        VerificationRequest {
-            verification_request,
+    pub fn new(
+        verification_requirements: VerificationRequirements,
+        ibc_msg: Option<SubMsg>,
+    ) -> Self {
+        _RegistrationRequest {
+            verification_requirements,
             ibc_msg,
         }
     }
@@ -48,7 +53,7 @@ pub type PresentationReq = Vec<(CriterionKey, Criterion)>;
 /// Verification requirements are provided on registration on a route
 /// The presentation request
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct VerificationReq {
+pub struct VerificationRequirements {
     /// This is the required presentation criteria,
     /// it is sent from presentation_request in the `RouteVerificationRequirements`
     pub presentation_required: PresentationReq,
@@ -56,12 +61,12 @@ pub struct VerificationReq {
     pub issuer_pubkey: Option<Jwk>,
 }
 
-impl VerificationReq {
+impl VerificationRequirements {
     pub fn new(
         presentation_request: Binary,
         issuer_pubkey: Option<Jwk>,
     ) -> Result<Self, SdjwtVerifierError> {
-        Ok(VerificationReq {
+        Ok(VerificationRequirements {
             presentation_required: from_json(presentation_request)?,
             issuer_pubkey,
         })

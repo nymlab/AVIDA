@@ -1,6 +1,6 @@
 use crate::{
     errors::SdjwtVerifierError,
-    types::{InitRegistration, PendingRoute, VerificationReq},
+    types::{InitRegistration, PendingRoute, VerificationRequirements},
 };
 
 // AVIDA specific
@@ -9,7 +9,7 @@ use avida_cheqd::ibc::{
 };
 use avida_common::{
     traits::avida_verifier_trait,
-    types::{MaxPresentationLen, RouteId, VerificationSource, MAX_PRESENTATION_LEN},
+    types::{IssuerSourceOrData, MaxPresentationLen, RouteId, MAX_PRESENTATION_LEN},
 };
 //  CosmWasm / Sylvia lib
 use cosmwasm_std::{
@@ -37,8 +37,11 @@ pub struct SdjwtVerifier<'a> {
     /// Max Presentation Length
     pub max_presentation_len: MaxPresentationLen<'a>,
     /// Registered Smart Contract addrs and routes
-    pub app_trust_data_source: Map<'a, &'a str, HashMap<RouteId, VerificationSource>>,
-    pub app_routes_requirements: Map<'a, &'a str, HashMap<RouteId, VerificationReq>>,
+    pub app_trust_data_source: Map<'a, &'a str, HashMap<RouteId, IssuerSourceOrData>>,
+    /// Per route, the requirements that is required for verifier to make a decision
+    /// This contains the presentation required (i.e. disclosed value requirements) and the issuer
+    /// pubkey
+    pub app_routes_requirements: Map<'a, &'a str, HashMap<RouteId, VerificationRequirements>>,
     /// Registered Smart Contract addrs and their admins
     pub app_admins: Map<'a, &'a str, Addr>,
     /// The IBC channel connecting with cheqd resource
