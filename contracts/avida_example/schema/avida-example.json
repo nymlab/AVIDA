@@ -256,28 +256,6 @@
               }
             },
             "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "get_route_requirements"
-            ],
-            "properties": {
-              "get_route_requirements": {
-                "type": "object",
-                "required": [
-                  "route_id"
-                ],
-                "properties": {
-                  "route_id": {
-                    "type": "integer",
-                    "format": "uint64",
-                    "minimum": 0.0
-                  }
-                }
-              }
-            },
-            "additionalProperties": false
           }
         ]
       }
@@ -286,76 +264,6 @@
   "migrate": null,
   "sudo": null,
   "responses": {
-    "get_route_requirements": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "RouteVerificationRequirements",
-      "description": "Specific verification requirements for the route, by `route_id`",
-      "type": "object",
-      "required": [
-        "issuer_source_or_data",
-        "presentation_required"
-      ],
-      "properties": {
-        "issuer_source_or_data": {
-          "description": "This defines where the source data for verification is",
-          "allOf": [
-            {
-              "$ref": "#/definitions/IssuerSourceOrData"
-            }
-          ]
-        },
-        "presentation_required": {
-          "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Binary"
-            }
-          ]
-        }
-      },
-      "additionalProperties": false,
-      "definitions": {
-        "Binary": {
-          "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
-          "type": "string"
-        },
-        "IssuerSourceOrData": {
-          "description": "Location to obtain the verification data from",
-          "type": "object",
-          "required": [
-            "data_or_location"
-          ],
-          "properties": {
-            "data_or_location": {
-              "description": "The data or location of the verification data at the trust registry For TrustRegistry::Cheqd, it is the `ResourceReqPacket` in avida-cheqd For data, the contracts should have the expected type In Sdjwt-Verifier, this is expected to be jwk",
-              "allOf": [
-                {
-                  "$ref": "#/definitions/Binary"
-                }
-              ]
-            },
-            "source": {
-              "description": "If `None`, this means data is directly provided",
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/TrustRegistry"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        "TrustRegistry": {
-          "type": "string",
-          "enum": [
-            "cheqd"
-          ]
-        }
-      }
-    },
     "get_verifier_address": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "GetVerifierResponse",

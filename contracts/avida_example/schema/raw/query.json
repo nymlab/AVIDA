@@ -20,28 +20,6 @@
             }
           },
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "get_route_requirements"
-          ],
-          "properties": {
-            "get_route_requirements": {
-              "type": "object",
-              "required": [
-                "route_id"
-              ],
-              "properties": {
-                "route_id": {
-                  "type": "integer",
-                  "format": "uint64",
-                  "minimum": 0.0
-                }
-              }
-            }
-          },
-          "additionalProperties": false
         }
       ]
     }
