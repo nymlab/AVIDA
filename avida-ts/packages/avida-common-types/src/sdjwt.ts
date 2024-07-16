@@ -5,5 +5,7 @@ export type CriterionKey = string;
 export type Criterion =
   | { string: string }
   | { number: [number, MathsOperator] }
-  | { boolean: boolean };
+  | { boolean: boolean }
+  | { expires: string }
+  | { not_contained_in: Array<number> };
 export type MathsOperator = "greater_than" | "less_than" | "equal_to";
