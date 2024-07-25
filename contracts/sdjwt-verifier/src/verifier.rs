@@ -155,13 +155,6 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
     ) -> Result<Response, Self::Error> {
         let ExecCtx { deps, env, info } = ctx;
 
-        // Ensure the app with this address is registered
-        if !self.app_trust_data_source.has(deps.storage, &app_addr)
-            || !self.app_routes_requirements.has(deps.storage, &app_addr)
-        {
-            return Err(SdjwtVerifierError::AppIsNotRegistered);
-        }
-
         let app_addr = deps.api.addr_validate(&app_addr)?;
 
         let app_admin = self.app_admins.load(deps.storage, app_addr.as_str())?;
@@ -370,6 +363,14 @@ impl SdjwtVerifier<'_> {
         route_id: RouteId,
         route_criteria: Option<RouteVerificationRequirements>,
     ) -> Result<Response, SdjwtVerifierError> {
+        
+        // Ensure the app with this address is registered
+        if !self.app_trust_data_source.has(storage, &app_addr)
+            || !self.app_routes_requirements.has(storage, &app_addr)
+        {
+            return Err(SdjwtVerifierError::AppIsNotRegistered);
+        }
+
         let mut req_map = self.app_routes_requirements.load(storage, app_addr)?;
         let mut data_sources = self.app_trust_data_source.load(storage, app_addr)?;
 
