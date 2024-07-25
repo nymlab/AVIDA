@@ -54,4 +54,9 @@ pub enum AvidaVerifierSudoMsg {
         app_addr: String,
         additional_requirements: Option<Binary>,
     },
+    Update {
+        app_addr: String,
+        route_id: RouteId,
+        route_criteria: Option<RouteVerificationRequirements>,
+    },
 }

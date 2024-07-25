@@ -78,6 +78,11 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
                     .map(|_| Response::default())
                     .map_err(SdjwtVerifierError::SdjwtVerifierResultError)?)
             }
+            AvidaVerifierSudoMsg::Update {
+                app_addr,
+                route_id,
+                route_criteria,
+            } => self._update(deps.storage, &env, &app_addr, route_id, route_criteria),
         }
     }
 
@@ -363,7 +368,6 @@ impl SdjwtVerifier<'_> {
         route_id: RouteId,
         route_criteria: Option<RouteVerificationRequirements>,
     ) -> Result<Response, SdjwtVerifierError> {
-        
         // Ensure the app with this address is registered
         if !self.app_trust_data_source.has(storage, &app_addr)
             || !self.app_routes_requirements.has(storage, &app_addr)
