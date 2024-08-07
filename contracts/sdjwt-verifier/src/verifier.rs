@@ -78,6 +78,11 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
                     .map(|_| Response::default())
                     .map_err(SdjwtVerifierError::SdjwtVerifierResultError)?)
             }
+            AvidaVerifierSudoMsg::Update {
+                app_addr,
+                route_id,
+                route_criteria,
+            } => self._update(deps.storage, &env, &app_addr, route_id, route_criteria),
         }
     }
 
@@ -155,16 +160,12 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
     ) -> Result<Response, Self::Error> {
         let ExecCtx { deps, env, info } = ctx;
 
-        // Ensure the app with this address is registered
-        if !self.app_trust_data_source.has(deps.storage, &app_addr)
-            || !self.app_routes_requirements.has(deps.storage, &app_addr)
-        {
-            return Err(SdjwtVerifierError::AppIsNotRegistered);
-        }
-
         let app_addr = deps.api.addr_validate(&app_addr)?;
 
-        let app_admin = self.app_admins.load(deps.storage, app_addr.as_str())?;
+        let app_admin = self
+            .app_admins
+            .load(deps.storage, app_addr.as_str())
+            .map_err(|_| SdjwtVerifierError::AppIsNotRegistered)?;
 
         // Ensure the caller is the admin of the dApp
         if app_admin != info.sender {
@@ -370,6 +371,13 @@ impl SdjwtVerifier<'_> {
         route_id: RouteId,
         route_criteria: Option<RouteVerificationRequirements>,
     ) -> Result<Response, SdjwtVerifierError> {
+        // Ensure the app with this address is registered
+        if !self.app_trust_data_source.has(storage, app_addr)
+            || !self.app_routes_requirements.has(storage, app_addr)
+        {
+            return Err(SdjwtVerifierError::AppIsNotRegistered);
+        }
+
         let mut req_map = self.app_routes_requirements.load(storage, app_addr)?;
         let mut data_sources = self.app_trust_data_source.load(storage, app_addr)?;
 
