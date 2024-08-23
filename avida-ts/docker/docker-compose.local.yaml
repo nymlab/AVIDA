@@ -2,7 +2,7 @@ version: "3"
 
 services:
   cheqd-node:
-    image: ghcr.io/nymlab/cheqd-node:v2.0.1-arm64
+    image: ghcr.io/nymlab/cheqd-node-multiarch:v2.0.1
     ports:
       - target: 9090
         published: 9090 # grpc
@@ -17,7 +17,7 @@ services:
       - ../env/local.env
 
   cheqd-resource-uploader:
-    image: ghcr.io/nymlab/cheqd-node:v2.0.1-arm64
+    image: ghcr.io/nymlab/cheqd-node-multiarch:v2.0.1
     volumes:
       - ./scripts/:/tmp/scripts/
       - ./cheqd-resource-artifacts/:/tmp/cheqd-resource-artifacts
@@ -28,7 +28,7 @@ services:
       - NODE=http://cheqd-node:26657
 
   neutron-node:
-    image: ghcr.io/nymlab/neutron-standalone:v3.0.5-arm64
+    image: ghcr.io/nymlab/neutron-standalone-multiarch:v3.0.5
     ports:
       - target: 9090
         published: 9080 # grpc
@@ -44,7 +44,7 @@ services:
   # deployer: neutron demo_2
   # salt: ascii avida-local
   neutron-deployer:
-    image: ghcr.io/nymlab/neutron-standalone:v3.0.5-arm64
+    image: ghcr.io/nymlab/neutron-standalone-multiarch:v3.0.5
     volumes:
       - ./../../artifacts/:/tmp/artifacts/
       - ../:/tmp/app/
