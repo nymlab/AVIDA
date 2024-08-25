@@ -57,11 +57,6 @@ export type QueryMsg1 = {
   get_verifier_address: {
     [k: string]: unknown;
   };
-} | {
-  get_route_requirements: {
-    route_id: number;
-    [k: string]: unknown;
-  };
 };
 export interface GetVerifierResponse {
   verifier: string;
