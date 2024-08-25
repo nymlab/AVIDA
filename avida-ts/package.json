@@ -9,7 +9,7 @@
     "setup": "pnpm run reset && pnpm install",
     "reset": "pnpm dlx rimraf --glob ./**/node_modules",
     "build": "NODE_ENV=production pnpm run build:txutils && pnpm run build:types",
-	  "local-demo": "node --env-file=./env/local.contract ./scripts/local-e2e-demo.mjs", 
+    "local-demo": "node --env-file=./env/local.contract ./scripts/local-e2e-demo.mjs", 
     "build:txutils": "tsc -p ./packages/avida-tx-utils && tsc-alias -p ./packages/avida-tx-utils/tsconfig.json",
     "build:types": "node ./scripts/gen-contract-types.mjs && tsc -p ./packages/avida-common-types && tsc-alias -p ./packages/avida-common-types/tsconfig.json",
     "scripts-type-check": "tsc --pretty --noEmit --project tsconfig.base.json",
