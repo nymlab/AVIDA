@@ -76,6 +76,8 @@ Administers of DApps can update / remove the route verification requirements by 
 
 Run a local netwwork with a cheqd and neutron node by following the instructions in [avida-ts](./avida-ts/README.md) and try out the demo DApp in [avida-example](./contracts/avida-example/).
 
+Alternatively, the [SD-JWT](./contracts/sdjwt-verifier) verifier is deployed on Neutron `pion-1` testnet at `neutron1asg8l0k3wp2a2w0q9kukudq9fnrgfs855pcfdedyqn09fzy2tn3s8p02jq`
+
 ---
 
 ## Background and Existing Solutions

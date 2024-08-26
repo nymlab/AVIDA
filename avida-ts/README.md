@@ -51,3 +51,29 @@ docker-compose -f ./docker/docker-compose.local.yaml up --remove-orphans
 # wait until you get the message "AVIDA Path created!" or follow `hermer-relayer-1` logs
 pnpm run local-demo
 ```
+
+Deploy the contract to the `pion-1` network:
+
+
+```bash
+# store code
+neutrond tx wasm store artifacts/avida_sdjwt_verifier-aarch64.wasm \
+  --chain-id pion-1 \
+  --node https://neutron-testnet-rpc.polkachu.com:443 \
+  --from avida \
+  --gas "auto" \
+  --gas-adjustment 1.1  \
+  --gas-prices "0.05untrn" \
+
+# instantiate contract at stored code_id
+neutrond tx wasm instantiate 6057 '{"max_presentation_len": 30000, "init_registrations": []}' \
+  --admin="$(neutrond keys show avida -a)" \
+  --label "avida-sd-jwt-verifier" \
+  --chain-id pion-1 \
+  --node https://neutron-testnet-rpc.polkachu.com:443 \
+  --from avida \
+  --gas "auto" \
+  --gas-adjustment 1.3  \
+  --gas-prices "0.08untrn" \
+  -y
+```
