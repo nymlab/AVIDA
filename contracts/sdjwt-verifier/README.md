@@ -1,6 +1,16 @@
-# sd-jwt onchain verifier
+# SD-JWT onchain verifier
 
-## Features
+
+This contract is IBC enabled and can query [cheqd] for resources such as the current issuer PubKey.
+
+[cheqd]: https://cheqd.io
+
+
+## Key difference to SD-JWT
+
+### Supported signature algorithms
+
+- Only EdDSA is supported for now
 
 ### Expiration Check
 
