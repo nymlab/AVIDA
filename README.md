@@ -13,6 +13,16 @@ For example, current verifier code for [SD-JWT](./contracts/sdjwt-verifier) is s
 > If you would like to implement other verification methods, please follow the `trait` provided [here](./packages/common/src/traits.rs) to provide unified interface for DApps developers.
 
 
+- [AVIDA](#avida)
+  - [Usage](#usage)
+    - [Concepts: App, Route & Verification Requirements](#concepts-app-route--verification-requirements)
+    - [Integrating SD-JWT verifier with DApp](#integrating-sd-jwt-verifier-with-dapp)
+    - [Local / Testnet](#local--testnet)
+  - [Background and Existing Solutions](#background-and-existing-solutions)
+    - [Block / Allow-list of onchain address](#block--allow-list-of-onchain-address)
+    - [NFT / Token based gateways](#nft--token-based-gateways)
+    - [Comparison to traditional SSI infrastructure](#comparison-to-traditional-ssi-infrastructure)
+
 ## Usage
 
 > An example DApp CosmWasm contract using the AVIDA SD-JWT verifier can be found in [avida-example](./contracts/avida-example/).
@@ -38,7 +48,7 @@ pub struct RouteVerificationRequirements {
 }
 ```
 
-#### Example for `RouteVerificationRequirements) for SD-JWT verifier
+**Example of `RouteVerificationRequirements` for SD-JWT verifier**:
 
 In the case of using [SD-JWT verifier contract](./contracts/sdjwt-verifier), the `issuer_source_or_data` can be ONE OF the [ResourceReqPacket](./packages/cheqd/src/types.rs) or the JWK public key of the Trusted Issuer.
 
@@ -53,7 +63,7 @@ This is defined as [PresentationReq](./contracts/sdjwt-verifier/src/types.rs)
 pub type PresentationReq = Vec<(CriterionKey, Criterion)>;
 ```
 
-### Integrate App (smart contracts / modules) to use SD-JWT verifier
+### Integrating SD-JWT verifier with DApp
 
 There are 3 core interactions to integrate your smart contract DApp with the AVIDA verifier:
 1. *Register your App and Route with the verifier contract*:
@@ -72,7 +82,9 @@ The `Register` message in SD-JWT takes the caller as the admin of the App, which
 3. *Maintain the route verification requirements*:
 Administers of DApps can update / remove the route verification requirements by sending `Update` / `Deregister` messages to the verifier contract.
 
-### Ready to try it out?
+A full example of this was implemented in [avida-example](./contracts/avida-example/).
+
+### Local / Testnet
 
 Run a local netwwork with a cheqd and neutron node by following the instructions in [avida-ts](./avida-ts/README.md) and try out the demo DApp in [avida-example](./contracts/avida-example/).
 
@@ -102,7 +114,7 @@ Service providers may use onchain data NFT ownerships to provide gated services.
 
 A simple example, subscription based business models do not work if service providers cannot revoke credentials if a customer does not pay. Or a community where a member has violated the community rules can have their rights revoked.
 
-## Comparison to traditional SSI infrastructure
+### Comparison to traditional SSI infrastructure
 
 Below is a comparison to the normal SSI infrastructure:
 
