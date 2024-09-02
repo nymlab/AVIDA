@@ -8,9 +8,9 @@ It also provides features to enhance the DApps' ability to manage their users' a
 
 AVIDA is agnostic to the underlying credential / presentation format,
 the different verification implementations are maintained in this repo.
-For example, current verifier code for [SD-JWT](./contracts/sdjwt-verifier) is supported and [anoncreds](./contracts/anoncreds-verifier/) will be updated to the current version.
+For example, current verifier code for [SD-JWT](https://github.com/nymlab/AVIDA/tree/main/contracts/sdjwt-verifier) is supported and [anoncreds](https://github.com/nymlab/AVIDA/tree/main/contracts/anoncreds-verifier) will be updated to the current version.
 
-> If you would like to implement other verification methods, please follow the `trait` provided [here](./packages/common/src/traits.rs) to provide unified interface for DApps developers.
+> If you would like to implement other verification methods, please follow the `trait` provided [here](https://github.com/nymlab/AVIDA/blob/main/packages/common/src/traits.rs) to provide unified interface for DApps developers.
 
 
 - [AVIDA](#avida)
@@ -25,7 +25,7 @@ For example, current verifier code for [SD-JWT](./contracts/sdjwt-verifier) is s
 
 ## Usage
 
-> An example DApp CosmWasm contract using the AVIDA SD-JWT verifier can be found in [avida-example](./contracts/avida-example/).
+> An example DApp CosmWasm contract using the AVIDA SD-JWT verifier can be found in [avida-example](https://github.com/nymlab/AVIDA/tree/main/contracts/avida_example).
 
 ### Concepts: App, Route & Verification Requirements
 
@@ -33,7 +33,7 @@ For example, current verifier code for [SD-JWT](./contracts/sdjwt-verifier) is s
 - *Route*: this is the identifier within an App that contains the *Verification Requirements*.
 - *Verification Requirements*: this is the data that the verifier will use to verify the credential presentation.
 
-The *Verification Requirements* type is defined in [avida-common](./packages/common/src/types.rs) as:
+The *Verification Requirements* type is defined in [avida-common](https://github.com/nymlab/AVIDA/blob/main/packages/common/src/types.rs) as:
 
 ```rust
 pub struct RouteVerificationRequirements {
@@ -50,13 +50,13 @@ pub struct RouteVerificationRequirements {
 
 **Example of `RouteVerificationRequirements` for SD-JWT verifier**:
 
-In the case of using [SD-JWT verifier contract](./contracts/sdjwt-verifier), the `issuer_source_or_data` can be ONE OF the [ResourceReqPacket](./packages/cheqd/src/types.rs) or the JWK public key of the Trusted Issuer.
+In the case of using [SD-JWT verifier contract](https://github.com/nymlab/AVIDA/tree/main/contracts/sdjwt-verifier), the `issuer_source_or_data` can be ONE OF the [ResourceReqPacket](https://github.com/nymlab/AVIDA/blob/main/packages/cheqd/src/types.rs) or the JWK public key of the Trusted Issuer.
 
-If it is [ResourceReqPacket](./packages/cheqd/src/types.rs), then the [SD-JWT verifier contract](./contracts/sdjwt-verifier) will create an IBC transaction to query the data stored on the cheqd resource module. The acknowledgement of the IBC transaction is expected to also be in JWK format that represents the JWK public key of the Trusted Issuer. The acknowledgement is handled and stored for the given App and Route.
+If it is [ResourceReqPacket](https://github.com/nymlab/AVIDA/blob/main/packages/cheqd/src/types.rs), then the [SD-JWT verifier contract](https://github.com/nymlab/AVIDA/tree/main/contracts/sdjwt-verifier) will create an IBC transaction to query the data stored on the cheqd resource module. The acknowledgement of the IBC transaction is expected to also be in JWK format that represents the JWK public key of the Trusted Issuer. The acknowledgement is handled and stored for the given App and Route.
 
 The `presentation_required`  should be de-serialised to a structure that is meaning for handle the presentation.
 For SD-JWT, we will expect the requirements to be some criteria that the disclosed attributes satify.
-This is defined as [PresentationReq](./contracts/sdjwt-verifier/src/types.rs)
+This is defined as [PresentationReq](https://github.com/nymlab/AVIDA/blob/main/contracts/sdjwt-verifier/src/types.rs)
 
 ```rust
 // Example
@@ -82,13 +82,13 @@ The `Register` message in SD-JWT takes the caller as the admin of the App, which
 3. *Maintain the route verification requirements*:
 Administers of DApps can update / remove the route verification requirements by sending `Update` / `Deregister` messages to the verifier contract.
 
-A full example of this was implemented in [avida-example](./contracts/avida-example/).
+A full example of this was implemented in [avida-example](https://github.com/nymlab/AVIDA/tree/main/contracts/avida_example).
 
 ### Local / Testnet
 
-Run a local netwwork with a cheqd and neutron node by following the instructions in [avida-ts](./avida-ts/README.md) and try out the demo DApp in [avida-example](./contracts/avida-example/).
+Run a local netwwork with a cheqd and neutron node by following the instructions in [avida-ts](https://github.com/nymlab/AVIDA/blob/main/avida-ts/README.md) and try out the demo DApp in [avida-example](https://github.com/nymlab/AVIDA/tree/main/contracts/avida_example).
 
-Alternatively, the [SD-JWT](./contracts/sdjwt-verifier) verifier is deployed on Neutron `pion-1` testnet at `neutron1asg8l0k3wp2a2w0q9kukudq9fnrgfs855pcfdedyqn09fzy2tn3s8p02jq`
+Alternatively, the [SD-JWT](https://github.com/nymlab/AVIDA/tree/main/contracts/sdjwt-verifier) verifier is deployed on Neutron `pion-1` testnet at `neutron1asg8l0k3wp2a2w0q9kukudq9fnrgfs855pcfdedyqn09fzy2tn3s8p02jq`
 
 ---
 
