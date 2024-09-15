@@ -11,8 +11,7 @@ use serde::{Deserialize, Serialize};
 use super::fixtures::instantiate_verifier_contract;
 use avida_test_utils::sdjwt::fixtures::{
     claims_with_revocation_idx, get_route_requirement_with_empty_revocation_list,
-    make_presentation, PresentationVerificationType, RouteVerificationRequirementsType,
-    FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID,
+    make_presentation, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -27,8 +26,7 @@ const REVOCATION_TEST_CALLER: &str = "revocation_test_caller";
 fn test_update_revocation_list() {
     let app: App<_> = App::default();
 
-    let (contract, _) =
-        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
+    let (contract, _) = instantiate_verifier_contract(&app);
 
     // Get route verification requirements for a single route with expiration
     let route_verification_req =
@@ -109,8 +107,7 @@ fn test_revoked_presentation_cannot_be_used() {
     let app: App<_> = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract, _) =
-        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
+    let (contract, _) = instantiate_verifier_contract(&app);
 
     // Get route verification requirements for a single route with expiration
     let route_verification_req =
@@ -142,10 +139,8 @@ fn test_revoked_presentation_cannot_be_used() {
 
     let unrevoked_claims = claims_with_revocation_idx("Alice", 30, true, 2021, None, unrevoked_idx);
 
-    let revoked_presentation =
-        make_presentation(revoked_claims, PresentationVerificationType::Success);
-    let valid_presentation =
-        make_presentation(unrevoked_claims, PresentationVerificationType::Success);
+    let revoked_presentation = make_presentation(revoked_claims, vec![]);
+    let valid_presentation = make_presentation(unrevoked_claims, vec![]);
 
     let res: VerifyResult = from_json(
         contract
@@ -191,8 +186,7 @@ fn test_addition_requirements_with_revocation_list() {
 
     // Instantiate verifier contract with some predefined parameters
     // By default there is no revocation list
-    let (contract, _) =
-        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
+    let (contract, _) = instantiate_verifier_contract(&app);
 
     // Now we create additional requirements for the route
     let addition_requirement = vec![(
@@ -203,8 +197,7 @@ fn test_addition_requirements_with_revocation_list() {
     // Make a presentation with some claims
     let revoked_claims = claims_with_revocation_idx("Alice", 30, true, 2021, None, revoked_idx);
 
-    let revoked_presentation =
-        make_presentation(revoked_claims, PresentationVerificationType::Success);
+    let revoked_presentation = make_presentation(revoked_claims, vec![]);
 
     // Additional requirements should be checked if revoked_claims is revoked and should error
     let res: VerifyResult = from_json(

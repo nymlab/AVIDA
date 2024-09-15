@@ -1,3 +1,6 @@
-mod contract_test;
+mod deregister;
 mod fixtures;
-mod verifier_test;
+mod register;
+mod revocation;
+mod update;
+mod verifier;
