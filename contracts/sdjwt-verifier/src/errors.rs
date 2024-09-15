@@ -21,6 +21,7 @@ pub enum SdjwtVerifierResultError {
     ExpirationKeyOrValueInvalid(String, String),
     PresentationExpired(cw_utils::Expiration),
     IdxRevoked(u64),
+    DynamicRequirementNotProvided,
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -57,6 +58,12 @@ pub enum SdjwtVerifierError {
     IDXNotInRequirement,
     #[error("Revocation List type")]
     RevocationListType,
+    #[error("Dynamic Requirement {0} Not Found")]
+    DynamicRequirementNotFound(String),
+    #[error("Dynamic Requirement Not Matched: wanted {0}, got {1}")]
+    DynamicRequirementsNotMatched(usize, usize),
+    #[error("Dynamic Requirement mismatch required to input dyn")]
+    DynamicRequirementsVariantsMismatch,
 }
 
 impl From<SdjwtVerifierError> for StdError {

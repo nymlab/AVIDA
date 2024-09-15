@@ -3,10 +3,7 @@ use std::collections::HashMap;
 use crate::{
     contract::SdjwtVerifier,
     errors::{SdjwtVerifierError, SdjwtVerifierResultError},
-    types::{
-        validate, PendingRoute, PresentationReq, VerificationRequirements, VerifyResult,
-        _RegistrationRequest,
-    },
+    types::{validate, PendingRoute, VerificationRequirements, VerifyResult, _RegistrationRequest},
 };
 
 // AVIDA specific
@@ -53,28 +50,23 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
                 app_addr,
                 route_id,
                 presentation,
-                additional_requirements,
+                dynamic_requirements,
             } => {
-                let additional_requirements: Option<PresentationReq> =
-                    additional_requirements.map(from_json).transpose()?;
                 // If app is registered, load the requirementes for the given route_id
-                let requirements = self
+                let mut requirements = self
                     .app_routes_requirements
                     .load(deps.storage, app_addr.as_str())?
                     .get(&route_id)
                     .ok_or(SdjwtVerifierError::RouteNotRegistered)?
                     .clone();
+
+                requirements.process_dynamic_requirements(dynamic_requirements)?;
+
                 let max_len = self.max_presentation_len.load(deps.storage)?;
 
                 // In `Sudo`, the app address may be the `moduleAccount`
                 Ok(self
-                    ._verify(
-                        presentation,
-                        requirements,
-                        max_len,
-                        &env.block,
-                        additional_requirements,
-                    )
+                    ._verify(presentation, requirements, max_len, &env.block)
                     .map(|_| Response::default())
                     .map_err(SdjwtVerifierError::SdjwtVerifierResultError)?)
             }
@@ -119,31 +111,26 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         presentation: VerfiablePresentation,
         route_id: RouteId,
         app_addr: Option<String>,
-        additional_requirements: Option<Binary>,
+        dynamic_requirements_args: Option<Binary>,
     ) -> Result<Response, Self::Error> {
         let ExecCtx { deps, info, env } = ctx;
 
-        let additional_requirements: Option<PresentationReq> =
-            additional_requirements.map(from_json).transpose()?;
         let app_addr = app_addr.unwrap_or_else(|| info.sender.to_string());
         let app_addr = deps.api.addr_validate(&app_addr)?;
 
         // If app is registered, load the requirementes for the given route_id
-        let requirements = self
+        let mut requirements = self
             .app_routes_requirements
             .load(deps.storage, app_addr.as_str())?
             .get(&route_id)
             .ok_or(SdjwtVerifierError::RouteNotRegistered)?
             .clone();
+
+        requirements.process_dynamic_requirements(dynamic_requirements_args)?;
+
         let max_len = self.max_presentation_len.load(deps.storage)?;
         // Performs the verification of the provided presentation within the context of the given route
-        let res = self._verify(
-            presentation,
-            requirements,
-            max_len,
-            &env.block,
-            additional_requirements,
-        );
+        let res = self._verify(presentation, requirements, max_len, &env.block);
 
         //:we response with the error so that it can be propagated
         Ok(Response::default().set_data(to_json_binary(&VerifyResult { result: res })?))
@@ -253,7 +240,6 @@ impl SdjwtVerifier<'_> {
         requirements: VerificationRequirements,
         max_presentation_len: usize,
         block_info: &BlockInfo,
-        additional_requirements: Option<PresentationReq>,
     ) -> Result<(), SdjwtVerifierResultError> {
         // Ensure the presentation is not too large
         ensure!(
@@ -281,16 +267,12 @@ impl SdjwtVerifier<'_> {
         .map_err(|e| SdjwtVerifierResultError::SdJwt(e.to_string()))?
         .verified_claims;
 
-        let combined_requirements = if let Some(additional_requirements) = additional_requirements {
-            let mut combined_requirements = requirements.presentation_required.clone();
-            combined_requirements.extend(additional_requirements);
-            combined_requirements
-        } else {
-            requirements.presentation_required.clone()
-        };
-
         // We validate the verified claims against the requirements
-        validate(combined_requirements, verified_claims, block_info)
+        validate(
+            requirements.presentation_required,
+            verified_claims,
+            block_info,
+        )
     }
 
     /// Performs a registration of an application and all its routes

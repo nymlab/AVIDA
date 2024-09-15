@@ -6,6 +6,7 @@ use cosmwasm_std::{from_json, Binary, BlockInfo, SubMsg};
 use cw_utils::Expiration;
 use jsonwebtoken::jwk::Jwk;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// This is the key to be used in claims that specifies expiration using `cw_util::Expiration`
 pub const CW_EXPIRATION: &str = "cw_exp";
@@ -65,6 +66,18 @@ pub struct VerificationRequirements {
     pub issuer_pubkey: Option<Jwk>,
 }
 
+fn same_variant(a: &Criterion, b: &Criterion) -> bool {
+    std::mem::discriminant(a) == std::mem::discriminant(b)
+}
+
+fn is_non_nested_dynamic(criterion: &Criterion) -> bool {
+    if let Criterion::Dynamic(inner) = criterion {
+        !matches!(**inner, Criterion::Dynamic(_))
+    } else {
+        false
+    }
+}
+
 impl VerificationRequirements {
     pub fn new(
         presentation_request: Binary,
@@ -74,6 +87,64 @@ impl VerificationRequirements {
             presentation_required: from_json(presentation_request)?,
             issuer_pubkey,
         })
+    }
+
+    pub fn process_dynamic_requirements(
+        &mut self,
+        dyn_requirements: Option<Binary>,
+    ) -> Result<(), SdjwtVerifierError> {
+        // There is nothing to process if there are no input dynamic requirements
+        // This does not mean that presentation will be validated,
+        // it just means that we are not updating the requirements
+        if dyn_requirements.is_none() {
+            return Ok(());
+        }
+        let dyn_requirements: PresentationReq = from_json(dyn_requirements.unwrap())?;
+
+        // Create a HashMap of strings associated with Dynamic criteria in all_criteria
+        let all_map: HashMap<&String, &Criterion> = self
+            .presentation_required
+            .iter()
+            .filter_map(|(key, criterion)| {
+                if is_non_nested_dynamic(criterion) {
+                    Some((key, criterion))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // Create a HashMap from dyn_criteria
+        let dyn_map: HashMap<&String, &Criterion> =
+            dyn_requirements.iter().map(|(key, c)| (key, c)).collect();
+
+        // Check if the HashMaps are equal
+        if all_map.len() != dyn_map.len() {
+            return Err(SdjwtVerifierError::DynamicRequirementsNotMatched(
+                all_map.len(),
+                dyn_map.len(),
+            ));
+        }
+
+        // Check if they have the same variant
+        let all_match = all_map.iter().all(|(key, criterion)| {
+            dyn_map.get(key).map_or(false, |dyn_criterion| {
+                same_variant(criterion, dyn_criterion)
+            })
+        });
+
+        // we replace the all requirements variant content with the dynamic one
+        if all_match {
+            // Replace the Dynamic criteria in all_criteria
+            for (key, criterion) in self.presentation_required.iter_mut() {
+                if let Some(&dyn_criterion) = dyn_map.get(key) {
+                    *criterion = dyn_criterion.clone();
+                }
+            }
+            Ok(())
+        } else {
+            Err(SdjwtVerifierError::DynamicRequirementsVariantsMismatch)
+        }
     }
 }
 
@@ -89,6 +160,12 @@ pub enum Criterion {
     /// this can be used in any form,
     /// but it is designed to be used with key IDX as a revocationlist
     NotContainedIn(Vec<u64>),
+    // dynamic means that the actual expected will be replaced with a dynamic value provided when
+    // verifying.
+    // For example: a Criterion::Dynamic(Box<Criterion::Number(18, MathsOperator::GreaterThan)>)
+    // will be replace by the the `dynamic_requirements_args`, for `Number` only the u64 is
+    // replaced.
+    Dynamic(Box<Criterion>),
 }
 
 #[cw_serde]
@@ -188,6 +265,9 @@ pub fn validate(
                         if bool_val != c_val {
                             return Err(SdjwtVerifierResultError::CriterionValueFailed(key));
                         }
+                    }
+                    (Criterion::Dynamic(_), _) => {
+                        return Err(SdjwtVerifierResultError::DynamicRequirementNotProvided);
                     }
                     _ => {
                         return Err(SdjwtVerifierResultError::DisclosedClaimNotFound(format!(
