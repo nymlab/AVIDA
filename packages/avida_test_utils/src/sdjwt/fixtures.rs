@@ -145,6 +145,24 @@ pub fn make_presentation(claims: Value, omit_attributes: Vec<String>) -> String 
         .unwrap()
 }
 
+// when we just use the make_route_verification_requirements,
+// there will be issues in the actual sdjwt-verifier crate as it is compiled multiple types
+// with different config. so we pass in &[u8] here
+pub fn make_route_verification_requirements_with_req_bytes(
+    pr_bytes: &[u8],
+) -> RouteVerificationRequirements {
+    let data_or_location = serde_json::to_string(&issuer_jwk()).unwrap();
+
+    // Add some default criteria as presentation request
+    RouteVerificationRequirements {
+        issuer_source_or_data: IssuerSourceOrData {
+            source: None,
+            data_or_location: Binary::from(data_or_location.as_bytes()),
+        },
+        presentation_required: Binary::from(pr_bytes),
+    }
+}
+
 /// Is used to get route verification requirements
 pub fn make_route_verification_requirements(
     presentation_req: PresentationReq,
@@ -159,16 +177,6 @@ pub fn make_route_verification_requirements(
             data_or_location: Binary::from(data_or_location.as_bytes()),
         },
         presentation_required: Binary::from(re.as_bytes()),
-    }
-}
-
-pub fn get_route_requirement_with_empty_revocation_list(route_id: u64) -> RegisterRouteRequest {
-    let first_presentation_req: PresentationReq =
-        vec![(IDX.to_string(), Criterion::NotContainedIn(vec![]))];
-
-    RegisterRouteRequest {
-        route_id,
-        requirements: make_route_verification_requirements(first_presentation_req),
     }
 }
 
@@ -240,6 +248,16 @@ pub fn get_route_requirement_with_unsupported_key_type() -> RegisterRouteRequest
     RegisterRouteRequest {
         route_id: SECOND_ROUTE_ID,
         requirements,
+    }
+}
+
+pub fn get_route_requirement_with_empty_revocation_list(route_id: u64) -> RegisterRouteRequest {
+    let first_presentation_req: PresentationReq =
+        vec![(IDX.to_string(), Criterion::NotContainedIn(vec![]))];
+
+    RegisterRouteRequest {
+        route_id,
+        requirements: make_route_verification_requirements(first_presentation_req),
     }
 }
 

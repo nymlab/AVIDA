@@ -441,6 +441,7 @@ impl SdjwtVerifier<'_> {
 
                     let verification_req =
                         VerificationRequirements::new(route_criteria.presentation_required, None)?;
+                    verification_req.validated_criterion()?;
                     Ok(_RegistrationRequest::new(verification_req, Some(ibc_msg)))
                 }
             }

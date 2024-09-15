@@ -8,8 +8,8 @@ use avida_common::traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy;
 
 use josekit::{self};
 
-use super::fixtures::instantiate_verifier_contract;
-use avida_test_utils::sdjwt::fixtures::{
+use super::utils::instantiate_verifier_contract;
+use avida_test_utils::sdjwt::{
     get_route_requirement_with_unsupported_key_type, get_two_input_routes_requirements, issuer_jwk,
     OWNER_ADDR, SECOND_CALLER_APP_ADDR, SECOND_ROUTE_ID, THIRD_ROUTE_ID,
 };

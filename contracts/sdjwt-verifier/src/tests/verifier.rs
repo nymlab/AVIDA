@@ -9,8 +9,8 @@ use avida_common::traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy;
 use avida_common::types::RegisterRouteRequest;
 use serde::{Deserialize, Serialize};
 
-use super::fixtures::instantiate_verifier_contract;
-use avida_test_utils::sdjwt::fixtures::{
+use super::utils::instantiate_verifier_contract;
+use avida_test_utils::sdjwt::{
     claims, get_default_block_info, get_route_verification_requirement, issuer_jwk,
     make_presentation, ExpirationCheck, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID,
     MAX_PRESENTATION_LEN, OWNER_ADDR, SECOND_CALLER_APP_ADDR, SECOND_ROUTE_ID,

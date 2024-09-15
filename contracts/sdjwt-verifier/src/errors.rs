@@ -64,6 +64,8 @@ pub enum SdjwtVerifierError {
     DynamicRequirementsNotMatched(usize, usize),
     #[error("Dynamic Requirement mismatch required to input dyn")]
     DynamicRequirementsVariantsMismatch,
+    #[error("Dynamic Requirement is nested")]
+    DynamicRequirementsNested,
 }
 
 impl From<SdjwtVerifierError> for StdError {
