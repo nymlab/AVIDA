@@ -32,6 +32,8 @@ fn test_dyn_requirements_not_contain() {
         Criterion::Dynamic(Box::new(Criterion::NotContainedIn(vec![]))),
     )];
 
+    let dyn_presentation_req_str = serde_json::to_string(&dyn_presentation_req).unwrap();
+
     // Register the app with the two routes
     assert!(contract
         .register(
@@ -39,9 +41,7 @@ fn test_dyn_requirements_not_contain() {
             vec![RegisterRouteRequest {
                 route_id: dyn_route_id,
                 requirements: make_route_verification_requirements_with_req_bytes(
-                    serde_json::to_string(&dyn_presentation_req)
-                        .unwrap()
-                        .as_bytes()
+                    dyn_presentation_req_str.as_bytes()
                 ),
             }]
         )

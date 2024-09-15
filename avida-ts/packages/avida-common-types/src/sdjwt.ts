@@ -7,5 +7,6 @@ export type Criterion =
   | { number: [number, MathsOperator] }
   | { boolean: boolean }
   | { expires: string }
-  | { not_contained_in: Array<number> };
+  | { not_contained_in: Array<number> }
+  | { dynamic: Criterion };
 export type MathsOperator = "greater_than" | "less_than" | "equal_to";
