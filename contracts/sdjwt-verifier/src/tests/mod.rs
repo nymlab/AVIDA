@@ -1,3 +1,7 @@
-mod contract_test;
-mod fixtures;
-mod verifier_test;
+mod deregister;
+mod dynamic_req;
+mod register;
+mod revocation;
+mod update;
+mod utils;
+mod verifier;

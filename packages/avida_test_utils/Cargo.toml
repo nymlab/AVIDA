@@ -7,11 +7,11 @@ repository = { workspace = true }
 keywords = { workspace = true }
 
 [features]
-sdjwt = []
+sdjwt = ["avida-sdjwt-verifier"]
 
 [dependencies]
 # sd-jwt verifier contract
-avida-sdjwt-verifier = { path = "../../contracts/sdjwt-verifier/", features = ["library"]}
+avida-sdjwt-verifier = { path = "../../contracts/sdjwt-verifier/", features = ["library"], optional = true }
 avida-common = { path = "../../packages/common/"}
 cosmwasm-schema = { workspace = true }
 cosmwasm-std = { workspace = true }

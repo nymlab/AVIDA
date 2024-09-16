@@ -1,7 +1,6 @@
 use avida_test_utils::sdjwt::fixtures::{
-    get_route_verification_requirement, ExpirationCheck, RouteVerificationRequirementsType,
-    FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID, MAX_PRESENTATION_LEN, OWNER_ADDR,
-    VERIFIER_CONTRACT_LABEL,
+    get_route_verification_requirement, ExpirationCheck, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID,
+    MAX_PRESENTATION_LEN, OWNER_ADDR, VERIFIER_CONTRACT_LABEL,
 };
 use sylvia::multitest::{App, Proxy};
 
@@ -16,15 +15,11 @@ use crate::types::InitRegistration;
 /// Is used to instantiate verifier contract with some predefined parameters
 pub fn instantiate_verifier_contract(
     app: &App<MtApp>,
-    route_verification_requirements_type: RouteVerificationRequirementsType,
 ) -> (
     Proxy<'_, MtApp, SdjwtVerifier<'_>>,
     RouteVerificationRequirements,
 ) {
-    let fx_route_verification_req = get_route_verification_requirement(
-        ExpirationCheck::NoExpiry,
-        route_verification_requirements_type,
-    );
+    let fx_route_verification_req = get_route_verification_requirement(ExpirationCheck::NoExpiry);
     let code_id = CodeId::store_code(app);
 
     // String, // Admin

@@ -2,7 +2,6 @@ use avida_common::types::RouteVerificationRequirements;
 use avida_sdjwt_verifier::types::{Criterion, MathsOperator, PresentationReq, CW_EXPIRATION};
 use avida_test_utils::sdjwt::fixtures::{
     claims, get_default_block_info, make_presentation, make_route_verification_requirements,
-    PresentationVerificationType, RouteVerificationRequirementsType,
 };
 
 use crate::contract::{sv::mt::CodeId as RestaurantCodeID, RestaurantContract};
@@ -13,7 +12,7 @@ use sylvia::multitest::{App, Proxy};
 
 pub fn create_presentation(age: u8) -> String {
     let claims = claims("Alice", age, true, 2021, None);
-    make_presentation(claims, PresentationVerificationType::Success)
+    make_presentation(claims, vec![])
 }
 
 pub fn create_presentation_with_exp(expired: bool) -> String {
@@ -23,7 +22,7 @@ pub fn create_presentation_with_exp(expired: bool) -> String {
         cw_utils::Expiration::AtTime(get_default_block_info().time.plus_hours(1))
     };
     let claims = claims("Alice", 30, true, 2021, Some(exp));
-    make_presentation(claims, PresentationVerificationType::Success)
+    make_presentation(claims, vec![])
 }
 
 pub fn setup_requirement(order: &str) -> RouteVerificationRequirements {
@@ -36,10 +35,7 @@ pub fn setup_requirement(order: &str) -> RouteVerificationRequirements {
         "food" => vec![],
         _ => vec![],
     };
-    make_route_verification_requirements(
-        presentation_req,
-        RouteVerificationRequirementsType::Supported,
-    )
+    make_route_verification_requirements(presentation_req)
 }
 
 pub fn setup_requirement_with_expiration() -> RouteVerificationRequirements {
@@ -52,10 +48,7 @@ pub fn setup_requirement_with_expiration() -> RouteVerificationRequirements {
         (CW_EXPIRATION.to_string(), Criterion::Expires(true)),
     ];
 
-    make_route_verification_requirements(
-        presentation_req,
-        RouteVerificationRequirementsType::Supported,
-    )
+    make_route_verification_requirements(presentation_req)
 }
 
 pub fn instantiate_contracts(app: &App<MtApp>) -> Proxy<'_, MtApp, RestaurantContract<'_>> {
