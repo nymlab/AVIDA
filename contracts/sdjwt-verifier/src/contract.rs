@@ -45,7 +45,7 @@ pub struct SdjwtVerifier<'a> {
     /// This contains the presentation required (i.e. disclosed value requirements) and the issuer
     /// pubkey
     pub app_routes_requirements: Map<'a, &'a str, HashMap<RouteId, VerificationRequirements>>,
-    /// Registered Smart Contract addrs and their admins
+    /// Registered App addrs (module / smart contract) and their admins
     pub app_admins: Map<'a, &'a str, Addr>,
     /// The IBC channel connecting with cheqd resource
     pub channel_id: Item<'a, String>,

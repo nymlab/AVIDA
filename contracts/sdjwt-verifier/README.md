@@ -1,10 +1,8 @@
 # SD-JWT onchain verifier
 
-
 This contract is IBC enabled and can query [cheqd] for resources such as the current issuer PubKey.
 
 [cheqd]: https://cheqd.io
-
 
 ## Key difference to SD-JWT
 
@@ -14,10 +12,10 @@ This contract is IBC enabled and can query [cheqd] for resources such as the cur
 
 ### Expiration Check
 
-For sdjwt that has an expiration, instead of using the standard epoch time,
-for cosmwasm, we use the key `crate::types::CW_EXPIRATION` (`cw_exp`) as opposed to `exp`,
-which expects the value to be the serialised value of `cw_util::Expiration`.
-If the route requires expiration check, the caller must include, in their `Criterion` - `Criterion::Expires(true)`
+For sdjwt that has an expiration, instead of using the standard epoch time, for cosmwasm, we use the key
+`crate::types::CW_EXPIRATION` (`cw_exp`) as opposed to `exp`, which expects the value to be the serialised value of
+`cw_util::Expiration`. If the route requires expiration check, the caller must include, in their `Criterion` -
+`Criterion::Expires(true)`
 
 ## Keys generation
 
