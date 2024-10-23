@@ -4,4 +4,4 @@ pub mod types;
 mod verifier;
 
 #[cfg(test)]
-mod tests;
+pub mod tests;
