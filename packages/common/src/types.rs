@@ -59,4 +59,9 @@ pub enum AvidaVerifierSudoMsg {
         route_id: RouteId,
         route_criteria: Option<RouteVerificationRequirements>,
     },
+    Register {
+        app_addr: String,
+        app_admin: String,
+        routes: Vec<RegisterRouteRequest>,
+    },
 }

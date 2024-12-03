@@ -83,6 +83,11 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
                 route_id,
                 route_criteria,
             } => self._update(deps.storage, &env, &app_addr, route_id, route_criteria),
+            AvidaVerifierSudoMsg::Register {
+                app_addr,
+                app_admin,
+                routes,
+            } => self._register(deps.storage, &env, &app_admin, &app_addr, routes),
         }
     }
 
