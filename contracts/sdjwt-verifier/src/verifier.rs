@@ -87,7 +87,10 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
                 app_addr,
                 app_admin,
                 routes,
-            } => self._register(deps.storage, &env, &app_admin, &app_addr, routes),
+            } => {
+                let admin = deps.api.addr_validate(&app_admin)?;
+                self._register(deps.storage, &env, &admin, &app_addr, routes)
+            }
         }
     }
 
