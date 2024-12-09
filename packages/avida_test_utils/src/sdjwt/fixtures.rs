@@ -1,3 +1,4 @@
+use avida_sdjwt_verifier::types::NumberCriterion;
 use avida_sdjwt_verifier::types::ReqAttr;
 use avida_sdjwt_verifier::types::IDX;
 use cosmwasm_std::BlockInfo;
@@ -209,7 +210,10 @@ pub fn get_two_input_routes_requirements() -> Vec<RegisterRouteRequest> {
         },
         ReqAttr {
             attribute: "age".to_string(),
-            criterion: Criterion::Number(24, MathsOperator::EqualTo),
+            criterion: Criterion::Number(NumberCriterion {
+                value: 24,
+                operator: MathsOperator::EqualTo,
+            }),
         },
         ReqAttr {
             attribute: "active".to_string(),
@@ -224,13 +228,19 @@ pub fn get_two_input_routes_requirements() -> Vec<RegisterRouteRequest> {
         },
         ReqAttr {
             attribute: "age".to_string(),
-            criterion: Criterion::Number(30, MathsOperator::EqualTo),
+            criterion: Criterion::Number(NumberCriterion {
+                value: 30,
+                operator: MathsOperator::EqualTo,
+            }),
         },
         ReqAttr {
             attribute: "active".to_string(),
             criterion: Criterion::Boolean(true),
         },
     ];
+
+    let pretty_json = serde_json::to_string(&first_presentation_req).unwrap();
+    println!("reg {:?}", pretty_json);
 
     vec![
         RegisterRouteRequest {
@@ -258,7 +268,10 @@ pub fn get_route_verification_requirement(
     let mut presentation_req: PresentationReq = vec![
         ReqAttr {
             attribute: "age".to_string(),
-            criterion: Criterion::Number(30, MathsOperator::EqualTo),
+            criterion: Criterion::Number(NumberCriterion {
+                value: 30,
+                operator: MathsOperator::EqualTo,
+            }),
         },
         ReqAttr {
             attribute: "active".to_string(),
@@ -266,7 +279,10 @@ pub fn get_route_verification_requirement(
         },
         ReqAttr {
             attribute: "joined_at".to_string(),
-            criterion: Criterion::Number(2020, MathsOperator::GreaterThan),
+            criterion: Criterion::Number(NumberCriterion {
+                value: 2020,
+                operator: MathsOperator::GreaterThan,
+            }),
         },
     ];
     if let ExpirationCheck::Expires = expiration_check {
@@ -286,7 +302,10 @@ pub fn get_input_route_requirement(
     let presentation_req: PresentationReq = vec![
         ReqAttr {
             attribute: "age".to_string(),
-            criterion: Criterion::Number(30, MathsOperator::EqualTo),
+            criterion: Criterion::Number(NumberCriterion {
+                value: 30,
+                operator: MathsOperator::EqualTo,
+            }),
         },
         ReqAttr {
             attribute: "active".to_string(),
@@ -294,7 +313,10 @@ pub fn get_input_route_requirement(
         },
         ReqAttr {
             attribute: "joined_at".to_string(),
-            criterion: Criterion::Number(2020, MathsOperator::GreaterThan),
+            criterion: Criterion::Number(NumberCriterion {
+                value: 2020,
+                operator: MathsOperator::GreaterThan,
+            }),
         },
     ];
     RegisterRouteRequest {

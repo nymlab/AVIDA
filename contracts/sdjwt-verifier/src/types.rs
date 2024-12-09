@@ -99,12 +99,18 @@ pub type CriterionKey = String;
 #[cw_serde]
 pub enum Criterion {
     String(String),
-    Number(u64, MathsOperator),
+    Number(NumberCriterion),
     Boolean(bool),
     Expires(bool),
     /// this can be used in any form,
     /// but it is designed to be used with key IDX as a revocationlist
     NotContainedIn(Vec<u64>),
+}
+
+#[cw_serde]
+pub struct NumberCriterion {
+    pub value: u64,
+    pub operator: MathsOperator,
 }
 
 #[cw_serde]
@@ -178,22 +184,22 @@ pub fn validate(
                             return Err(SdjwtVerifierResultError::CriterionValueFailed(attribute));
                         }
                     }
-                    (Criterion::Number(c_val, op), Some(serde_json::Value::Number(p_val))) => {
+                    (Criterion::Number(c), Some(serde_json::Value::Number(p_val))) => {
                         if let Some(num) = p_val.as_u64() {
-                            match op {
-                                MathsOperator::GreaterThan if &num <= c_val => {
+                            match c.operator {
+                                MathsOperator::GreaterThan if num <= c.value => {
                                     return Err(SdjwtVerifierResultError::CriterionValueFailed(
                                         attribute,
                                     ));
                                 }
 
-                                MathsOperator::LessThan if &num >= c_val => {
+                                MathsOperator::LessThan if num >= c.value => {
                                     return Err(SdjwtVerifierResultError::CriterionValueFailed(
                                         attribute,
                                     ));
                                 }
 
-                                MathsOperator::EqualTo if &num != c_val => {
+                                MathsOperator::EqualTo if num != c.value => {
                                     return Err(SdjwtVerifierResultError::CriterionValueFailed(
                                         attribute,
                                     ));

@@ -1,6 +1,6 @@
 use avida_common::types::RouteVerificationRequirements;
 use avida_sdjwt_verifier::types::{
-    Criterion, MathsOperator, PresentationReq, ReqAttr, CW_EXPIRATION,
+    Criterion, MathsOperator, NumberCriterion, PresentationReq, ReqAttr, CW_EXPIRATION,
 };
 use avida_test_utils::sdjwt::fixtures::{
     claims, get_default_block_info, make_presentation, make_route_verification_requirements,
@@ -33,7 +33,10 @@ pub fn setup_requirement(order: &str) -> RouteVerificationRequirements {
     let presentation_req: PresentationReq = match order {
         "drink" => vec![ReqAttr {
             attribute: "age".to_string(),
-            criterion: Criterion::Number(18, MathsOperator::GreaterThan),
+            criterion: Criterion::Number(NumberCriterion {
+                value: 18,
+                operator: MathsOperator::GreaterThan,
+            }),
         }],
         "food" => vec![],
         _ => vec![],
@@ -49,7 +52,10 @@ pub fn setup_requirement_with_expiration() -> RouteVerificationRequirements {
     let presentation_req: PresentationReq = vec![
         ReqAttr {
             attribute: "age".to_string(),
-            criterion: Criterion::Number(18, MathsOperator::GreaterThan),
+            criterion: Criterion::Number(NumberCriterion {
+                value: 18,
+                operator: MathsOperator::GreaterThan,
+            }),
         },
         ReqAttr {
             attribute: CW_EXPIRATION.to_string(),
