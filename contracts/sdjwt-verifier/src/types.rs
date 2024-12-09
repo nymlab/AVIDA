@@ -52,7 +52,23 @@ impl _RegistrationRequest {
     }
 }
 
-pub type PresentationReq = Vec<(CriterionKey, Criterion)>;
+/// The presentation request
+pub type PresentationReq = Vec<ReqAttr>;
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ReqAttr {
+    pub attribute: String,
+    pub criterion: Criterion,
+}
+
+impl ReqAttr {
+    pub fn new(attribute: String, criterion: Criterion) -> Self {
+        ReqAttr {
+            attribute,
+            criterion,
+        }
+    }
+}
 
 /// Verification requirements are provided on registration on a route
 /// The presentation request
@@ -119,10 +135,14 @@ pub fn validate(
             "null_disclosures".to_string(),
         )),
         serde_json::Value::Object(claims) => {
-            for (key, criterion) in presentation_request {
-                match (&criterion, claims.get(&key)) {
+            for ReqAttr {
+                attribute,
+                criterion,
+            } in presentation_request
+            {
+                match (&criterion, claims.get(&attribute)) {
                     (Criterion::Expires(true), Some(serde_json::Value::String(exp)))
-                        if key == CW_EXPIRATION =>
+                        if attribute == CW_EXPIRATION =>
                     {
                         let expiration: Expiration =
                             serde_json_wasm::from_str(exp).map_err(|_| {
@@ -138,7 +158,7 @@ pub fn validate(
                     // - the value must be a string
                     (Criterion::Expires(true), invalid_val) => {
                         return Err(SdjwtVerifierResultError::ExpirationKeyOrValueInvalid(
-                            key.to_string(),
+                            attribute.to_string(),
                             format!("{:?}", invalid_val),
                         ));
                     }
@@ -155,7 +175,7 @@ pub fn validate(
                     }
                     (Criterion::String(c_val), Some(serde_json::Value::String(p_val))) => {
                         if p_val != c_val {
-                            return Err(SdjwtVerifierResultError::CriterionValueFailed(key));
+                            return Err(SdjwtVerifierResultError::CriterionValueFailed(attribute));
                         }
                     }
                     (Criterion::Number(c_val, op), Some(serde_json::Value::Number(p_val))) => {
@@ -163,19 +183,19 @@ pub fn validate(
                             match op {
                                 MathsOperator::GreaterThan if &num <= c_val => {
                                     return Err(SdjwtVerifierResultError::CriterionValueFailed(
-                                        key,
+                                        attribute,
                                     ));
                                 }
 
                                 MathsOperator::LessThan if &num >= c_val => {
                                     return Err(SdjwtVerifierResultError::CriterionValueFailed(
-                                        key,
+                                        attribute,
                                     ));
                                 }
 
                                 MathsOperator::EqualTo if &num != c_val => {
                                     return Err(SdjwtVerifierResultError::CriterionValueFailed(
-                                        key,
+                                        attribute,
                                     ));
                                 }
                                 _ => {}
@@ -186,13 +206,13 @@ pub fn validate(
                     }
                     (Criterion::Boolean(c_val), Some(serde_json::Value::Bool(bool_val))) => {
                         if bool_val != c_val {
-                            return Err(SdjwtVerifierResultError::CriterionValueFailed(key));
+                            return Err(SdjwtVerifierResultError::CriterionValueFailed(attribute));
                         }
                     }
                     _ => {
                         return Err(SdjwtVerifierResultError::DisclosedClaimNotFound(format!(
-                            "Expects claim to be: {:?} for key: {}",
-                            criterion, &key
+                            "Expects claim to be: {:?} for attr: {}",
+                            criterion, &attribute
                         )));
                     }
                 }

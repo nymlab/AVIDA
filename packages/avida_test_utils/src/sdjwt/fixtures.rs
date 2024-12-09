@@ -1,3 +1,4 @@
+use avida_sdjwt_verifier::types::ReqAttr;
 use avida_sdjwt_verifier::types::IDX;
 use cosmwasm_std::BlockInfo;
 use cw_utils::Expiration;
@@ -185,8 +186,10 @@ pub fn make_route_verification_requirements(
 }
 
 pub fn get_route_requirement_with_empty_revocation_list(route_id: u64) -> RegisterRouteRequest {
-    let first_presentation_req: PresentationReq =
-        vec![(IDX.to_string(), Criterion::NotContainedIn(vec![]))];
+    let first_presentation_req: PresentationReq = vec![ReqAttr {
+        attribute: IDX.to_string(),
+        criterion: Criterion::NotContainedIn(vec![]),
+    }];
 
     RegisterRouteRequest {
         route_id,
@@ -200,21 +203,33 @@ pub fn get_route_requirement_with_empty_revocation_list(route_id: u64) -> Regist
 /// Is used to get input verification requirements for 2 routes
 pub fn get_two_input_routes_requirements() -> Vec<RegisterRouteRequest> {
     let first_presentation_req: PresentationReq = vec![
-        ("name".to_string(), Criterion::String("John".to_string())),
-        (
-            "age".to_string(),
-            Criterion::Number(24, MathsOperator::EqualTo),
-        ),
-        ("active".to_string(), Criterion::Boolean(true)),
+        ReqAttr {
+            attribute: "name".to_string(),
+            criterion: Criterion::String("John".to_string()),
+        },
+        ReqAttr {
+            attribute: "age".to_string(),
+            criterion: Criterion::Number(24, MathsOperator::EqualTo),
+        },
+        ReqAttr {
+            attribute: "active".to_string(),
+            criterion: Criterion::Boolean(true),
+        },
     ];
 
     let second_presentation_req: PresentationReq = vec![
-        ("name".to_string(), Criterion::String("Jane".to_string())),
-        (
-            "age".to_string(),
-            Criterion::Number(30, MathsOperator::EqualTo),
-        ),
-        ("active".to_string(), Criterion::Boolean(true)),
+        ReqAttr {
+            attribute: "name".to_string(),
+            criterion: Criterion::String("Jane".to_string()),
+        },
+        ReqAttr {
+            attribute: "age".to_string(),
+            criterion: Criterion::Number(30, MathsOperator::EqualTo),
+        },
+        ReqAttr {
+            attribute: "active".to_string(),
+            criterion: Criterion::Boolean(true),
+        },
     ];
 
     vec![
@@ -241,18 +256,24 @@ pub fn get_route_verification_requirement(
     route_verification_requirements_type: RouteVerificationRequirementsType,
 ) -> RouteVerificationRequirements {
     let mut presentation_req: PresentationReq = vec![
-        (
-            "age".to_string(),
-            Criterion::Number(30, MathsOperator::EqualTo),
-        ),
-        ("active".to_string(), Criterion::Boolean(true)),
-        (
-            "joined_at".to_string(),
-            Criterion::Number(2020, MathsOperator::GreaterThan),
-        ),
+        ReqAttr {
+            attribute: "age".to_string(),
+            criterion: Criterion::Number(30, MathsOperator::EqualTo),
+        },
+        ReqAttr {
+            attribute: "active".to_string(),
+            criterion: Criterion::Boolean(true),
+        },
+        ReqAttr {
+            attribute: "joined_at".to_string(),
+            criterion: Criterion::Number(2020, MathsOperator::GreaterThan),
+        },
     ];
     if let ExpirationCheck::Expires = expiration_check {
-        presentation_req.push((CW_EXPIRATION.to_string(), Criterion::Expires(true)))
+        presentation_req.push(ReqAttr::new(
+            CW_EXPIRATION.to_string(),
+            Criterion::Expires(true),
+        ))
     };
 
     make_route_verification_requirements(presentation_req, route_verification_requirements_type)
@@ -263,15 +284,18 @@ pub fn get_input_route_requirement(
     route_verification_requirements_type: RouteVerificationRequirementsType,
 ) -> RegisterRouteRequest {
     let presentation_req: PresentationReq = vec![
-        (
-            "age".to_string(),
-            Criterion::Number(30, MathsOperator::EqualTo),
-        ),
-        ("active".to_string(), Criterion::Boolean(true)),
-        (
-            "joined_at".to_string(),
-            Criterion::Number(2020, MathsOperator::GreaterThan),
-        ),
+        ReqAttr {
+            attribute: "age".to_string(),
+            criterion: Criterion::Number(30, MathsOperator::EqualTo),
+        },
+        ReqAttr {
+            attribute: "active".to_string(),
+            criterion: Criterion::Boolean(true),
+        },
+        ReqAttr {
+            attribute: "joined_at".to_string(),
+            criterion: Criterion::Number(2020, MathsOperator::GreaterThan),
+        },
     ];
     RegisterRouteRequest {
         route_id: SECOND_ROUTE_ID,

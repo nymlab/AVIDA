@@ -1,5 +1,7 @@
 use avida_common::types::RouteVerificationRequirements;
-use avida_sdjwt_verifier::types::{Criterion, MathsOperator, PresentationReq, CW_EXPIRATION};
+use avida_sdjwt_verifier::types::{
+    Criterion, MathsOperator, PresentationReq, ReqAttr, CW_EXPIRATION,
+};
 use avida_test_utils::sdjwt::fixtures::{
     claims, get_default_block_info, make_presentation, make_route_verification_requirements,
     PresentationVerificationType, RouteVerificationRequirementsType,
@@ -29,10 +31,10 @@ pub fn create_presentation_with_exp(expired: bool) -> String {
 pub fn setup_requirement(order: &str) -> RouteVerificationRequirements {
     // Add only 1 criterion - age greater than 18 for drink, and none for food
     let presentation_req: PresentationReq = match order {
-        "drink" => vec![(
-            "age".to_string(),
-            Criterion::Number(18, MathsOperator::GreaterThan),
-        )],
+        "drink" => vec![ReqAttr {
+            attribute: "age".to_string(),
+            criterion: Criterion::Number(18, MathsOperator::GreaterThan),
+        }],
         "food" => vec![],
         _ => vec![],
     };
@@ -45,11 +47,14 @@ pub fn setup_requirement(order: &str) -> RouteVerificationRequirements {
 pub fn setup_requirement_with_expiration() -> RouteVerificationRequirements {
     // Add 2 criterion - age greater than 18, and expiration
     let presentation_req: PresentationReq = vec![
-        (
-            "age".to_string(),
-            Criterion::Number(18, MathsOperator::GreaterThan),
-        ),
-        (CW_EXPIRATION.to_string(), Criterion::Expires(true)),
+        ReqAttr {
+            attribute: "age".to_string(),
+            criterion: Criterion::Number(18, MathsOperator::GreaterThan),
+        },
+        ReqAttr {
+            attribute: CW_EXPIRATION.to_string(),
+            criterion: Criterion::Expires(true),
+        },
     ];
 
     make_route_verification_requirements(

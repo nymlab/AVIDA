@@ -87,6 +87,26 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "get_app_admin"
+          ],
+          "properties": {
+            "get_app_admin": {
+              "type": "object",
+              "required": [
+                "app_addr"
+              ],
+              "properties": {
+                "app_addr": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
         }
       ]
     }

@@ -122,9 +122,9 @@ impl SdjwtVerifier<'_> {
         route_requirements
             .presentation_required
             .iter_mut()
-            .find(|(key, _)| key == IDX)
-            .map(|(_, criterion)| -> Result<_, SdjwtVerifierError> {
-                if let Criterion::NotContainedIn(revocation_list) = criterion {
+            .find(|req| req.attribute == IDX)
+            .map(|req| -> Result<_, SdjwtVerifierError> {
+                if let Criterion::NotContainedIn(revocation_list) = &mut req.criterion {
                     for r in revoke {
                         if !revocation_list.contains(&r) {
                             revocation_list.push(r);
@@ -166,6 +166,12 @@ impl SdjwtVerifier<'_> {
             .issuer_pubkey
             .as_ref()
             .map(|jwk| serde_json_wasm::to_string(jwk).unwrap()))
+    }
+
+    #[sv::msg(query)]
+    fn get_app_admin(&self, ctx: QueryCtx, app_addr: String) -> Result<String, SdjwtVerifierError> {
+        let admin = self.app_admins.load(ctx.deps.storage, &app_addr)?;
+        Ok(admin.to_string())
     }
 
     // Functions in the `impl` block has access to the state of the contract

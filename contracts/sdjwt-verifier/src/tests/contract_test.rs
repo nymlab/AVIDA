@@ -4,7 +4,7 @@ use sylvia::multitest::App;
 
 use crate::contract::sv::mt::SdjwtVerifierProxy;
 use crate::errors::SdjwtVerifierResultError;
-use crate::types::{Criterion, PresentationReq, VerifyResult};
+use crate::types::{Criterion, PresentationReq, ReqAttr, VerifyResult};
 use avida_common::traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy;
 use serde::{Deserialize, Serialize};
 
@@ -51,8 +51,8 @@ fn test_update_revocation_list() {
     )
     .unwrap();
 
-    let revocation_list = req.iter().find(|(k, _)| k == "idx").unwrap();
-    assert_eq!(revocation_list.1, Criterion::NotContainedIn(vec![]));
+    let revocation_list = req.iter().find(|req| req.attribute == "idx").unwrap();
+    assert_eq!(revocation_list.criterion, Criterion::NotContainedIn(vec![]));
 
     contract
         .update_revocation_list(
@@ -74,8 +74,11 @@ fn test_update_revocation_list() {
     )
     .unwrap();
 
-    let revocation_list = req.iter().find(|(k, _)| k == "idx").unwrap();
-    assert_eq!(revocation_list.1, Criterion::NotContainedIn(vec![1, 2, 3]));
+    let revocation_list = req.iter().find(|req| req.attribute == "idx").unwrap();
+    assert_eq!(
+        revocation_list.criterion,
+        Criterion::NotContainedIn(vec![1, 2, 3])
+    );
 
     contract
         .update_revocation_list(
@@ -97,8 +100,11 @@ fn test_update_revocation_list() {
     )
     .unwrap();
 
-    let revocation_list = req.iter().find(|(k, _)| k == "idx").unwrap();
-    assert_eq!(revocation_list.1, Criterion::NotContainedIn(vec![1, 3, 7]));
+    let revocation_list = req.iter().find(|req| req.attribute == "idx").unwrap();
+    assert_eq!(
+        revocation_list.criterion,
+        Criterion::NotContainedIn(vec![1, 3, 7])
+    );
 }
 
 #[test]
@@ -195,10 +201,10 @@ fn test_addition_requirements_with_revocation_list() {
         instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
 
     // Now we create additional requirements for the route
-    let addition_requirement = vec![(
-        "idx".to_string(),
-        Criterion::NotContainedIn(vec![revoked_idx]),
-    )];
+    let addition_requirement = vec![ReqAttr {
+        attribute: "idx".to_string(),
+        criterion: Criterion::NotContainedIn(vec![revoked_idx]),
+    }];
 
     // Make a presentation with some claims
     let revoked_claims = claims_with_revocation_idx("Alice", 30, true, 2021, None, revoked_idx);
