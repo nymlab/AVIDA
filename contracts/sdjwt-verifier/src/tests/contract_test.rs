@@ -47,7 +47,8 @@ fn test_update_revocation_list() {
         contract
             .get_route_requirements(REVOCATION_TEST_CALLER.to_string(), REVOCATION_ROUTE_ID)
             .unwrap()
-            .presentation_required,
+            .presentation_required
+            .unwrap(),
     )
     .unwrap();
 
@@ -70,7 +71,8 @@ fn test_update_revocation_list() {
         contract
             .get_route_requirements(REVOCATION_TEST_CALLER.to_string(), REVOCATION_ROUTE_ID)
             .unwrap()
-            .presentation_required,
+            .presentation_required
+            .unwrap(),
     )
     .unwrap();
 
@@ -96,7 +98,8 @@ fn test_update_revocation_list() {
         contract
             .get_route_requirements(REVOCATION_TEST_CALLER.to_string(), REVOCATION_ROUTE_ID)
             .unwrap()
-            .presentation_required,
+            .presentation_required
+            .unwrap(),
     )
     .unwrap();
 

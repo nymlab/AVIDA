@@ -248,7 +248,11 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
 
         Ok(RouteVerificationRequirements {
             issuer_source_or_data: route_td.clone(),
-            presentation_required: to_json_binary(&route_req.presentation_required)?,
+            presentation_required: if route_req.presentation_required.is_empty() {
+                None
+            } else {
+                Some(to_json_binary(&route_req.presentation_required)?)
+            },
         })
     }
 }

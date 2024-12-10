@@ -622,7 +622,7 @@ fn register_serde_json_error() {
     // Make invalid presentation request
     two_routes_verification_req[0]
         .requirements
-        .presentation_required = Binary::from(b"invalid");
+        .presentation_required = Some(Binary::from(b"invalid"));
 
     // Try register the app with the two routes and invalid presentation request
     assert!(matches!(
@@ -893,7 +893,7 @@ fn update_serde_json_error() {
     );
 
     // Try update the route verification requirements with invalid presentation request
-    updated_route_verification_req.presentation_required = Binary::from(b"invalid");
+    updated_route_verification_req.presentation_required = Some(Binary::from(b"invalid"));
 
     assert!(matches!(
         contract

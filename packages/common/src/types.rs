@@ -26,7 +26,7 @@ pub struct RouteVerificationRequirements {
     /// The presentation request is the criteria required for the presentation,
     /// for example required certains claims to be disclosed
     /// This value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier
-    pub presentation_required: Binary,
+    pub presentation_required: Option<Binary>,
 }
 
 #[cw_serde]

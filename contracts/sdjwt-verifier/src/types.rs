@@ -83,11 +83,14 @@ pub struct VerificationRequirements {
 
 impl VerificationRequirements {
     pub fn new(
-        presentation_request: Binary,
+        presentation_request: Option<Binary>,
         issuer_pubkey: Option<Jwk>,
     ) -> Result<Self, SdjwtVerifierError> {
         Ok(VerificationRequirements {
-            presentation_required: from_json(presentation_request)?,
+            presentation_required: match presentation_request {
+                Some(binary) => from_json(&binary)?,
+                None => vec![],
+            },
             issuer_pubkey,
         })
     }

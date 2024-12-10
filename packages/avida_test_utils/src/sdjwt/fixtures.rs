@@ -182,7 +182,7 @@ pub fn make_route_verification_requirements(
             source: None,
             data_or_location: Binary::from(data_or_location.as_bytes()),
         },
-        presentation_required: Binary::from(re.as_bytes()),
+        presentation_required: Some(Binary::from(re.as_bytes())),
     }
 }
 
