@@ -6,6 +6,7 @@ use cosmwasm_std::{from_json, Binary, BlockInfo, SubMsg};
 use cw_utils::Expiration;
 use jsonwebtoken::jwk::Jwk;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// This is the key to be used in claims that specifies expiration using `cw_util::Expiration`
 pub const CW_EXPIRATION: &str = "cw_exp";
@@ -15,7 +16,7 @@ pub const IDX: &str = "idx";
 
 #[cw_serde]
 pub struct VerifyResult {
-    pub result: Result<(), SdjwtVerifierResultError>,
+    pub result: Result<Value, SdjwtVerifierResultError>,
 }
 
 #[cw_serde]

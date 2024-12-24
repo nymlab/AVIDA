@@ -37,7 +37,6 @@ jsonwebtoken = { git = "https://github.com/nymlab/jsonwebtoken", rev = "98763b38
 thiserror = { workspace = true }
 serde_json = {version = "1.0.116", default-features = false, features = ["alloc"]}
 
-
 [dev-dependencies]
 sylvia = { workspace = true, features = ["mt"] }
 avida-test-utils = { path = "../../packages/avida_test_utils/", features = ["sdjwt"]}

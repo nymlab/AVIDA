@@ -33,6 +33,8 @@ use sylvia::{
     types::{ExecCtx, QueryCtx, SudoCtx},
 };
 
+use serde_json::Value;
+
 // sd-jwt specific dependencies
 use jsonwebtoken::{
     jwk::{AlgorithmParameters, EllipticCurve, Jwk, OctetKeyPairParameters},
@@ -67,7 +69,7 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
                 let max_len = self.max_presentation_len.load(deps.storage)?;
 
                 // In `Sudo`, the app address may be the `moduleAccount`
-                Ok(self
+                let data = self
                     ._verify(
                         presentation,
                         requirements,
@@ -75,8 +77,10 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
                         &env.block,
                         additional_requirements,
                     )
-                    .map(|_| Response::default())
-                    .map_err(SdjwtVerifierError::SdjwtVerifierResultError)?)
+                    .map(|res| to_json_binary(&VerifyResult { result: Ok(res) }))
+                    .map_err(SdjwtVerifierError::SdjwtVerifierResultError)??;
+
+                Ok(Response::default().set_data(data))
             }
             AvidaVerifierSudoMsg::Update {
                 app_addr,
@@ -266,7 +270,7 @@ impl SdjwtVerifier<'_> {
         max_presentation_len: usize,
         block_info: &BlockInfo,
         additional_requirements: Option<PresentationReq>,
-    ) -> Result<(), SdjwtVerifierResultError> {
+    ) -> Result<Value, SdjwtVerifierResultError> {
         // Ensure the presentation is not too large
         ensure!(
             presentation.len() <= max_presentation_len,
@@ -282,7 +286,7 @@ impl SdjwtVerifier<'_> {
         .map_err(|e| SdjwtVerifierResultError::JwtError(e.to_string()))?;
 
         // We verify the presentation
-        let verified_claims = SDJWTVerifier::new(
+        let sdjwt_verifier = SDJWTVerifier::new(
             String::from_utf8(presentation.to_vec())
                 .map_err(|e| SdjwtVerifierResultError::StringConversion(e.to_string()))?,
             Box::new(move |_, _| decoding_key.clone()),
@@ -290,19 +294,23 @@ impl SdjwtVerifier<'_> {
             None, // This version does not support key binding
             SDJWTSerializationFormat::Compact,
         )
-        .map_err(|e| SdjwtVerifierResultError::SdJwt(e.to_string()))?
-        .verified_claims;
+        .map_err(|e| SdjwtVerifierResultError::SdJwt(e.to_string()))?;
 
         let combined_requirements = if let Some(additional_requirements) = additional_requirements {
             let mut combined_requirements = requirements.presentation_required.clone();
             combined_requirements.extend(additional_requirements);
             combined_requirements
         } else {
-            requirements.presentation_required.clone()
+            requirements.presentation_required
         };
 
         // We validate the verified claims against the requirements
-        validate(combined_requirements, verified_claims, block_info)
+        validate(
+            combined_requirements,
+            sdjwt_verifier.verified_claims.clone(),
+            block_info,
+        )?;
+        Ok(sdjwt_verifier.verified_claims)
     }
 
     /// Performs a registration of an application and all its routes
