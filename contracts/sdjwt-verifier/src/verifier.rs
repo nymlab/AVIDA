@@ -17,7 +17,9 @@ use avida_common::types::{
     TrustRegistry, VerfiablePresentation,
 };
 use cosmwasm_std::{
-    ensure, from_json, to_json_binary, Addr, Binary, BlockInfo, CosmosMsg, Deps, DepsMut, Env, IbcBasicResponse, IbcChannelConnectMsg, IbcPacketAckMsg, IbcTimeout, MessageInfo, Response, Storage, SubMsg
+    ensure, from_json, to_json_binary, Addr, Binary, BlockInfo, CosmosMsg, Deps, DepsMut, Env,
+    IbcBasicResponse, IbcChannelConnectMsg, IbcPacketAckMsg, IbcTimeout, MessageInfo, Response,
+    Storage, SubMsg,
 };
 use sd_jwt_rs::{SDJWTSerializationFormat, SDJWTVerifier};
 use serde_json::Value;
@@ -27,7 +29,7 @@ use jsonwebtoken::{
     DecodingKey,
 };
 
-impl<'a> SdjwtVerifier<'a> {
+impl <'a> SdjwtVerifier <'a> {
     // Execute message handlers
     pub fn handle_update_revocation_list(
         &self,

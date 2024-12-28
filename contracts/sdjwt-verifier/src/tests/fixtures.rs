@@ -3,30 +3,35 @@ use avida_test_utils::sdjwt::fixtures::{
     FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID, MAX_PRESENTATION_LEN, OWNER_ADDR,
     VERIFIER_CONTRACT_LABEL,
 };
-use sylvia::multitest::{App, Proxy};
 
 use avida_common::types::{RegisterRouteRequest, RouteVerificationRequirements};
 
-use cw_multi_test::App as MtApp;
+use cosmwasm_std::{Addr, Empty};
+use cw_multi_test::{App as MtApp, Contract, ContractWrapper, Executor};
 
-use crate::contract::sv::mt::CodeId;
-use crate::contract::SdjwtVerifier;
+use crate::contract::{self, InstantiateMsg};
 use crate::types::InitRegistration;
+
+fn notarised_odp_contract() -> Box<dyn Contract<Empty>> {
+    Box::new(ContractWrapper::new_with_empty(
+        contract::execute,
+        contract::instantiate,
+        contract::query,
+    ))
+}
 
 /// Is used to instantiate verifier contract with some predefined parameters
 pub fn instantiate_verifier_contract(
-    app: &App<MtApp>,
+    app: &mut MtApp,
     route_verification_requirements_type: RouteVerificationRequirementsType,
-) -> (
-    Proxy<'_, MtApp, SdjwtVerifier<'_>>,
-    RouteVerificationRequirements,
-) {
+) -> (Addr, RouteVerificationRequirements) {
     let fx_route_verification_req = get_route_verification_requirement(
         ExpirationCheck::NoExpiry,
         route_verification_requirements_type,
     );
-    let code_id = CodeId::store_code(app);
 
+    let contract = notarised_odp_contract();
+    let code_id = app.store_code(contract);
     // String, // Admin
     // String, // App Addr
     // Vec<(RouteId, RouteVerificationRequirements)>,
@@ -39,12 +44,20 @@ pub fn instantiate_verifier_contract(
         }],
     }];
 
-    (
-        code_id
-            .instantiate(MAX_PRESENTATION_LEN, init_registrations)
-            .with_label(VERIFIER_CONTRACT_LABEL)
-            .call(OWNER_ADDR)
-            .unwrap(),
-        fx_route_verification_req,
-    )
+    let instantiate_msg = InstantiateMsg {
+        max_presentation_len: MAX_PRESENTATION_LEN,
+        init_registrations,
+    };
+    let owner = app.api().addr_make(OWNER_ADDR);
+    let contract_addr = app
+        .instantiate_contract(
+            code_id,
+            owner,
+            &instantiate_msg,
+            &[],
+            VERIFIER_CONTRACT_LABEL,
+            None,
+        )
+        .unwrap();
+    (contract_addr, fx_route_verification_req)
 }

@@ -34,12 +34,12 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // State structure
 pub struct SdjwtVerifier<'a> {
-    pub max_presentation_len: MaxPresentationLen<'a>,
-    pub app_trust_data_source: Map<'a, &'a str, HashMap<RouteId, IssuerSourceOrData>>,
-    pub app_routes_requirements: Map<'a, &'a str, HashMap<RouteId, VerificationRequirements>>,
-    pub app_admins: Map<'a, &'a str, Addr>,
-    pub channel_id: Item<'a, String>,
-    pub pending_verification_req_requests: Map<'a, &'a str, PendingRoute>,
+    pub max_presentation_len: MaxPresentationLen,
+    pub app_trust_data_source: Map<&'a str, HashMap<RouteId, IssuerSourceOrData>>,
+    pub app_routes_requirements: Map<&'a str, HashMap<RouteId, VerificationRequirements>>,
+    pub app_admins: Map<&'a str, Addr>,
+    pub channel_id: Item<String>,
+    pub pending_verification_req_requests: Map<&'a str, PendingRoute>,
 }
 
 // Contract instantiation parameters
@@ -271,7 +271,7 @@ pub fn ibc_packet_receive(
     _env: Env,
     msg: IbcPacketReceiveMsg,
 ) -> Result<IbcReceiveResponse, SdjwtVerifierError> {
-    Ok(IbcReceiveResponse::new().set_ack(StdAck::error("No packet handling".to_string())))
+    Ok(IbcReceiveResponse::new(StdAck::error("No packet handling".to_string())))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

@@ -7,11 +7,13 @@ repository = { workspace = true }
 keywords = { workspace = true }
 
 [dependencies]
-cosmwasm-schema = { workspace = true }
-cosmwasm-std = { workspace = true }
-cw-storage-plus = { workspace = true }
-sylvia = { workspace = true }
-sylvia-derive = { workspace = true }
+cosmwasm-schema = "2.1.0"
+cosmwasm-std = { version = "2.1.0", features = [
+  "cosmwasm_1_4",
+  # Enable this if you only deploy to chains that have CosmWasm 2.0 or higher
+  # "cosmwasm_2_0",
+] }
+cw-storage-plus = "2.0.0"
 thiserror = { workspace = true }
 serde = { workspace = true }
-schemars = { workspace = true }
+schemars = "0.8.16"

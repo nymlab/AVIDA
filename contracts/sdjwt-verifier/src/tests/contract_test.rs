@@ -5,7 +5,6 @@ use sylvia::multitest::App;
 use crate::contract::sv::mt::SdjwtVerifierProxy;
 use crate::errors::SdjwtVerifierResultError;
 use crate::types::{Criterion, PresentationReq, ReqAttr, VerifyResult};
-use avida_common::traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy;
 use serde::{Deserialize, Serialize};
 
 use super::fixtures::instantiate_verifier_contract;
@@ -28,7 +27,7 @@ fn test_update_revocation_list() {
     let app: App<_> = App::default();
 
     let (contract, _) =
-        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
+        instantiate_verifier_contract(&mut app, RouteVerificationRequirementsType::Supported);
 
     // Get route verification requirements for a single route with expiration
     let route_verification_req =

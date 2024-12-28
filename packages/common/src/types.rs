@@ -3,7 +3,7 @@ use cosmwasm_std::Binary;
 use cw_storage_plus::Item;
 
 /// This is set for the verifier to prevent the presentation from being too large
-pub type MaxPresentationLen<'a> = Item<'a, usize>;
+pub type MaxPresentationLen= Item<usize>;
 pub const MAX_PRESENTATION_LEN: MaxPresentationLen = Item::new("mpl");
 
 /// The verifiable presentation type is encoded as Binary
