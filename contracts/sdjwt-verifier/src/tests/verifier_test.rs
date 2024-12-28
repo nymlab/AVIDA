@@ -2,10 +2,8 @@ use cosmwasm_std::{from_json, Binary};
 
 use sylvia::multitest::App;
 
-use crate::contract::sv::mt::SdjwtVerifierProxy;
 use crate::errors::{SdjwtVerifierError, SdjwtVerifierResultError};
 use crate::types::VerifyResult;
-use avida_common::traits::avida_verifier_trait::sv::mt::AvidaVerifierTraitProxy;
 use avida_common::types::RegisterRouteRequest;
 use serde::{Deserialize, Serialize};
 

@@ -4,115 +4,90 @@ use crate::{
     contract::SdjwtVerifier,
     errors::{SdjwtVerifierError, SdjwtVerifierResultError},
     types::{
-        validate, PendingRoute, PresentationReq, VerificationRequirements, VerifyResult,
-        _RegistrationRequest,
+        validate, Criterion, PendingRoute, PresentationReq, UpdateRevocationListRequest,
+        VerificationRequirements, VerifyResult, _RegistrationRequest, IDX,
     },
 };
-
-// AVIDA specific
 use avida_cheqd::{
-    ibc::{get_timeout_timestamp, HOUR_PACKET_LIFETIME},
+    ibc::{get_timeout_timestamp, ibc_packet_ack_resource_extractor, HOUR_PACKET_LIFETIME},
     types::ResourceReqPacket,
 };
-use avida_common::{
-    traits::AvidaVerifierTrait,
-    types::{
-        AvidaVerifierSudoMsg, IssuerSourceOrData, RegisterRouteRequest, RouteId,
-        RouteVerificationRequirements, TrustRegistry, VerfiablePresentation,
-    },
+use avida_common::types::{
+    IssuerSourceOrData, RegisterRouteRequest, RouteId, RouteVerificationRequirements,
+    TrustRegistry, VerfiablePresentation,
 };
-
-//  CosmWasm / Sylvia lib
 use cosmwasm_std::{
-    ensure, from_json, to_json_binary, Addr, Binary, BlockInfo, CosmosMsg, Env, IbcTimeout,
-    Response, Storage, SubMsg,
+    ensure, from_json, to_json_binary, Addr, Binary, BlockInfo, CosmosMsg, Deps, DepsMut, Env, IbcBasicResponse, IbcChannelConnectMsg, IbcPacketAckMsg, IbcTimeout, MessageInfo, Response, Storage, SubMsg
 };
-
-use sylvia::{
-    contract,
-    types::{ExecCtx, QueryCtx, SudoCtx},
-};
-
+use sd_jwt_rs::{SDJWTSerializationFormat, SDJWTVerifier};
 use serde_json::Value;
 
-// sd-jwt specific dependencies
 use jsonwebtoken::{
     jwk::{AlgorithmParameters, EllipticCurve, Jwk, OctetKeyPairParameters},
     DecodingKey,
 };
-use sd_jwt_rs::{SDJWTSerializationFormat, SDJWTVerifier};
 
-#[contract(module=crate::contract)]
-#[sv::messages(avida_verifier_trait as AvidaVerifierTrait)]
-impl AvidaVerifierTrait for SdjwtVerifier<'_> {
-    type Error = SdjwtVerifierError;
+impl<'a> SdjwtVerifier<'a> {
+    // Execute message handlers
+    pub fn handle_update_revocation_list(
+        &self,
+        deps: DepsMut,
+        app_addr: String,
+        request: UpdateRevocationListRequest,
+    ) -> Result<Response, SdjwtVerifierError> {
+        let UpdateRevocationListRequest {
+            route_id,
+            revoke,
+            unrevoke,
+        } = request;
 
-    #[sv::msg(sudo)]
-    fn sudo(&self, ctx: SudoCtx, msg: AvidaVerifierSudoMsg) -> Result<Response, Self::Error> {
-        let SudoCtx { deps, env } = ctx;
-        match msg {
-            AvidaVerifierSudoMsg::Verify {
-                app_addr,
-                route_id,
-                presentation,
-                additional_requirements,
-            } => {
-                let additional_requirements: Option<PresentationReq> =
-                    additional_requirements.map(from_json).transpose()?;
-                // If app is registered, load the requirementes for the given route_id
-                let requirements = self
-                    .app_routes_requirements
-                    .load(deps.storage, app_addr.as_str())?
-                    .get(&route_id)
-                    .ok_or(SdjwtVerifierError::RouteNotRegistered)?
-                    .clone();
-                let max_len = self.max_presentation_len.load(deps.storage)?;
+        let mut all_routes_requirements =
+            self.app_routes_requirements.load(deps.storage, &app_addr)?;
 
-                // In `Sudo`, the app address may be the `moduleAccount`
-                let data = self
-                    ._verify(
-                        presentation,
-                        requirements,
-                        max_len,
-                        &env.block,
-                        additional_requirements,
-                    )
-                    .map(|res| to_json_binary(&VerifyResult { result: Ok(res) }))
-                    .map_err(SdjwtVerifierError::SdjwtVerifierResultError)??;
+        let mut route_requirements = all_routes_requirements
+            .get(&route_id)
+            .ok_or(SdjwtVerifierError::RouteNotRegistered)?
+            .clone();
 
-                Ok(Response::default().set_data(data))
-            }
-            AvidaVerifierSudoMsg::Update {
-                app_addr,
-                route_id,
-                route_criteria,
-            } => self._update(deps.storage, &env, &app_addr, route_id, route_criteria),
-            AvidaVerifierSudoMsg::Register {
-                app_addr,
-                app_admin,
-                routes,
-            } => {
-                let admin = deps.api.addr_validate(&app_admin)?;
-                self._register(deps.storage, &env, &admin, &app_addr, routes)
-            }
-        }
+        route_requirements
+            .presentation_required
+            .iter_mut()
+            .find(|req| req.attribute == IDX)
+            .map(|req| -> Result<_, SdjwtVerifierError> {
+                if let Criterion::NotContainedIn(revocation_list) = &mut req.criterion {
+                    for r in revoke {
+                        if !revocation_list.contains(&r) {
+                            revocation_list.push(r);
+                        }
+                    }
+
+                    for r in unrevoke {
+                        revocation_list.retain(|&x| x != r);
+                    }
+                    Ok(())
+                } else {
+                    Err(SdjwtVerifierError::RevocationListType)
+                }
+            })
+            .ok_or(SdjwtVerifierError::IDXNotInRequirement)??;
+
+        all_routes_requirements.insert(route_id, route_requirements);
+
+        self.app_routes_requirements
+            .save(deps.storage, &app_addr, &all_routes_requirements)?;
+
+        Ok(Response::default())
     }
 
-    /// Application registration
-    /// The caller will be the "admin" of the dApp to update requirements
-    #[sv::msg(exec)]
-    fn register(
+    pub fn handle_register(
         &self,
-        ctx: ExecCtx,
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
         app_addr: String,
         requests: Vec<RegisterRouteRequest>,
-    ) -> Result<Response, Self::Error> {
-        let ExecCtx { deps, env, info } = ctx;
+    ) -> Result<Response, SdjwtVerifierError> {
         let app_addr = deps.api.addr_validate(&app_addr)?;
-
-        deps.api.debug(&format!("{:?}", requests));
-
-        // Complete registration
         self._register(
             deps.storage,
             &env,
@@ -122,25 +97,21 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         )
     }
 
-    /// Performs the verification of the provided presentation within the context of the given route
-    #[sv::msg(exec)]
-    fn verify(
+    pub fn handle_verify(
         &self,
-        ctx: ExecCtx,
-        // Compact format serialised  sd-jwt
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
         presentation: VerfiablePresentation,
         route_id: RouteId,
         app_addr: Option<String>,
         additional_requirements: Option<Binary>,
-    ) -> Result<Response, Self::Error> {
-        let ExecCtx { deps, info, env } = ctx;
-
+    ) -> Result<Response, SdjwtVerifierError> {
         let additional_requirements: Option<PresentationReq> =
             additional_requirements.map(from_json).transpose()?;
         let app_addr = app_addr.unwrap_or_else(|| info.sender.to_string());
         let app_addr = deps.api.addr_validate(&app_addr)?;
 
-        // If app is registered, load the requirementes for the given route_id
         let requirements = self
             .app_routes_requirements
             .load(deps.storage, app_addr.as_str())?
@@ -148,30 +119,30 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
             .ok_or(SdjwtVerifierError::RouteNotRegistered)?
             .clone();
         let max_len = self.max_presentation_len.load(deps.storage)?;
-        // Performs the verification of the provided presentation within the context of the given route
-        let res = self._verify(
-            presentation,
-            requirements,
-            max_len,
-            &env.block,
-            additional_requirements,
-        );
 
-        //:we response with the error so that it can be propagated
-        Ok(Response::default().set_data(to_json_binary(&VerifyResult { result: res })?))
+        let res = self
+            ._verify(
+                presentation,
+                requirements,
+                max_len,
+                &env.block,
+                additional_requirements,
+            )
+            .map(|res| to_json_binary(&VerifyResult { result: Ok(res) }))
+            .map_err(SdjwtVerifierError::SdjwtVerifierResultError)??;
+
+        Ok(Response::default().set_data(res))
     }
 
-    /// For dApp to update their verification criteria
-    #[sv::msg(exec)]
-    fn update(
+    pub fn handle_update(
         &self,
-        ctx: ExecCtx,
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
         app_addr: String,
         route_id: RouteId,
         route_criteria: Option<RouteVerificationRequirements>,
-    ) -> Result<Response, Self::Error> {
-        let ExecCtx { deps, env, info } = ctx;
-
+    ) -> Result<Response, SdjwtVerifierError> {
         let app_addr = deps.api.addr_validate(&app_addr)?;
 
         let app_admin = self
@@ -179,12 +150,10 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
             .load(deps.storage, app_addr.as_str())
             .map_err(|_| SdjwtVerifierError::AppIsNotRegistered)?;
 
-        // Ensure the caller is the admin of the dApp
         if app_admin != info.sender {
             return Err(SdjwtVerifierError::Unauthorised);
         }
 
-        // Perform verification criteria update
         self._update(
             deps.storage,
             &env,
@@ -194,12 +163,12 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         )
     }
 
-    /// For dApp contracts to deregister
-    #[sv::msg(exec)]
-    fn deregister(&self, ctx: ExecCtx, app_addr: String) -> Result<Response, Self::Error> {
-        let ExecCtx { deps, info, .. } = ctx;
-
-        // Ensure the app with this address is registered
+    pub fn handle_deregister(
+        &self,
+        deps: DepsMut,
+        info: MessageInfo,
+        app_addr: String,
+    ) -> Result<Response, SdjwtVerifierError> {
         if !self.app_trust_data_source.has(deps.storage, &app_addr)
             || !self.app_routes_requirements.has(deps.storage, &app_addr)
         {
@@ -209,43 +178,107 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
         let app_addr = deps.api.addr_validate(&app_addr)?;
         let app_admin = self.app_admins.load(deps.storage, app_addr.as_str())?;
 
-        // Ensure the caller is the admin of the dApp
         if app_admin != info.sender {
             return Err(SdjwtVerifierError::Unauthorised);
         }
 
-        // Perform deregistration
         self._deregister(deps.storage, app_addr.as_str())
     }
 
-    /// Query available routes for a dApp contract
-    #[sv::msg(query)]
-    fn get_routes(&self, ctx: QueryCtx, app_addr: String) -> Result<Vec<RouteId>, Self::Error> {
-        let v = self
+    // Sudo message handlers
+    pub fn handle_sudo_verify(
+        &self,
+        deps: DepsMut,
+        env: Env,
+        app_addr: String,
+        route_id: RouteId,
+        presentation: VerfiablePresentation,
+        additional_requirements: Option<Binary>,
+    ) -> Result<Response, SdjwtVerifierError> {
+        let additional_requirements: Option<PresentationReq> =
+            additional_requirements.map(from_json).transpose()?;
+
+        let requirements = self
             .app_routes_requirements
-            .load(ctx.deps.storage, &app_addr)?;
+            .load(deps.storage, &app_addr)?
+            .get(&route_id)
+            .ok_or(SdjwtVerifierError::RouteNotRegistered)?
+            .clone();
+        let max_len = self.max_presentation_len.load(deps.storage)?;
+
+        let res = self
+            ._verify(
+                presentation,
+                requirements,
+                max_len,
+                &env.block,
+                additional_requirements,
+            )
+            .map(|res| to_json_binary(&VerifyResult { result: Ok(res) }))
+            .map_err(SdjwtVerifierError::SdjwtVerifierResultError)??;
+
+        Ok(Response::default().set_data(res))
+    }
+
+    pub fn handle_sudo_update(
+        &self,
+        deps: DepsMut,
+        env: Env,
+        app_addr: String,
+        route_id: RouteId,
+        route_criteria: Option<RouteVerificationRequirements>,
+    ) -> Result<Response, SdjwtVerifierError> {
+        self._update(deps.storage, &env, &app_addr, route_id, route_criteria)
+    }
+
+    // Query handlers
+    pub fn query_route_verification_key(
+        &self,
+        deps: Deps,
+        app_addr: String,
+        route_id: RouteId,
+    ) -> Result<Option<String>, SdjwtVerifierError> {
+        let req = self.app_routes_requirements.load(deps.storage, &app_addr)?;
+        let route_req = req
+            .get(&route_id)
+            .ok_or(SdjwtVerifierError::RouteNotRegistered)?;
+        Ok(route_req
+            .issuer_pubkey
+            .as_ref()
+            .map(|jwk| serde_json_wasm::to_string(jwk).unwrap()))
+    }
+
+    pub fn query_app_admin(
+        &self,
+        deps: Deps,
+        app_addr: String,
+    ) -> Result<String, SdjwtVerifierError> {
+        let admin = self.app_admins.load(deps.storage, &app_addr)?;
+        Ok(admin.to_string())
+    }
+
+    pub fn query_routes(
+        &self,
+        deps: Deps,
+        app_addr: String,
+    ) -> Result<Vec<RouteId>, SdjwtVerifierError> {
+        let v = self.app_routes_requirements.load(deps.storage, &app_addr)?;
         let routes: Vec<RouteId> = v.keys().cloned().collect();
         Ok(routes)
     }
 
-    /// Query requirements of a route for a dApp contract
-    #[sv::msg(query)]
-    fn get_route_requirements(
+    pub fn query_route_requirements(
         &self,
-        ctx: QueryCtx,
+        deps: Deps,
         app_addr: String,
         route_id: RouteId,
-    ) -> Result<RouteVerificationRequirements, Self::Error> {
-        let req = self
-            .app_routes_requirements
-            .load(ctx.deps.storage, &app_addr)?;
+    ) -> Result<RouteVerificationRequirements, SdjwtVerifierError> {
+        let req = self.app_routes_requirements.load(deps.storage, &app_addr)?;
         let route_req = req
             .get(&route_id)
             .ok_or(SdjwtVerifierError::RouteNotRegistered)?;
 
-        let trust_data = self
-            .app_trust_data_source
-            .load(ctx.deps.storage, &app_addr)?;
+        let trust_data = self.app_trust_data_source.load(deps.storage, &app_addr)?;
         let route_td = trust_data
             .get(&route_id)
             .ok_or(SdjwtVerifierError::RouteNotRegistered)?;
@@ -259,9 +292,7 @@ impl AvidaVerifierTrait for SdjwtVerifier<'_> {
             },
         })
     }
-}
 
-impl SdjwtVerifier<'_> {
     /// Verify the provided presentation within the context of the given route
     pub fn _verify(
         &self,
@@ -501,5 +532,58 @@ impl SdjwtVerifier<'_> {
                 Err(SdjwtVerifierError::UnsupportedKeyType)
             }
         }
+    }
+
+    // Functions in the `impl` block has access to the state of the contract
+    pub fn ibc_channel_connect(
+        &self,
+        deps: DepsMut,
+        msg: IbcChannelConnectMsg,
+    ) -> Result<IbcBasicResponse, SdjwtVerifierError> {
+        if self.channel_id.may_load(deps.storage)?.is_some() {
+            Err(SdjwtVerifierError::ChannelAlreadyExists)
+        } else {
+            self.channel_id
+                .save(deps.storage, &msg.channel().endpoint.channel_id)?;
+
+            Ok(IbcBasicResponse::new())
+        }
+    }
+
+    pub fn ibc_packet_ack(
+        &self,
+        deps: DepsMut,
+        msg: IbcPacketAckMsg,
+    ) -> Result<IbcBasicResponse, SdjwtVerifierError> {
+        let (resource_req_packet, resource) = ibc_packet_ack_resource_extractor(msg)?;
+
+        // Checks that this was a packet that we requested
+        let contract = SdjwtVerifier::new();
+        let pending_route = contract
+            .pending_verification_req_requests
+            .load(deps.storage, &resource_req_packet.to_string())?;
+        contract
+            .pending_verification_req_requests
+            .remove(deps.storage, &resource_req_packet.to_string());
+
+        // Checks the return data is the expected format
+        let pubkey: Jwk = from_json(resource.linked_resource.data)
+            .map_err(|e| SdjwtVerifierError::ReturnedResourceFormat(e.to_string()))?;
+
+        let mut req = contract
+            .app_routes_requirements
+            .load(deps.storage, &pending_route.app_addr)?;
+
+        let r = req
+            .get_mut(&pending_route.route_id)
+            .ok_or(SdjwtVerifierError::NoRequirementsForRoute)?;
+
+        r.issuer_pubkey = Some(pubkey);
+
+        contract
+            .app_routes_requirements
+            .save(deps.storage, &pending_route.app_addr, &req)?;
+
+        Ok(IbcBasicResponse::new())
     }
 }

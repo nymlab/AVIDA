@@ -1,3 +1,14 @@
+#[cfg(not(feature = "library"))]
+use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    to_json_binary, Addr, Binary, Deps, DepsMut, Env, IbcBasicResponse, IbcChannelCloseMsg,
+    IbcChannelConnectMsg, IbcChannelOpenMsg, IbcChannelOpenResponse, IbcPacketAckMsg,
+    IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, MessageInfo, Response, StdAck,
+    StdResult,
+};
+use cw2::set_contract_version;
+use cw_storage_plus::{Item, Map};
+
 use crate::{
     errors::SdjwtVerifierError,
     types::{
@@ -6,62 +17,102 @@ use crate::{
     },
 };
 
-// AVIDA specific
 use avida_cheqd::ibc::{
     ibc_channel_close_handler, ibc_channel_open_handler, ibc_packet_ack_resource_extractor,
 };
-use avida_common::{
-    traits::avida_verifier_trait,
-    types::{IssuerSourceOrData, MaxPresentationLen, RouteId, MAX_PRESENTATION_LEN},
-};
-//  CosmWasm / Sylvia lib
-use cosmwasm_std::{
-    entry_point, from_json, Addr, DepsMut, Env, IbcBasicResponse, IbcChannelCloseMsg,
-    IbcChannelConnectMsg, IbcChannelOpenMsg, IbcChannelOpenResponse, IbcPacketAckMsg,
-    IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, Response, StdAck, StdResult,
-};
-use cw2::set_contract_version;
-use cw_storage_plus::{Item, Map};
-#[cfg(not(feature = "library"))]
-use sylvia::entry_points;
-use sylvia::{
-    contract, schemars,
-    types::{ExecCtx, InstantiateCtx, QueryCtx},
+use avida_common::types::{
+    IssuerSourceOrData, MaxPresentationLen, RegisterRouteRequest, RouteId,
+    RouteVerificationRequirements, VerfiablePresentation, MAX_PRESENTATION_LEN,
 };
 
 use jsonwebtoken::jwk::Jwk;
 use std::collections::HashMap;
 
+// Contract name and version info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// The `invoice factory` structure stored in state
+// State structure
 pub struct SdjwtVerifier<'a> {
-    /// Max Presentation Length
     pub max_presentation_len: MaxPresentationLen<'a>,
-    /// Registered Smart Contract addrs and routes
     pub app_trust_data_source: Map<'a, &'a str, HashMap<RouteId, IssuerSourceOrData>>,
-    /// Per route, the requirements that is required for verifier to make a decision
-    /// This contains the presentation required (i.e. disclosed value requirements) and the issuer
-    /// pubkey
     pub app_routes_requirements: Map<'a, &'a str, HashMap<RouteId, VerificationRequirements>>,
-    /// Registered App addrs (module / smart contract) and their admins
     pub app_admins: Map<'a, &'a str, Addr>,
-    /// The IBC channel connecting with cheqd resource
     pub channel_id: Item<'a, String>,
-    /// Temp storage pending IBC packet Ack
-    /// ibc_channel_ack: the original packet is a ResourceReqPacket which should fill the `VerificationReq`
-    /// for a app and its route.
-    /// NOTE: There is currently no clean up / expiration in this version
-    /// so we will only support one per packet at the moment (and it will be overwritten)
     pub pending_verification_req_requests: Map<'a, &'a str, PendingRoute>,
 }
 
-#[cfg_attr(not(feature = "library"), entry_points)]
-#[contract]
-#[sv::error(SdjwtVerifierError)]
-#[sv::messages(avida_verifier_trait as AvidaVerifierTrait)]
-impl SdjwtVerifier<'_> {
+// Contract instantiation parameters
+#[cosmwasm_schema::cw_serde]
+pub struct InstantiateMsg {
+    pub max_presentation_len: usize,
+    pub init_registrations: Vec<InitRegistration>,
+}
+
+// Execute messages
+#[cosmwasm_schema::cw_serde]
+pub enum ExecuteMsg {
+    UpdateRevocationList {
+        app_addr: String,
+        request: UpdateRevocationListRequest,
+    },
+    Register {
+        app_addr: String,
+        requests: Vec<RegisterRouteRequest>,
+    },
+    Verify {
+        presentation: VerfiablePresentation,
+        route_id: RouteId,
+        app_addr: Option<String>,
+        additional_requirements: Option<Binary>,
+    },
+    Update {
+        app_addr: String,
+        route_id: RouteId,
+        route_criteria: Option<RouteVerificationRequirements>,
+    },
+    Deregister {
+        app_addr: String,
+    },
+}
+
+// Query messages
+#[cosmwasm_schema::cw_serde]
+pub enum QueryMsg {
+    GetRouteVerificationKey { app_addr: String, route_id: RouteId },
+    GetAppAdmin { app_addr: String },
+    GetRoutes { app_addr: String },
+    GetRouteRequirements { app_addr: String, route_id: RouteId },
+}
+
+// Sudo messages (privileged operations)
+#[cosmwasm_schema::cw_serde]
+pub enum SudoMsg {
+    Verify {
+        app_addr: String,
+        route_id: RouteId,
+        presentation: VerfiablePresentation,
+        additional_requirements: Option<Binary>,
+    },
+    Update {
+        app_addr: String,
+        route_id: RouteId,
+        route_criteria: Option<RouteVerificationRequirements>,
+    },
+    Register {
+        app_addr: String,
+        app_admin: String,
+        routes: Vec<RegisterRouteRequest>,
+    },
+}
+
+impl<'a> Default for SdjwtVerifier<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<'a> SdjwtVerifier<'a> {
     pub fn new() -> Self {
         Self {
             max_presentation_len: MAX_PRESENTATION_LEN,
@@ -72,190 +123,122 @@ impl SdjwtVerifier<'_> {
             pending_verification_req_requests: Map::new("pending_verification_req_requests"),
         }
     }
+}
 
-    /// Instantiates sdjwt verifier
-    #[sv::msg(instantiate)]
-    fn instantiate(
-        &self,
-        ctx: InstantiateCtx,
-        max_presentation_len: usize,
-        // Vec of app_addr to their routes and requirements
-        init_registrations: Vec<InitRegistration>,
-    ) -> Result<Response, SdjwtVerifierError> {
-        let InstantiateCtx { deps, env, .. } = ctx;
-        set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+// Entry points
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn instantiate(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    msg: InstantiateMsg,
+) -> Result<Response, SdjwtVerifierError> {
+    let contract = SdjwtVerifier::new();
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-        self.max_presentation_len
-            .save(deps.storage, &max_presentation_len)?;
+    contract
+        .max_presentation_len
+        .save(deps.storage, &msg.max_presentation_len)?;
 
-        for app in init_registrations {
-            let admin = deps.api.addr_validate(&app.app_admin)?;
-            let app_addr = deps.api.addr_validate(&app.app_addr)?;
-            self._register(deps.storage, &env, &admin, app_addr.as_str(), app.routes)?;
-        }
-
-        Ok(Response::default())
+    for app in msg.init_registrations {
+        let admin = deps.api.addr_validate(&app.app_admin)?;
+        let app_addr = deps.api.addr_validate(&app.app_addr)?;
+        contract._register(deps.storage, &env, &admin, app_addr.as_str(), app.routes)?;
     }
 
-    #[sv::msg(exec)]
-    fn update_revocation_list(
-        &self,
-        ctx: ExecCtx,
-        app_addr: String,
-        request: UpdateRevocationListRequest,
-    ) -> Result<Response, SdjwtVerifierError> {
-        let UpdateRevocationListRequest {
+    Ok(Response::default())
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn execute(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> Result<Response, SdjwtVerifierError> {
+    let contract = SdjwtVerifier::new();
+    match msg {
+        ExecuteMsg::UpdateRevocationList { app_addr, request } => {
+            contract.handle_update_revocation_list(deps, app_addr, request)
+        }
+        ExecuteMsg::Register { app_addr, requests } => {
+            contract.handle_register(deps, env, info, app_addr, requests)
+        }
+        ExecuteMsg::Verify {
+            presentation,
             route_id,
-            revoke,
-            unrevoke,
-        } = request;
-
-        let mut all_routes_requirements = self
-            .app_routes_requirements
-            .load(ctx.deps.storage, &app_addr)?;
-
-        let mut route_requirements = all_routes_requirements
-            .get(&route_id)
-            .ok_or(SdjwtVerifierError::RouteNotRegistered)?
-            .clone();
-
-        route_requirements
-            .presentation_required
-            .iter_mut()
-            .find(|req| req.attribute == IDX)
-            .map(|req| -> Result<_, SdjwtVerifierError> {
-                if let Criterion::NotContainedIn(revocation_list) = &mut req.criterion {
-                    for r in revoke {
-                        if !revocation_list.contains(&r) {
-                            revocation_list.push(r);
-                        }
-                    }
-
-                    for r in unrevoke {
-                        revocation_list.retain(|&x| x != r);
-                    }
-                    Ok(())
-                } else {
-                    Err(SdjwtVerifierError::RevocationListType)
-                }
-            })
-            .ok_or(SdjwtVerifierError::IDXNotInRequirement)??;
-
-        all_routes_requirements.insert(route_id, route_requirements);
-
-        self.app_routes_requirements
-            .save(ctx.deps.storage, &app_addr, &all_routes_requirements)?;
-
-        Ok(Response::default())
+            app_addr,
+            additional_requirements,
+        } => contract.handle_verify(
+            deps,
+            env,
+            info,
+            presentation,
+            route_id,
+            app_addr,
+            additional_requirements,
+        ),
+        ExecuteMsg::Update {
+            app_addr,
+            route_id,
+            route_criteria,
+        } => contract.handle_update(deps, env, info, app_addr, route_id, route_criteria),
+        ExecuteMsg::Deregister { app_addr } => contract.handle_deregister(deps, info, app_addr),
     }
+}
 
-    #[sv::msg(query)]
-    fn get_route_verification_key(
-        &self,
-        ctx: QueryCtx,
-        app_addr: String,
-        route_id: RouteId,
-    ) -> Result<Option<String>, SdjwtVerifierError> {
-        let req = self
-            .app_routes_requirements
-            .load(ctx.deps.storage, &app_addr)?;
-        let route_req = req
-            .get(&route_id)
-            .ok_or(SdjwtVerifierError::RouteNotRegistered)?;
-        Ok(route_req
-            .issuer_pubkey
-            .as_ref()
-            .map(|jwk| serde_json_wasm::to_string(jwk).unwrap()))
-    }
-
-    #[sv::msg(query)]
-    fn get_app_admin(&self, ctx: QueryCtx, app_addr: String) -> Result<String, SdjwtVerifierError> {
-        let admin = self.app_admins.load(ctx.deps.storage, &app_addr)?;
-        Ok(admin.to_string())
-    }
-
-    // Functions in the `impl` block has access to the state of the contract
-    fn ibc_channel_connect(
-        &self,
-        deps: DepsMut,
-        msg: IbcChannelConnectMsg,
-    ) -> Result<IbcBasicResponse, SdjwtVerifierError> {
-        if self.channel_id.may_load(deps.storage)?.is_some() {
-            Err(SdjwtVerifierError::ChannelAlreadyExists)
-        } else {
-            self.channel_id
-                .save(deps.storage, &msg.channel().endpoint.channel_id)?;
-
-            Ok(IbcBasicResponse::new())
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    let contract = SdjwtVerifier::new();
+    match msg {
+        QueryMsg::GetRouteVerificationKey { app_addr, route_id } => {
+            to_json_binary(&contract.query_route_verification_key(deps, app_addr, route_id)?)
+        }
+        QueryMsg::GetAppAdmin { app_addr } => {
+            to_json_binary(&contract.query_app_admin(deps, app_addr)?)
+        }
+        QueryMsg::GetRoutes { app_addr } => to_json_binary(&contract.query_routes(deps, app_addr)?),
+        QueryMsg::GetRouteRequirements { app_addr, route_id } => {
+            to_json_binary(&contract.query_route_requirements(deps, app_addr, route_id)?)
         }
     }
+}
 
-    fn ibc_packet_ack(
-        &self,
-        deps: DepsMut,
-        msg: IbcPacketAckMsg,
-    ) -> Result<IbcBasicResponse, SdjwtVerifierError> {
-        let (resource_req_packet, resource) = ibc_packet_ack_resource_extractor(msg)?;
-
-        // Checks that this was a packet that we requested
-        let contract = SdjwtVerifier::new();
-        let pending_route = contract
-            .pending_verification_req_requests
-            .load(deps.storage, &resource_req_packet.to_string())?;
-        contract
-            .pending_verification_req_requests
-            .remove(deps.storage, &resource_req_packet.to_string());
-
-        // Checks the return data is the expected format
-        let pubkey: Jwk = from_json(resource.linked_resource.data)
-            .map_err(|e| SdjwtVerifierError::ReturnedResourceFormat(e.to_string()))?;
-
-        let mut req = contract
-            .app_routes_requirements
-            .load(deps.storage, &pending_route.app_addr)?;
-
-        let r = req
-            .get_mut(&pending_route.route_id)
-            .ok_or(SdjwtVerifierError::NoRequirementsForRoute)?;
-
-        r.issuer_pubkey = Some(pubkey);
-
-        contract
-            .app_routes_requirements
-            .save(deps.storage, &pending_route.app_addr, &req)?;
-
-        Ok(IbcBasicResponse::new())
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn sudo(deps: DepsMut, env: Env, msg: SudoMsg) -> Result<Response, SdjwtVerifierError> {
+    let contract = SdjwtVerifier::new();
+    match msg {
+        SudoMsg::Verify {
+            app_addr,
+            route_id,
+            presentation,
+            additional_requirements,
+        } => contract.handle_sudo_verify(
+            deps,
+            env,
+            app_addr,
+            route_id,
+            presentation,
+            additional_requirements,
+        ),
+        SudoMsg::Update {
+            app_addr,
+            route_id,
+            route_criteria,
+        } => contract.handle_sudo_update(deps, env, app_addr, route_id, route_criteria),
+        SudoMsg::Register {
+            app_addr,
+            app_admin,
+            routes,
+        } => {
+            let admin = deps.api.addr_validate(&app_admin)?;
+            contract._register(deps.storage, &env, &admin, &app_addr, routes)
+        }
     }
 }
 
-impl Default for SdjwtVerifier<'_> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[entry_point]
-/// The entry point for connecting a channel
-pub fn ibc_channel_connect(
-    deps: DepsMut,
-    _env: Env,
-    msg: IbcChannelConnectMsg,
-) -> StdResult<IbcBasicResponse> {
-    Ok(SdjwtVerifier::new().ibc_channel_connect(deps, msg)?)
-}
-
-#[entry_point]
-pub fn ibc_packet_ack(
-    deps: DepsMut,
-    _env: Env,
-    msg: IbcPacketAckMsg,
-) -> StdResult<IbcBasicResponse> {
-    Ok(SdjwtVerifier::new().ibc_packet_ack(deps, msg)?)
-}
-
-#[entry_point]
-/// The entry point for opening a channel
-// NOTE: to be moved when implemented by sylvia
+// IBC entry points
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn ibc_channel_open(
     _deps: DepsMut,
     _env: Env,
@@ -264,28 +247,43 @@ pub fn ibc_channel_open(
     Ok(ibc_channel_open_handler(msg)?)
 }
 
-#[entry_point]
-/// The entry point for connecting a channel
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn ibc_channel_connect(
+    deps: DepsMut,
+    _env: Env,
+    msg: IbcChannelConnectMsg,
+) -> StdResult<IbcBasicResponse> {
+    Ok(SdjwtVerifier::new().ibc_channel_connect(deps, msg)?)
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn ibc_channel_close(
     _deps: DepsMut,
     _env: Env,
-    _msg: IbcChannelCloseMsg,
+    msg: IbcChannelCloseMsg,
 ) -> StdResult<IbcBasicResponse> {
-    // Returns error as it does not support closing
     ibc_channel_close_handler()
 }
 
-#[entry_point]
-/// This should never be used as we do not have services over IBC (at the moment)
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn ibc_packet_receive(
     _deps: DepsMut,
     _env: Env,
-    _msg: IbcPacketReceiveMsg,
+    msg: IbcPacketReceiveMsg,
 ) -> Result<IbcReceiveResponse, SdjwtVerifierError> {
     Ok(IbcReceiveResponse::new().set_ack(StdAck::error("No packet handling".to_string())))
 }
 
-#[entry_point]
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn ibc_packet_ack(
+    deps: DepsMut,
+    _env: Env,
+    msg: IbcPacketAckMsg,
+) -> StdResult<IbcBasicResponse> {
+    Ok(SdjwtVerifier::new().ibc_packet_ack(deps, msg)?)
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn ibc_packet_timeout(
     _deps: DepsMut,
     _env: Env,

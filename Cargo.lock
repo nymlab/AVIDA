@@ -107,7 +107,6 @@ dependencies = [
  "serde-json-wasm 0.5.1",
  "serde_json",
  "sylvia",
- "sylvia-derive",
  "thiserror",
 ]
 
