@@ -9,7 +9,10 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 
 use crate::{
-    errors::SdjwtVerifierError, msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg}, state::MAX_PRESENTATION_LENGTH, verifier::*
+    errors::SdjwtVerifierError,
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
+    state::MAX_PRESENTATION_LENGTH,
+    verifier::*,
 };
 
 use avida_cheqd::ibc::{ibc_channel_close_handler, ibc_channel_open_handler};
