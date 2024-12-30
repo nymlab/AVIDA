@@ -9,7 +9,8 @@ use avida_common::types::{RegisterRouteRequest, RouteVerificationRequirements};
 use cosmwasm_std::{Addr, Empty};
 use cw_multi_test::{App as MtApp, Contract, ContractWrapper, Executor};
 
-use crate::contract::{self, InstantiateMsg};
+use crate::contract;
+use crate::msg::InstantiateMsg;
 use crate::types::InitRegistration;
 
 fn notarised_odp_contract() -> Box<dyn Contract<Empty>> {
@@ -32,12 +33,13 @@ pub fn instantiate_verifier_contract(
 
     let contract = notarised_odp_contract();
     let code_id = app.store_code(contract);
+    let first_caller_app_addr = app.api().addr_make(FIRST_CALLER_APP_ADDR);
     // String, // Admin
     // String, // App Addr
     // Vec<(RouteId, RouteVerificationRequirements)>,
     let init_registrations = vec![InitRegistration {
-        app_admin: FIRST_CALLER_APP_ADDR.to_string(),
-        app_addr: FIRST_CALLER_APP_ADDR.to_string(),
+        app_admin: first_caller_app_addr.to_string(),
+        app_addr: first_caller_app_addr.to_string(),
         routes: vec![RegisterRouteRequest {
             route_id: FIRST_ROUTE_ID,
             requirements: fx_route_verification_req.clone(),

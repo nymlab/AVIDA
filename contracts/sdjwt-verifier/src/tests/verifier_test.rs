@@ -30,7 +30,7 @@ fn instantiate_success() {
 
     // Instantiate verifier contract with some predefined parameters
     let (contract, fx_route_verification_req) =
-        instantiate_verifier_contract(&app, RouteVerificationRequirementsType::Supported);
+        instantiate_verifier_contract(&mut app, RouteVerificationRequirementsType::Supported);
 
     let registered_routes = contract
         .get_routes(FIRST_CALLER_APP_ADDR.to_string())

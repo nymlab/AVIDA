@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use crate::{
-    contract::SdjwtVerifier,
     errors::{SdjwtVerifierError, SdjwtVerifierResultError},
+    state::*,
     types::{
         validate, Criterion, PendingRoute, PresentationReq, UpdateRevocationListRequest,
         VerificationRequirements, VerifyResult, _RegistrationRequest, IDX,
@@ -29,563 +29,501 @@ use jsonwebtoken::{
     DecodingKey,
 };
 
-impl <'a> SdjwtVerifier <'a> {
-    // Execute message handlers
-    pub fn handle_update_revocation_list(
-        &self,
-        deps: DepsMut,
-        app_addr: String,
-        request: UpdateRevocationListRequest,
-    ) -> Result<Response, SdjwtVerifierError> {
-        let UpdateRevocationListRequest {
-            route_id,
-            revoke,
-            unrevoke,
-        } = request;
+// Execute message handlers
+pub fn handle_update_revocation_list(
+    deps: DepsMut,
+    app_addr: String,
+    request: UpdateRevocationListRequest,
+) -> Result<Response, SdjwtVerifierError> {
+    let UpdateRevocationListRequest {
+        route_id,
+        revoke,
+        unrevoke,
+    } = request;
 
-        let mut all_routes_requirements =
-            self.app_routes_requirements.load(deps.storage, &app_addr)?;
+    let mut all_routes_requirements = APP_ROUTES_REQUIREMENTS.load(deps.storage, &app_addr)?;
 
-        let mut route_requirements = all_routes_requirements
-            .get(&route_id)
-            .ok_or(SdjwtVerifierError::RouteNotRegistered)?
-            .clone();
+    let mut route_requirements = all_routes_requirements
+        .get(&route_id)
+        .ok_or(SdjwtVerifierError::RouteNotRegistered)?
+        .clone();
 
-        route_requirements
-            .presentation_required
-            .iter_mut()
-            .find(|req| req.attribute == IDX)
-            .map(|req| -> Result<_, SdjwtVerifierError> {
-                if let Criterion::NotContainedIn(revocation_list) = &mut req.criterion {
-                    for r in revoke {
-                        if !revocation_list.contains(&r) {
-                            revocation_list.push(r);
-                        }
+    route_requirements
+        .presentation_required
+        .iter_mut()
+        .find(|req| req.attribute == IDX)
+        .map(|req| -> Result<_, SdjwtVerifierError> {
+            if let Criterion::NotContainedIn(revocation_list) = &mut req.criterion {
+                for r in revoke {
+                    if !revocation_list.contains(&r) {
+                        revocation_list.push(r);
                     }
-
-                    for r in unrevoke {
-                        revocation_list.retain(|&x| x != r);
-                    }
-                    Ok(())
-                } else {
-                    Err(SdjwtVerifierError::RevocationListType)
                 }
-            })
-            .ok_or(SdjwtVerifierError::IDXNotInRequirement)??;
 
-        all_routes_requirements.insert(route_id, route_requirements);
+                for r in unrevoke {
+                    revocation_list.retain(|&x| x != r);
+                }
+                Ok(())
+            } else {
+                Err(SdjwtVerifierError::RevocationListType)
+            }
+        })
+        .ok_or(SdjwtVerifierError::IDXNotInRequirement)??;
 
-        self.app_routes_requirements
-            .save(deps.storage, &app_addr, &all_routes_requirements)?;
+    all_routes_requirements.insert(route_id, route_requirements);
 
-        Ok(Response::default())
+    APP_ROUTES_REQUIREMENTS.save(deps.storage, &app_addr, &all_routes_requirements)?;
+
+    Ok(Response::default())
+}
+
+pub fn handle_register(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    app_addr: String,
+    requests: Vec<RegisterRouteRequest>,
+) -> Result<Response, SdjwtVerifierError> {
+    let app_addr = deps.api.addr_validate(&app_addr)?;
+    _register(
+        deps.storage,
+        &env,
+        &info.sender,
+        app_addr.as_str(),
+        requests,
+    )
+}
+
+pub fn handle_verify(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    presentation: VerfiablePresentation,
+    route_id: RouteId,
+    app_addr: Option<String>,
+    additional_requirements: Option<Binary>,
+) -> Result<Response, SdjwtVerifierError> {
+    let additional_requirements: Option<PresentationReq> =
+        additional_requirements.map(from_json).transpose()?;
+    let app_addr = app_addr.unwrap_or_else(|| info.sender.to_string());
+    let app_addr = deps.api.addr_validate(&app_addr)?;
+
+    let requirements = APP_ROUTES_REQUIREMENTS
+        .load(deps.storage, app_addr.as_str())?
+        .get(&route_id)
+        .ok_or(SdjwtVerifierError::RouteNotRegistered)?
+        .clone();
+    let max_len = MAX_PRESENTATION_LEN.load(deps.storage)?;
+
+    let res = _verify(
+        presentation,
+        requirements,
+        max_len,
+        &env.block,
+        additional_requirements,
+    )
+    .map(|res| to_json_binary(&VerifyResult { result: Ok(res) }))
+    .map_err(SdjwtVerifierError::SdjwtVerifierResultError)??;
+
+    Ok(Response::default().set_data(res))
+}
+
+pub fn handle_update(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    app_addr: String,
+    route_id: RouteId,
+    route_criteria: Option<RouteVerificationRequirements>,
+) -> Result<Response, SdjwtVerifierError> {
+    let app_addr = deps.api.addr_validate(&app_addr)?;
+
+    let app_admin = APP_ADMINS
+        .load(deps.storage, app_addr.as_str())
+        .map_err(|_| SdjwtVerifierError::AppIsNotRegistered)?;
+
+    if app_admin != info.sender {
+        return Err(SdjwtVerifierError::Unauthorised);
     }
 
-    pub fn handle_register(
-        &self,
-        deps: DepsMut,
-        env: Env,
-        info: MessageInfo,
-        app_addr: String,
-        requests: Vec<RegisterRouteRequest>,
-    ) -> Result<Response, SdjwtVerifierError> {
-        let app_addr = deps.api.addr_validate(&app_addr)?;
-        self._register(
-            deps.storage,
-            &env,
-            &info.sender,
-            app_addr.as_str(),
-            requests,
-        )
+    _update(
+        deps.storage,
+        &env,
+        app_addr.as_str(),
+        route_id,
+        route_criteria,
+    )
+}
+
+pub fn handle_deregister(
+    deps: DepsMut,
+    info: MessageInfo,
+    app_addr: String,
+) -> Result<Response, SdjwtVerifierError> {
+    if !APP_TRUST_DATA_SOURCE.has(deps.storage, &app_addr)
+        || !APP_ROUTES_REQUIREMENTS.has(deps.storage, &app_addr)
+    {
+        return Err(SdjwtVerifierError::AppIsNotRegistered);
     }
 
-    pub fn handle_verify(
-        &self,
-        deps: DepsMut,
-        env: Env,
-        info: MessageInfo,
-        presentation: VerfiablePresentation,
-        route_id: RouteId,
-        app_addr: Option<String>,
-        additional_requirements: Option<Binary>,
-    ) -> Result<Response, SdjwtVerifierError> {
-        let additional_requirements: Option<PresentationReq> =
-            additional_requirements.map(from_json).transpose()?;
-        let app_addr = app_addr.unwrap_or_else(|| info.sender.to_string());
-        let app_addr = deps.api.addr_validate(&app_addr)?;
+    let app_addr = deps.api.addr_validate(&app_addr)?;
+    let app_admin = APP_ADMINS.load(deps.storage, app_addr.as_str())?;
 
-        let requirements = self
-            .app_routes_requirements
-            .load(deps.storage, app_addr.as_str())?
-            .get(&route_id)
-            .ok_or(SdjwtVerifierError::RouteNotRegistered)?
-            .clone();
-        let max_len = self.max_presentation_len.load(deps.storage)?;
-
-        let res = self
-            ._verify(
-                presentation,
-                requirements,
-                max_len,
-                &env.block,
-                additional_requirements,
-            )
-            .map(|res| to_json_binary(&VerifyResult { result: Ok(res) }))
-            .map_err(SdjwtVerifierError::SdjwtVerifierResultError)??;
-
-        Ok(Response::default().set_data(res))
+    if app_admin != info.sender {
+        return Err(SdjwtVerifierError::Unauthorised);
     }
 
-    pub fn handle_update(
-        &self,
-        deps: DepsMut,
-        env: Env,
-        info: MessageInfo,
-        app_addr: String,
-        route_id: RouteId,
-        route_criteria: Option<RouteVerificationRequirements>,
-    ) -> Result<Response, SdjwtVerifierError> {
-        let app_addr = deps.api.addr_validate(&app_addr)?;
+    _deregister(deps.storage, app_addr.as_str())
+}
 
-        let app_admin = self
-            .app_admins
-            .load(deps.storage, app_addr.as_str())
-            .map_err(|_| SdjwtVerifierError::AppIsNotRegistered)?;
+// Sudo message handlers
+pub fn handle_sudo_verify(
+    deps: DepsMut,
+    env: Env,
+    app_addr: String,
+    route_id: RouteId,
+    presentation: VerfiablePresentation,
+    additional_requirements: Option<Binary>,
+) -> Result<Response, SdjwtVerifierError> {
+    let additional_requirements: Option<PresentationReq> =
+        additional_requirements.map(from_json).transpose()?;
 
-        if app_admin != info.sender {
-            return Err(SdjwtVerifierError::Unauthorised);
-        }
+    let requirements = APP_ROUTES_REQUIREMENTS
+        .load(deps.storage, &app_addr)?
+        .get(&route_id)
+        .ok_or(SdjwtVerifierError::RouteNotRegistered)?
+        .clone();
+    let max_len = MAX_PRESENTATION_LEN.load(deps.storage)?;
 
-        self._update(
-            deps.storage,
-            &env,
-            app_addr.as_str(),
-            route_id,
-            route_criteria,
-        )
-    }
+    let res = _verify(
+        presentation,
+        requirements,
+        max_len,
+        &env.block,
+        additional_requirements,
+    )
+    .map(|res| to_json_binary(&VerifyResult { result: Ok(res) }))
+    .map_err(SdjwtVerifierError::SdjwtVerifierResultError)??;
 
-    pub fn handle_deregister(
-        &self,
-        deps: DepsMut,
-        info: MessageInfo,
-        app_addr: String,
-    ) -> Result<Response, SdjwtVerifierError> {
-        if !self.app_trust_data_source.has(deps.storage, &app_addr)
-            || !self.app_routes_requirements.has(deps.storage, &app_addr)
-        {
-            return Err(SdjwtVerifierError::AppIsNotRegistered);
-        }
+    Ok(Response::default().set_data(res))
+}
 
-        let app_addr = deps.api.addr_validate(&app_addr)?;
-        let app_admin = self.app_admins.load(deps.storage, app_addr.as_str())?;
+pub fn handle_sudo_update(
+    deps: DepsMut,
+    env: Env,
+    app_addr: String,
+    route_id: RouteId,
+    route_criteria: Option<RouteVerificationRequirements>,
+) -> Result<Response, SdjwtVerifierError> {
+    _update(deps.storage, &env, &app_addr, route_id, route_criteria)
+}
 
-        if app_admin != info.sender {
-            return Err(SdjwtVerifierError::Unauthorised);
-        }
+// Query handlers
+pub fn query_route_verification_key(
+    deps: Deps,
+    app_addr: String,
+    route_id: RouteId,
+) -> Result<Option<String>, SdjwtVerifierError> {
+    let req = APP_ROUTES_REQUIREMENTS.load(deps.storage, &app_addr)?;
+    let route_req = req
+        .get(&route_id)
+        .ok_or(SdjwtVerifierError::RouteNotRegistered)?;
+    Ok(route_req
+        .issuer_pubkey
+        .as_ref()
+        .map(|jwk| serde_json_wasm::to_string(jwk).unwrap()))
+}
 
-        self._deregister(deps.storage, app_addr.as_str())
-    }
+pub fn query_app_admin(deps: Deps, app_addr: String) -> Result<String, SdjwtVerifierError> {
+    let admin = APP_ADMINS.load(deps.storage, &app_addr)?;
+    Ok(admin.to_string())
+}
 
-    // Sudo message handlers
-    pub fn handle_sudo_verify(
-        &self,
-        deps: DepsMut,
-        env: Env,
-        app_addr: String,
-        route_id: RouteId,
-        presentation: VerfiablePresentation,
-        additional_requirements: Option<Binary>,
-    ) -> Result<Response, SdjwtVerifierError> {
-        let additional_requirements: Option<PresentationReq> =
-            additional_requirements.map(from_json).transpose()?;
+pub fn query_routes(deps: Deps, app_addr: String) -> Result<Vec<RouteId>, SdjwtVerifierError> {
+    let v = APP_ROUTES_REQUIREMENTS.load(deps.storage, &app_addr)?;
+    let routes: Vec<RouteId> = v.keys().cloned().collect();
+    Ok(routes)
+}
 
-        let requirements = self
-            .app_routes_requirements
-            .load(deps.storage, &app_addr)?
-            .get(&route_id)
-            .ok_or(SdjwtVerifierError::RouteNotRegistered)?
-            .clone();
-        let max_len = self.max_presentation_len.load(deps.storage)?;
+pub fn query_route_requirements(
+    deps: Deps,
+    app_addr: String,
+    route_id: RouteId,
+) -> Result<RouteVerificationRequirements, SdjwtVerifierError> {
+    let req = APP_ROUTES_REQUIREMENTS.load(deps.storage, &app_addr)?;
+    let route_req = req
+        .get(&route_id)
+        .ok_or(SdjwtVerifierError::RouteNotRegistered)?;
 
-        let res = self
-            ._verify(
-                presentation,
-                requirements,
-                max_len,
-                &env.block,
-                additional_requirements,
-            )
-            .map(|res| to_json_binary(&VerifyResult { result: Ok(res) }))
-            .map_err(SdjwtVerifierError::SdjwtVerifierResultError)??;
+    let trust_data = APP_TRUST_DATA_SOURCE.load(deps.storage, &app_addr)?;
+    let route_td = trust_data
+        .get(&route_id)
+        .ok_or(SdjwtVerifierError::RouteNotRegistered)?;
 
-        Ok(Response::default().set_data(res))
-    }
+    Ok(RouteVerificationRequirements {
+        issuer_source_or_data: route_td.clone(),
+        presentation_required: if route_req.presentation_required.is_empty() {
+            None
+        } else {
+            Some(to_json_binary(&route_req.presentation_required)?)
+        },
+    })
+}
 
-    pub fn handle_sudo_update(
-        &self,
-        deps: DepsMut,
-        env: Env,
-        app_addr: String,
-        route_id: RouteId,
-        route_criteria: Option<RouteVerificationRequirements>,
-    ) -> Result<Response, SdjwtVerifierError> {
-        self._update(deps.storage, &env, &app_addr, route_id, route_criteria)
-    }
+/// Verify the provided presentation within the context of the given route
+pub fn _verify(
+    presentation: VerfiablePresentation,
+    requirements: VerificationRequirements,
+    max_presentation_len: usize,
+    block_info: &BlockInfo,
+    additional_requirements: Option<PresentationReq>,
+) -> Result<Value, SdjwtVerifierResultError> {
+    // Ensure the presentation is not too large
+    ensure!(
+        presentation.len() <= max_presentation_len,
+        SdjwtVerifierResultError::PresentationTooLarge
+    );
 
-    // Query handlers
-    pub fn query_route_verification_key(
-        &self,
-        deps: Deps,
-        app_addr: String,
-        route_id: RouteId,
-    ) -> Result<Option<String>, SdjwtVerifierError> {
-        let req = self.app_routes_requirements.load(deps.storage, &app_addr)?;
-        let route_req = req
-            .get(&route_id)
-            .ok_or(SdjwtVerifierError::RouteNotRegistered)?;
-        Ok(route_req
+    let decoding_key = DecodingKey::from_jwk(
+        requirements
             .issuer_pubkey
             .as_ref()
-            .map(|jwk| serde_json_wasm::to_string(jwk).unwrap()))
+            .ok_or(SdjwtVerifierResultError::PubKeyNotFound)?,
+    )
+    .map_err(|e| SdjwtVerifierResultError::JwtError(e.to_string()))?;
+
+    // We verify the presentation
+    let sdjwt_verifier = SDJWTVerifier::new(
+        String::from_utf8(presentation.to_vec())
+            .map_err(|e| SdjwtVerifierResultError::StringConversion(e.to_string()))?,
+        Box::new(move |_, _| decoding_key.clone()),
+        None, // This version does not support key binding
+        None, // This version does not support key binding
+        SDJWTSerializationFormat::Compact,
+    )
+    .map_err(|e| SdjwtVerifierResultError::SdJwt(e.to_string()))?;
+
+    let combined_requirements = if let Some(additional_requirements) = additional_requirements {
+        let mut combined_requirements = requirements.presentation_required.clone();
+        combined_requirements.extend(additional_requirements);
+        combined_requirements
+    } else {
+        requirements.presentation_required
+    };
+
+    // We validate the verified claims against the requirements
+    validate(
+        combined_requirements,
+        sdjwt_verifier.verified_claims.clone(),
+        block_info,
+    )?;
+    Ok(sdjwt_verifier.verified_claims)
+}
+
+/// Performs a registration of an application and all its routes
+pub fn _register(
+    storage: &mut dyn Storage,
+    env: &Env,
+    admin: &Addr,
+    app_addr: &str,
+    route_criteria: Vec<RegisterRouteRequest>,
+) -> Result<Response, SdjwtVerifierError> {
+    if APP_TRUST_DATA_SOURCE.has(storage, app_addr)
+        || APP_ROUTES_REQUIREMENTS.has(storage, app_addr)
+    {
+        return Err(SdjwtVerifierError::AppAlreadyRegistered);
     }
 
-    pub fn query_app_admin(
-        &self,
-        deps: Deps,
-        app_addr: String,
-    ) -> Result<String, SdjwtVerifierError> {
-        let admin = self.app_admins.load(deps.storage, &app_addr)?;
-        Ok(admin.to_string())
-    }
+    let mut req_map: HashMap<u64, VerificationRequirements> = HashMap::new();
+    let mut data_sources: HashMap<u64, IssuerSourceOrData> = HashMap::new();
 
-    pub fn query_routes(
-        &self,
-        deps: Deps,
-        app_addr: String,
-    ) -> Result<Vec<RouteId>, SdjwtVerifierError> {
-        let v = self.app_routes_requirements.load(deps.storage, &app_addr)?;
-        let routes: Vec<RouteId> = v.keys().cloned().collect();
-        Ok(routes)
-    }
+    let mut response = Response::default();
 
-    pub fn query_route_requirements(
-        &self,
-        deps: Deps,
-        app_addr: String,
-        route_id: RouteId,
-    ) -> Result<RouteVerificationRequirements, SdjwtVerifierError> {
-        let req = self.app_routes_requirements.load(deps.storage, &app_addr)?;
-        let route_req = req
-            .get(&route_id)
-            .ok_or(SdjwtVerifierError::RouteNotRegistered)?;
+    for RegisterRouteRequest {
+        route_id,
+        requirements,
+    } in route_criteria
+    {
+        data_sources.insert(route_id, requirements.issuer_source_or_data.clone());
+        // On registration we check if the dApp has request for IBC data
+        // Make a verification request for specified app addr and route id with a provided route criteria
+        let _RegistrationRequest {
+            verification_requirements,
+            ibc_msg,
+        } = make_internal_registration_request(storage, env, app_addr, route_id, requirements)?;
 
-        let trust_data = self.app_trust_data_source.load(deps.storage, &app_addr)?;
-        let route_td = trust_data
-            .get(&route_id)
-            .ok_or(SdjwtVerifierError::RouteNotRegistered)?;
+        req_map.insert(route_id, verification_requirements);
 
-        Ok(RouteVerificationRequirements {
-            issuer_source_or_data: route_td.clone(),
-            presentation_required: if route_req.presentation_required.is_empty() {
-                None
-            } else {
-                Some(to_json_binary(&route_req.presentation_required)?)
-            },
-        })
-    }
-
-    /// Verify the provided presentation within the context of the given route
-    pub fn _verify(
-        &self,
-        presentation: VerfiablePresentation,
-        requirements: VerificationRequirements,
-        max_presentation_len: usize,
-        block_info: &BlockInfo,
-        additional_requirements: Option<PresentationReq>,
-    ) -> Result<Value, SdjwtVerifierResultError> {
-        // Ensure the presentation is not too large
-        ensure!(
-            presentation.len() <= max_presentation_len,
-            SdjwtVerifierResultError::PresentationTooLarge
-        );
-
-        let decoding_key = DecodingKey::from_jwk(
-            requirements
-                .issuer_pubkey
-                .as_ref()
-                .ok_or(SdjwtVerifierResultError::PubKeyNotFound)?,
-        )
-        .map_err(|e| SdjwtVerifierResultError::JwtError(e.to_string()))?;
-
-        // We verify the presentation
-        let sdjwt_verifier = SDJWTVerifier::new(
-            String::from_utf8(presentation.to_vec())
-                .map_err(|e| SdjwtVerifierResultError::StringConversion(e.to_string()))?,
-            Box::new(move |_, _| decoding_key.clone()),
-            None, // This version does not support key binding
-            None, // This version does not support key binding
-            SDJWTSerializationFormat::Compact,
-        )
-        .map_err(|e| SdjwtVerifierResultError::SdJwt(e.to_string()))?;
-
-        let combined_requirements = if let Some(additional_requirements) = additional_requirements {
-            let mut combined_requirements = requirements.presentation_required.clone();
-            combined_requirements.extend(additional_requirements);
-            combined_requirements
-        } else {
-            requirements.presentation_required
-        };
-
-        // We validate the verified claims against the requirements
-        validate(
-            combined_requirements,
-            sdjwt_verifier.verified_claims.clone(),
-            block_info,
-        )?;
-        Ok(sdjwt_verifier.verified_claims)
-    }
-
-    /// Performs a registration of an application and all its routes
-    pub fn _register(
-        &self,
-        storage: &mut dyn Storage,
-        env: &Env,
-        admin: &Addr,
-        app_addr: &str,
-        route_criteria: Vec<RegisterRouteRequest>,
-    ) -> Result<Response, SdjwtVerifierError> {
-        if self.app_trust_data_source.has(storage, app_addr)
-            || self.app_routes_requirements.has(storage, app_addr)
-        {
-            return Err(SdjwtVerifierError::AppAlreadyRegistered);
+        if let Some(ibc_msg) = ibc_msg {
+            response = response.add_submessage(ibc_msg);
         }
+    }
 
-        let mut req_map: HashMap<u64, VerificationRequirements> = HashMap::new();
-        let mut data_sources: HashMap<u64, IssuerSourceOrData> = HashMap::new();
+    // Save the registered trust data sources and route requirements
+    APP_TRUST_DATA_SOURCE.save(storage, app_addr, &data_sources)?;
+    APP_ROUTES_REQUIREMENTS.save(storage, app_addr, &req_map)?;
+    APP_ADMINS.save(storage, app_addr, admin)?;
 
-        let mut response = Response::default();
+    Ok(response)
+}
 
-        for RegisterRouteRequest {
-            route_id,
-            requirements,
-        } in route_criteria
-        {
-            data_sources.insert(route_id, requirements.issuer_source_or_data.clone());
-            // On registration we check if the dApp has request for IBC data
-            // Make a verification request for specified app addr and route id with a provided route criteria
-            let _RegistrationRequest {
-                verification_requirements,
-                ibc_msg,
-            } = self.make_internal_registration_request(
-                storage,
-                env,
-                app_addr,
-                route_id,
-                requirements,
-            )?;
+/// Performs a deregister of an application and all its routes
+fn _deregister(storage: &mut dyn Storage, app_addr: &str) -> Result<Response, SdjwtVerifierError> {
+    APP_TRUST_DATA_SOURCE.remove(storage, app_addr);
+    APP_ROUTES_REQUIREMENTS.remove(storage, app_addr);
+    APP_ADMINS.remove(storage, app_addr);
 
-            req_map.insert(route_id, verification_requirements);
+    Ok(Response::default())
+}
 
-            if let Some(ibc_msg) = ibc_msg {
-                response = response.add_submessage(ibc_msg);
-            }
+/// Performs an update on the verification requirements for a given app addr and route id with the new criteria
+fn _update(
+    storage: &mut dyn Storage,
+    env: &Env,
+    app_addr: &str,
+    route_id: RouteId,
+    route_criteria: Option<RouteVerificationRequirements>,
+) -> Result<Response, SdjwtVerifierError> {
+    // Ensure the app with this address is registered
+    if !APP_TRUST_DATA_SOURCE.has(storage, app_addr)
+        || !APP_ROUTES_REQUIREMENTS.has(storage, app_addr)
+    {
+        return Err(SdjwtVerifierError::AppIsNotRegistered);
+    }
+
+    let mut req_map = APP_ROUTES_REQUIREMENTS.load(storage, app_addr)?;
+    let mut data_sources = APP_TRUST_DATA_SOURCE.load(storage, app_addr)?;
+
+    let mut response: Response = Response::default();
+
+    // On registration we check if the dApp has request for IBC data
+    if let Some(route_criteria) = route_criteria {
+        data_sources.insert(route_id, route_criteria.issuer_source_or_data.clone());
+
+        // Make a verification request for specified app addr and route id with a provided route criteria
+        let _RegistrationRequest {
+            verification_requirements,
+            ibc_msg,
+        } = make_internal_registration_request(storage, env, app_addr, route_id, route_criteria)?;
+
+        req_map.insert(route_id, verification_requirements);
+
+        if let Some(ibc_msg) = ibc_msg {
+            response = response.add_submessage(ibc_msg);
         }
+    } else {
+        data_sources.remove(&route_id);
+        req_map.remove(&route_id);
+    }
 
-        // Save the registered trust data sources and route requirements
-        self.app_trust_data_source
-            .save(storage, app_addr, &data_sources)?;
-        self.app_routes_requirements
-            .save(storage, app_addr, &req_map)?;
-        self.app_admins.save(storage, app_addr, admin)?;
+    if data_sources.is_empty() && req_map.is_empty() {
+        // If there are no more routes, deregister the app
+        _deregister(storage, app_addr)
+    } else {
+        // Save the updated trust data sources and route requirements
+        APP_TRUST_DATA_SOURCE.save(storage, app_addr, &data_sources)?;
+        APP_ROUTES_REQUIREMENTS.save(storage, app_addr, &req_map)?;
 
         Ok(response)
     }
+}
 
-    /// Performs a deregister of an application and all its routes
-    fn _deregister(
-        &self,
-        storage: &mut dyn Storage,
-        app_addr: &str,
-    ) -> Result<Response, SdjwtVerifierError> {
-        self.app_trust_data_source.remove(storage, app_addr);
-        self.app_routes_requirements.remove(storage, app_addr);
-        self.app_admins.remove(storage, app_addr);
+/// Creates a _RegitrationRequest for specified app addr and route id and provided route criteria
+fn make_internal_registration_request(
+    storage: &mut dyn Storage,
+    env: &Env,
+    app_addr: &str,
+    route_id: RouteId,
+    route_criteria: RouteVerificationRequirements,
+) -> Result<_RegistrationRequest, SdjwtVerifierError> {
+    if let Some(registry) = route_criteria.issuer_source_or_data.source {
+        match registry {
+            TrustRegistry::Cheqd => {
+                // For Cheqd, the data is in the ResourceReqPacket
+                let resource_req_packat: ResourceReqPacket =
+                    from_json(&route_criteria.issuer_source_or_data.data_or_location)?;
 
-        Ok(Response::default())
-    }
+                let ibc_msg = SubMsg::new(CosmosMsg::Ibc(cosmwasm_std::IbcMsg::SendPacket {
+                    channel_id: CHANNEL_ID.load(storage)?,
+                    data: to_json_binary(&resource_req_packat)?,
+                    timeout: IbcTimeout::with_timestamp(get_timeout_timestamp(
+                        env,
+                        HOUR_PACKET_LIFETIME,
+                    )),
+                }));
 
-    /// Performs an update on the verification requirements for a given app addr and route id with the new criteria
-    fn _update(
-        &self,
-        storage: &mut dyn Storage,
-        env: &Env,
-        app_addr: &str,
-        route_id: RouteId,
-        route_criteria: Option<RouteVerificationRequirements>,
-    ) -> Result<Response, SdjwtVerifierError> {
-        // Ensure the app with this address is registered
-        if !self.app_trust_data_source.has(storage, app_addr)
-            || !self.app_routes_requirements.has(storage, app_addr)
-        {
-            return Err(SdjwtVerifierError::AppIsNotRegistered);
-        }
-
-        let mut req_map = self.app_routes_requirements.load(storage, app_addr)?;
-        let mut data_sources = self.app_trust_data_source.load(storage, app_addr)?;
-
-        let mut response: Response = Response::default();
-
-        // On registration we check if the dApp has request for IBC data
-        if let Some(route_criteria) = route_criteria {
-            data_sources.insert(route_id, route_criteria.issuer_source_or_data.clone());
-
-            // Make a verification request for specified app addr and route id with a provided route criteria
-            let _RegistrationRequest {
-                verification_requirements,
-                ibc_msg,
-            } = self.make_internal_registration_request(
-                storage,
-                env,
-                app_addr,
-                route_id,
-                route_criteria,
-            )?;
-
-            req_map.insert(route_id, verification_requirements);
-
-            if let Some(ibc_msg) = ibc_msg {
-                response = response.add_submessage(ibc_msg);
-            }
-        } else {
-            data_sources.remove(&route_id);
-            req_map.remove(&route_id);
-        }
-
-        if data_sources.is_empty() && req_map.is_empty() {
-            // If there are no more routes, deregister the app
-            self._deregister(storage, app_addr)
-        } else {
-            // Save the updated trust data sources and route requirements
-            self.app_trust_data_source
-                .save(storage, app_addr, &data_sources)?;
-            self.app_routes_requirements
-                .save(storage, app_addr, &req_map)?;
-
-            Ok(response)
-        }
-    }
-
-    /// Creates a _RegitrationRequest for specified app addr and route id and provided route criteria
-    fn make_internal_registration_request(
-        &self,
-        storage: &mut dyn Storage,
-        env: &Env,
-        app_addr: &str,
-        route_id: RouteId,
-        route_criteria: RouteVerificationRequirements,
-    ) -> Result<_RegistrationRequest, SdjwtVerifierError> {
-        if let Some(registry) = route_criteria.issuer_source_or_data.source {
-            match registry {
-                TrustRegistry::Cheqd => {
-                    // For Cheqd, the data is in the ResourceReqPacket
-                    let resource_req_packat: ResourceReqPacket =
-                        from_json(&route_criteria.issuer_source_or_data.data_or_location)?;
-
-                    let ibc_msg = SubMsg::new(CosmosMsg::Ibc(cosmwasm_std::IbcMsg::SendPacket {
-                        channel_id: self.channel_id.load(storage)?,
-                        data: to_json_binary(&resource_req_packat)?,
-                        timeout: IbcTimeout::with_timestamp(get_timeout_timestamp(
-                            env,
-                            HOUR_PACKET_LIFETIME,
-                        )),
-                    }));
-
-                    self.pending_verification_req_requests.save(
-                        storage,
-                        &resource_req_packat.to_string(),
-                        &PendingRoute {
-                            app_addr: app_addr.to_string(),
-                            route_id,
-                        },
-                    )?;
-
-                    let verification_req =
-                        VerificationRequirements::new(route_criteria.presentation_required, None)?;
-                    Ok(_RegistrationRequest::new(verification_req, Some(ibc_msg)))
-                }
-            }
-        } else {
-            let issuer_pubkey: Jwk =
-                from_json(&route_criteria.issuer_source_or_data.data_or_location)?;
-
-            if let AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
-                curve: EllipticCurve::Ed25519,
-                ..
-            }) = issuer_pubkey.algorithm
-            {
-                let verification_req = VerificationRequirements::new(
-                    route_criteria.presentation_required,
-                    Some(issuer_pubkey),
+                PENDING_VERIFICATION_REQ_REQUESTS.save(
+                    storage,
+                    &resource_req_packat.to_string(),
+                    &PendingRoute {
+                        app_addr: app_addr.to_string(),
+                        route_id,
+                    },
                 )?;
 
-                Ok(_RegistrationRequest::new(verification_req, None))
-            } else {
-                Err(SdjwtVerifierError::UnsupportedKeyType)
+                let verification_req =
+                    VerificationRequirements::new(route_criteria.presentation_required, None)?;
+                Ok(_RegistrationRequest::new(verification_req, Some(ibc_msg)))
             }
         }
-    }
+    } else {
+        let issuer_pubkey: Jwk = from_json(&route_criteria.issuer_source_or_data.data_or_location)?;
 
-    // Functions in the `impl` block has access to the state of the contract
-    pub fn ibc_channel_connect(
-        &self,
-        deps: DepsMut,
-        msg: IbcChannelConnectMsg,
-    ) -> Result<IbcBasicResponse, SdjwtVerifierError> {
-        if self.channel_id.may_load(deps.storage)?.is_some() {
-            Err(SdjwtVerifierError::ChannelAlreadyExists)
+        if let AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
+            curve: EllipticCurve::Ed25519,
+            ..
+        }) = issuer_pubkey.algorithm
+        {
+            let verification_req = VerificationRequirements::new(
+                route_criteria.presentation_required,
+                Some(issuer_pubkey),
+            )?;
+
+            Ok(_RegistrationRequest::new(verification_req, None))
         } else {
-            self.channel_id
-                .save(deps.storage, &msg.channel().endpoint.channel_id)?;
-
-            Ok(IbcBasicResponse::new())
+            Err(SdjwtVerifierError::UnsupportedKeyType)
         }
     }
+}
 
-    pub fn ibc_packet_ack(
-        &self,
-        deps: DepsMut,
-        msg: IbcPacketAckMsg,
-    ) -> Result<IbcBasicResponse, SdjwtVerifierError> {
-        let (resource_req_packet, resource) = ibc_packet_ack_resource_extractor(msg)?;
-
-        // Checks that this was a packet that we requested
-        let contract = SdjwtVerifier::new();
-        let pending_route = contract
-            .pending_verification_req_requests
-            .load(deps.storage, &resource_req_packet.to_string())?;
-        contract
-            .pending_verification_req_requests
-            .remove(deps.storage, &resource_req_packet.to_string());
-
-        // Checks the return data is the expected format
-        let pubkey: Jwk = from_json(resource.linked_resource.data)
-            .map_err(|e| SdjwtVerifierError::ReturnedResourceFormat(e.to_string()))?;
-
-        let mut req = contract
-            .app_routes_requirements
-            .load(deps.storage, &pending_route.app_addr)?;
-
-        let r = req
-            .get_mut(&pending_route.route_id)
-            .ok_or(SdjwtVerifierError::NoRequirementsForRoute)?;
-
-        r.issuer_pubkey = Some(pubkey);
-
-        contract
-            .app_routes_requirements
-            .save(deps.storage, &pending_route.app_addr, &req)?;
+// Functions in the `impl` block has access to the state of the contract
+pub fn ibc_channel_connect_handler(
+    deps: DepsMut,
+    msg: IbcChannelConnectMsg,
+) -> Result<IbcBasicResponse, SdjwtVerifierError> {
+    if CHANNEL_ID.may_load(deps.storage)?.is_some() {
+        Err(SdjwtVerifierError::ChannelAlreadyExists)
+    } else {
+        CHANNEL_ID.save(deps.storage, &msg.channel().endpoint.channel_id)?;
 
         Ok(IbcBasicResponse::new())
     }
+}
+
+pub fn ibc_packet_ack_handler(
+    deps: DepsMut,
+    msg: IbcPacketAckMsg,
+) -> Result<IbcBasicResponse, SdjwtVerifierError> {
+    let (resource_req_packet, resource) = ibc_packet_ack_resource_extractor(msg)?;
+
+    // Checks that this was a packet that we requested
+    let pending_route =
+        PENDING_VERIFICATION_REQ_REQUESTS.load(deps.storage, &resource_req_packet.to_string())?;
+    PENDING_VERIFICATION_REQ_REQUESTS.remove(deps.storage, &resource_req_packet.to_string());
+
+    // Checks the return data is the expected format
+    let pubkey: Jwk = from_json(resource.linked_resource.data)
+        .map_err(|e| SdjwtVerifierError::ReturnedResourceFormat(e.to_string()))?;
+
+    let mut req = APP_ROUTES_REQUIREMENTS.load(deps.storage, &pending_route.app_addr)?;
+
+    let r = req
+        .get_mut(&pending_route.route_id)
+        .ok_or(SdjwtVerifierError::NoRequirementsForRoute)?;
+
+    r.issuer_pubkey = Some(pubkey);
+
+    APP_ROUTES_REQUIREMENTS.save(deps.storage, &pending_route.app_addr, &req)?;
+
+    Ok(IbcBasicResponse::new())
 }
