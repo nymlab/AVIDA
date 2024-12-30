@@ -518,6 +518,67 @@ fn verify_presentation_too_large() {
 }
 
 #[test]
+fn verify_success_on_no_expiration_check_for_expired_claims() {
+    let mut app = App::default();
+
+    let (contract_addr, _) =
+        instantiate_verifier_contract(&mut app, RouteVerificationRequirementsType::Supported);
+
+    // Get route verification requirements for a single route with expiration
+    let route_verification_req = get_route_verification_requirement(
+        ExpirationCheck::NoExpiry,
+        RouteVerificationRequirementsType::Supported,
+    );
+
+    let owner = app.api().addr_make(OWNER_ADDR);
+    let second_caller_app_addr = app.api().addr_make(SECOND_CALLER_APP_ADDR);
+
+    //Register the app with exp requirements
+    app.execute_contract(
+        owner,
+        contract_addr.clone(),
+        &ExecuteMsg::Register {
+            app_addr: second_caller_app_addr.to_string(),
+            requests: vec![RegisterRouteRequest {
+                route_id: SECOND_ROUTE_ID,
+                requirements: route_verification_req,
+            }],
+        },
+        &[],
+    )
+    .unwrap();
+
+    // Make a presentation with some claims that has expired
+    let exp = cw_utils::Expiration::AtTime(get_default_block_info().time.minus_days(1));
+    let invalid_timestamp_claims = claims("Alice", 30, true, 2021, Some(exp));
+
+    let presentation = make_presentation(
+        invalid_timestamp_claims,
+        PresentationVerificationType::Success,
+    );
+
+    let res: VerifyResult = from_json(
+        app.execute_contract(
+            second_caller_app_addr.clone(),
+            contract_addr,
+            &ExecuteMsg::Verify {
+                presentation: Binary::from(presentation.as_bytes()),
+                route_id: SECOND_ROUTE_ID,
+                app_addr: Some(second_caller_app_addr.to_string()),
+                additional_requirements: None,
+            },
+            &[],
+        )
+        .unwrap()
+        .data
+        .unwrap(),
+    )
+    .unwrap();
+
+    assert!(res.result.is_ok());
+}
+
+#[test]
 fn register_success() {
     let mut app = App::default();
 
