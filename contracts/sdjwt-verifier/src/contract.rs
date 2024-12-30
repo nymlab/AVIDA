@@ -1,6 +1,3 @@
-use std::char::MAX;
-
-use avida_common::types::MAX_PRESENTATION_LEN;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -12,9 +9,7 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 
 use crate::{
-    errors::SdjwtVerifierError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
-    verifier::*,
+    errors::SdjwtVerifierError, msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg}, state::MAX_PRESENTATION_LENGTH, verifier::*
 };
 
 use avida_cheqd::ibc::{ibc_channel_close_handler, ibc_channel_open_handler};
@@ -33,7 +28,7 @@ pub fn instantiate(
 ) -> Result<Response, SdjwtVerifierError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    MAX_PRESENTATION_LEN.save(deps.storage, &msg.max_presentation_len)?;
+    MAX_PRESENTATION_LENGTH.save(deps.storage, &msg.max_presentation_len)?;
 
     for app in msg.init_registrations {
         let admin = deps.api.addr_validate(&app.app_admin)?;

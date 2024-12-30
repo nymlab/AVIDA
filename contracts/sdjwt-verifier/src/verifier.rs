@@ -113,7 +113,7 @@ pub fn handle_verify(
         .get(&route_id)
         .ok_or(SdjwtVerifierError::RouteNotRegistered)?
         .clone();
-    let max_len = MAX_PRESENTATION_LEN.load(deps.storage)?;
+    let max_len = MAX_PRESENTATION_LENGTH.load(deps.storage)?;
 
     let res = _verify(
         presentation,
@@ -121,11 +121,11 @@ pub fn handle_verify(
         max_len,
         &env.block,
         additional_requirements,
-    )
-    .map(|res| to_json_binary(&VerifyResult { result: Ok(res) }))
-    .map_err(SdjwtVerifierError::SdjwtVerifierResultError)??;
+    );
 
-    Ok(Response::default().set_data(res))
+    let data = to_json_binary(&VerifyResult { result: res })?;
+
+    Ok(Response::default().set_data(data))
 }
 
 pub fn handle_update(
@@ -193,7 +193,7 @@ pub fn handle_sudo_verify(
         .get(&route_id)
         .ok_or(SdjwtVerifierError::RouteNotRegistered)?
         .clone();
-    let max_len = MAX_PRESENTATION_LEN.load(deps.storage)?;
+    let max_len = MAX_PRESENTATION_LENGTH.load(deps.storage)?;
 
     let res = _verify(
         presentation,

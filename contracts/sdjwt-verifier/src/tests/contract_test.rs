@@ -165,21 +165,24 @@ fn test_revoked_presentation_cannot_be_used() {
     let route_verification_req =
         get_route_requirement_with_empty_revocation_list(REVOCATION_ROUTE_ID);
 
+    let revocation_test_caller = app.api().addr_make(REVOCATION_TEST_CALLER);
+
     // Register the app with exp requirements
     let register_app_msg = ExecuteMsg::Register {
-        app_addr: REVOCATION_TEST_CALLER.to_string(),
+        app_addr: revocation_test_caller.to_string(),
         requests: vec![route_verification_req.clone()],
     };
-    let revocation_test_caller = app.api().addr_make(REVOCATION_TEST_CALLER);
+
     app.execute_contract(
         revocation_test_caller.clone(),
         contract_addr.clone(),
         &register_app_msg,
         &[],
-    );
+    )
+    .unwrap();
 
     let update_revocation_list_msg = ExecuteMsg::UpdateRevocationList {
-        app_addr: REVOCATION_TEST_CALLER.to_string(),
+        app_addr: revocation_test_caller.to_string(),
         request: crate::types::UpdateRevocationListRequest {
             route_id: REVOCATION_ROUTE_ID,
             revoke: vec![revoked_idx],
@@ -192,7 +195,8 @@ fn test_revoked_presentation_cannot_be_used() {
         contract_addr.clone(),
         &update_revocation_list_msg,
         &[],
-    );
+    )
+    .unwrap();
 
     // Make a presentation with some claims
     let revoked_claims = claims_with_revocation_idx("Alice", 30, true, 2021, None, revoked_idx);
@@ -207,32 +211,29 @@ fn test_revoked_presentation_cannot_be_used() {
     let verify_msg = ExecuteMsg::Verify {
         presentation: Binary::from(revoked_presentation.as_bytes()),
         route_id: REVOCATION_ROUTE_ID,
-        app_addr: Some(REVOCATION_TEST_CALLER.to_string()),
+        app_addr: Some(revocation_test_caller.to_string()),
         additional_requirements: None,
     };
 
     let first_caller_app_addr = app.api().addr_make(FIRST_CALLER_APP_ADDR);
 
-    let res: VerifyResult = from_json(
-        app.execute_contract(
+    let res = app
+        .execute_contract(
             first_caller_app_addr.clone(),
             contract_addr.clone(),
             &verify_msg,
             &[],
         )
-        .unwrap()
-        .data
-        .unwrap(),
-    )
-    .unwrap();
-    let err = res.result.unwrap_err();
+        .unwrap();
+    let verify_res: VerifyResult = from_json(res.data.unwrap()).unwrap();
+    let err = verify_res.result.unwrap_err();
 
     assert_eq!(err, SdjwtVerifierResultError::IdxRevoked(revoked_idx));
 
     let verify_msg = ExecuteMsg::Verify {
         presentation: Binary::from(valid_presentation.as_bytes()),
         route_id: REVOCATION_ROUTE_ID,
-        app_addr: Some(REVOCATION_TEST_CALLER.to_string()),
+        app_addr: Some(revocation_test_caller.to_string()),
         additional_requirements: None,
     };
     let res: VerifyResult = from_json(
@@ -275,7 +276,7 @@ fn test_addition_requirements_with_revocation_list() {
     let verify_msg = ExecuteMsg::Verify {
         presentation: Binary::from(revoked_presentation.as_bytes()),
         route_id: FIRST_ROUTE_ID,
-        app_addr: Some(FIRST_CALLER_APP_ADDR.to_string()),
+        app_addr: Some(first_caller_app_addr.to_string()),
         additional_requirements: Some(to_json_binary(&addition_requirement).unwrap()),
     };
     let res: VerifyResult = from_json(
@@ -297,7 +298,7 @@ fn test_addition_requirements_with_revocation_list() {
     let verify_msg = ExecuteMsg::Verify {
         presentation: Binary::from(revoked_presentation.as_bytes()),
         route_id: FIRST_ROUTE_ID,
-        app_addr: Some(FIRST_CALLER_APP_ADDR.to_string()),
+        app_addr: Some(first_caller_app_addr.to_string()),
         additional_requirements: None,
     };
     let res: VerifyResult = from_json(

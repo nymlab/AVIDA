@@ -23,9 +23,31 @@ pub enum SdjwtVerifierResultError {
     IdxRevoked(u64),
 }
 
+impl std::fmt::Display for SdjwtVerifierResultError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SdjwtVerifierResultError::PresentationTooLarge => write!(f, "Presentation too large"),
+            SdjwtVerifierResultError::VerifiedClaimsTypeUnexpected => write!(f, "Verified claims type unexpected"),
+            SdjwtVerifierResultError::CriterionValueTypeUnexpected => write!(f, "Criterion value type unexpected"),
+            SdjwtVerifierResultError::CriterionValueNumberInvalid => write!(f, "Criterion value number invalid"),
+            SdjwtVerifierResultError::CriterionValueFailed(msg) => write!(f, "Criterion value failed: {}", msg),
+            SdjwtVerifierResultError::DisclosedClaimNotFound(msg) => write!(f, "Disclosed claim not found: {}", msg),
+            SdjwtVerifierResultError::RequiredClaimsNotSatisfied => write!(f, "Required claims not satisfied"),
+            SdjwtVerifierResultError::PubKeyNotFound => write!(f, "Public key not found"),
+            SdjwtVerifierResultError::JwtError(msg) => write!(f, "JWT error: {}", msg),
+            SdjwtVerifierResultError::StringConversion(msg) => write!(f, "String conversion error: {}", msg),
+            SdjwtVerifierResultError::SdJwt(msg) => write!(f, "SD-JWT error: {}", msg),
+            SdjwtVerifierResultError::ExpirationStringInvalid(msg) => write!(f, "Expiration string invalid: {}", msg),
+            SdjwtVerifierResultError::ExpirationKeyOrValueInvalid(key, value) => write!(f, "Expiration key or value invalid: {} - {}", key, value),
+            SdjwtVerifierResultError::PresentationExpired(exp) => write!(f, "Presentation expired: {:?}", exp),
+            SdjwtVerifierResultError::IdxRevoked(idx) => write!(f, "IDX revoked: {}", idx),
+        }
+    }
+}
+
 #[derive(Error, Debug, PartialEq)]
 pub enum SdjwtVerifierError {
-    #[error("Verifier Result Error")]
+    #[error("Verifier Result Error {0}")]
     SdjwtVerifierResultError(SdjwtVerifierResultError),
     #[error("SudoValidationFailed")]
     SudoValidationFailed,
