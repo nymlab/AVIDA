@@ -2,9 +2,9 @@ name: Test, Lint and Build Checker
 
 on:
   push:
-    branches: ["main", "feat/mvp"]
+    branches: ["main"]
   pull_request:
-
+    branches: ["main"]
 env:
   CARGO_TERM_COLOR: always
 
@@ -74,7 +74,7 @@ jobs:
         run: cargo clippy -- -D warnings
 
       - name: Generate Schemas
-        run: ./scripts/schemas.sh
+        run: make schemas
 
       - name: Show Schema changes
         run: git status --porcelain
