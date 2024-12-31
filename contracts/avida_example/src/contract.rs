@@ -3,7 +3,7 @@ use avida_common::types::RegisterRouteRequest;
 use crate::msg::ExecuteMsg;
 use avida_sdjwt_verifier::msg::ExecuteMsg as AvidaExecuteMsg;
 use avida_sdjwt_verifier::types::VerifyResult;
-use cosmwasm_std::entry_point;
+use cosmwasm_std::{entry_point, Deps};
 
 use cosmwasm_std::{
     from_json, to_json_binary, Binary, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
@@ -20,7 +20,8 @@ use crate::state::{PENDING_ORDER_SUBJECTS, VERIFIER};
 use crate::types::{GetVerifierResponse, GiveMeSomeDrink, GiveMeSomeFood, RegisterRequirement};
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-fn reply(deps: DepsMut, _: Env, reply: Reply) -> Result<Response, ContractError> {
+#[allow(deprecated)]
+pub fn reply(deps: DepsMut, _: Env, reply: Reply) -> Result<Response, ContractError> {
     match (reply.id, reply.result.into_result()) {
         (REGISTER_REQUIREMENT_REPLY_ID, Err(err)) => Err(ContractError::RegistrationError(err)),
         (REGISTER_REQUIREMENT_REPLY_ID, Ok(_)) => Ok(Response::new()),
@@ -77,7 +78,7 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+pub fn execute(deps: DepsMut, env: Env, _info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
         ExecuteMsg::RegisterRequirement { requirements } => {
             handle_register_requirement(deps, env, requirements)
@@ -186,13 +187,13 @@ pub fn handle_give_me_some_food(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-fn query(deps: DepsMut, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetVerifierAddress {} => to_json_binary(&get_verifier_address(deps)?),
     }
 }
 
-fn get_verifier_address(deps: DepsMut) -> Result<GetVerifierResponse, ContractError> {
+fn get_verifier_address(deps: Deps) -> Result<GetVerifierResponse, ContractError> {
     let verifier = VERIFIER.load(deps.storage)?;
     Ok(GetVerifierResponse { verifier })
 }

@@ -156,7 +156,7 @@ pub fn ibc_channel_connect(
 pub fn ibc_channel_close(
     _deps: DepsMut,
     _env: Env,
-    msg: IbcChannelCloseMsg,
+    _msg: IbcChannelCloseMsg,
 ) -> StdResult<IbcBasicResponse> {
     ibc_channel_close_handler()
 }
@@ -165,7 +165,7 @@ pub fn ibc_channel_close(
 pub fn ibc_packet_receive(
     _deps: DepsMut,
     _env: Env,
-    msg: IbcPacketReceiveMsg,
+    _msg: IbcPacketReceiveMsg,
 ) -> Result<IbcReceiveResponse, SdjwtVerifierError> {
     Ok(IbcReceiveResponse::new(StdAck::error(
         "No packet handling".to_string(),

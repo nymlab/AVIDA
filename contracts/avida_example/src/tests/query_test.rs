@@ -1,57 +1,61 @@
+use crate::constants::GIVE_ME_DRINK_ROUTE_ID;
+use crate::msg::QueryMsg;
+use crate::tests::fixtures::setup_requirement;
+use crate::types::RegisterRequirement;
+use crate::{tests::fixtures::instantiate_contracts, types::GetVerifierResponse};
+use avida_common::types::RouteVerificationRequirements;
 use cosmwasm_std::Addr;
-use sylvia::multitest::App;
-
+use cw_multi_test::{App, Executor};
+use crate::msg::ExecuteMsg;
 use avida_test_utils::sdjwt::fixtures::OWNER_ADDR;
-
-use crate::contract::sv::mt::{CodeId as RestaurantCodeID, RestaurantContractProxy};
-
+use avida_sdjwt_verifier::msg::QueryMsg as VerifierQueryMsg;
 #[test]
 fn get_verifier() {
-    let app = App::default();
-    let verifier_contract_addr = Addr::unchecked("verifier"); // "verifier";
-    let code_id_restaurant = RestaurantCodeID::store_code(&app);
+    let mut app = App::default();
+    let (restaurant_addr, verifier_addr) = instantiate_contracts(&mut app);
 
-    let contract_restaurant = code_id_restaurant
-        .instantiate(verifier_contract_addr.to_string())
-        .with_label("Restaurant")
-        .call(OWNER_ADDR)
+    // Query verifier address
+    let response: GetVerifierResponse = app
+        .wrap()
+        .query_wasm_smart(restaurant_addr, &QueryMsg::GetVerifierAddress {})
         .unwrap();
 
-    let asked_verifier = contract_restaurant.get_verifier_address().unwrap();
-    assert_eq!(asked_verifier.verifier, verifier_contract_addr);
+    assert_eq!(response.verifier, verifier_addr.to_string());
 }
 
-//#[test]
-//fn get_route_requirements() {
-//    let app = App::default();
-//    // Storages for contracts
-//    let code_id_verifier = VerifierCodeID::store_code(&app);
-//    let code_id_restaurant = RestaurantCodeID::store_code(&app);
-//
-//    // Instantiate contracts
-//    let max_presentation_len = 3000usize;
-//    let contract_verifier = code_id_verifier
-//        .instantiate(max_presentation_len, vec![])
-//        .with_label("Verifier")
-//        .call(OWNER_ADDR)
-//        .unwrap();
-//
-//    let contract_restaurant = code_id_restaurant
-//        .instantiate(contract_verifier.contract_addr.to_string())
-//        .with_label("Restaurant")
-//        .call(OWNER_ADDR)
-//        .unwrap();
-//    // Setup requirement
-//    let fx_route_verification_req = setup_requirement("drink");
-//    contract_restaurant
-//        .register_requirement(RegisterRequirement::Drink {
-//            requirements: fx_route_verification_req.clone(),
-//        })
-//        .call(OWNER_ADDR)
-//        .unwrap();
-//    let registered_routes = contract_restaurant
-//        .get_route_requirements(GIVE_ME_DRINK_ROUTE_ID)
-//        .unwrap();
-//
-//    assert_eq!(registered_routes, fx_route_verification_req);
-//}
+#[test]
+fn get_route_requirements() {
+    let mut app = App::default();
+
+    // Instantiate verifier & restaurant contracts
+    let (restaurant_addr, verifier_addr) = instantiate_contracts(&mut app);
+
+    // Setup and register requirement
+    let fx_route_verification_req = setup_requirement("drink");
+    let register_msg = ExecuteMsg::RegisterRequirement{ requirements: RegisterRequirement::Drink {
+        requirements: fx_route_verification_req.clone(),
+    }};
+
+    app.execute_contract(
+        Addr::unchecked(OWNER_ADDR),
+        restaurant_addr.clone(),
+        &register_msg,
+        &[],
+    )
+    .unwrap();
+
+    // Query route requirements
+    let requirements: RouteVerificationRequirements = app
+        .wrap()
+        .query_wasm_smart(
+            verifier_addr,
+            &VerifierQueryMsg::GetRouteRequirements {
+                app_addr: restaurant_addr.to_string(),
+                route_id: GIVE_ME_DRINK_ROUTE_ID,
+            },
+        )
+        .unwrap();
+
+    // Verify the requirements match what we registered
+    assert_eq!(requirements, fx_route_verification_req);
+}

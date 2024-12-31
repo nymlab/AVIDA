@@ -14,9 +14,6 @@ cw2 = "1.1.2"
 cosmwasm-schema = "1.5"
 cw-utils = "1.0.3"
 cw-storage-plus = "1.2"
-# sylvia framework
-sylvia = "0.10"
-sylvia-derive = "0.10"
 
 thiserror = { version = "1.0.50" }
 anyhow = { version = "1.0.51"}

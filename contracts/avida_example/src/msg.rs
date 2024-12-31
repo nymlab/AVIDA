@@ -1,4 +1,4 @@
-use cosmwasm_schema::cw_serde;
+use cosmwasm_schema::{cw_serde, QueryResponses};
 
 use crate::types::{GiveMeSomeDrink, GiveMeSomeFood, RegisterRequirement};
 
@@ -7,6 +7,7 @@ pub struct InstantiateMsg {
     pub verifier: String,
 }
 
+#[cw_serde]
 pub enum ExecuteMsg {
     RegisterRequirement { requirements: RegisterRequirement },
     GiveMeSomeDrink(GiveMeSomeDrink),
@@ -14,6 +15,8 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(String)]
     GetVerifierAddress,
 }
