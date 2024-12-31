@@ -23,6 +23,7 @@
         "minimum": 0.0
       }
     },
+    "additionalProperties": false,
     "definitions": {
       "Binary": {
         "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
@@ -103,8 +104,7 @@
         "description": "Specific verification requirements for the route, by `route_id`",
         "type": "object",
         "required": [
-          "issuer_source_or_data",
-          "presentation_required"
+          "issuer_source_or_data"
         ],
         "properties": {
           "issuer_source_or_data": {
@@ -117,9 +117,12 @@
           },
           "presentation_required": {
             "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier",
-            "allOf": [
+            "anyOf": [
               {
                 "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
               }
             ]
           }
@@ -137,175 +140,166 @@
   "execute": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "ExecuteMsg",
-    "anyOf": [
+    "oneOf": [
       {
-        "$ref": "#/definitions/AvidaVerifierTraitExecMsg"
+        "type": "object",
+        "required": [
+          "update_revocation_list"
+        ],
+        "properties": {
+          "update_revocation_list": {
+            "type": "object",
+            "required": [
+              "app_addr",
+              "request"
+            ],
+            "properties": {
+              "app_addr": {
+                "type": "string"
+              },
+              "request": {
+                "$ref": "#/definitions/UpdateRevocationListRequest"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       },
       {
-        "$ref": "#/definitions/ExecMsg"
+        "type": "object",
+        "required": [
+          "register"
+        ],
+        "properties": {
+          "register": {
+            "type": "object",
+            "required": [
+              "app_addr",
+              "requests"
+            ],
+            "properties": {
+              "app_addr": {
+                "type": "string"
+              },
+              "requests": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/RegisterRouteRequest"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "verify"
+        ],
+        "properties": {
+          "verify": {
+            "type": "object",
+            "required": [
+              "presentation",
+              "route_id"
+            ],
+            "properties": {
+              "additional_requirements": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Binary"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "app_addr": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "presentation": {
+                "$ref": "#/definitions/Binary"
+              },
+              "route_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "update"
+        ],
+        "properties": {
+          "update": {
+            "type": "object",
+            "required": [
+              "app_addr",
+              "route_id"
+            ],
+            "properties": {
+              "app_addr": {
+                "type": "string"
+              },
+              "route_criteria": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/RouteVerificationRequirements"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "route_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "deregister"
+        ],
+        "properties": {
+          "deregister": {
+            "type": "object",
+            "required": [
+              "app_addr"
+            ],
+            "properties": {
+              "app_addr": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       }
     ],
     "definitions": {
-      "AvidaVerifierTraitExecMsg": {
-        "oneOf": [
-          {
-            "type": "object",
-            "required": [
-              "register"
-            ],
-            "properties": {
-              "register": {
-                "type": "object",
-                "required": [
-                  "app_addr",
-                  "requests"
-                ],
-                "properties": {
-                  "app_addr": {
-                    "type": "string"
-                  },
-                  "requests": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/definitions/RegisterRouteRequest"
-                    }
-                  }
-                }
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "verify"
-            ],
-            "properties": {
-              "verify": {
-                "type": "object",
-                "required": [
-                  "presentation",
-                  "route_id"
-                ],
-                "properties": {
-                  "additional_requirements": {
-                    "anyOf": [
-                      {
-                        "$ref": "#/definitions/Binary"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "app_addr": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "presentation": {
-                    "$ref": "#/definitions/Binary"
-                  },
-                  "route_id": {
-                    "type": "integer",
-                    "format": "uint64",
-                    "minimum": 0.0
-                  }
-                }
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "update"
-            ],
-            "properties": {
-              "update": {
-                "type": "object",
-                "required": [
-                  "app_addr",
-                  "route_id"
-                ],
-                "properties": {
-                  "app_addr": {
-                    "type": "string"
-                  },
-                  "route_criteria": {
-                    "anyOf": [
-                      {
-                        "$ref": "#/definitions/RouteVerificationRequirements"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "route_id": {
-                    "type": "integer",
-                    "format": "uint64",
-                    "minimum": 0.0
-                  }
-                }
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "deregister"
-            ],
-            "properties": {
-              "deregister": {
-                "type": "object",
-                "required": [
-                  "app_addr"
-                ],
-                "properties": {
-                  "app_addr": {
-                    "type": "string"
-                  }
-                }
-              }
-            },
-            "additionalProperties": false
-          }
-        ]
-      },
       "Binary": {
         "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
         "type": "string"
-      },
-      "ExecMsg": {
-        "oneOf": [
-          {
-            "type": "object",
-            "required": [
-              "update_revocation_list"
-            ],
-            "properties": {
-              "update_revocation_list": {
-                "type": "object",
-                "required": [
-                  "app_addr",
-                  "request"
-                ],
-                "properties": {
-                  "app_addr": {
-                    "type": "string"
-                  },
-                  "request": {
-                    "$ref": "#/definitions/UpdateRevocationListRequest"
-                  }
-                }
-              }
-            },
-            "additionalProperties": false
-          }
-        ]
       },
       "IssuerSourceOrData": {
         "description": "Location to obtain the verification data from",
@@ -359,8 +353,7 @@
         "description": "Specific verification requirements for the route, by `route_id`",
         "type": "object",
         "required": [
-          "issuer_source_or_data",
-          "presentation_required"
+          "issuer_source_or_data"
         ],
         "properties": {
           "issuer_source_or_data": {
@@ -373,9 +366,12 @@
           },
           "presentation_required": {
             "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier",
-            "allOf": [
+            "anyOf": [
               {
                 "$ref": "#/definitions/Binary"
+              },
+              {
+                "type": "null"
               }
             ]
           }
@@ -426,116 +422,104 @@
   "query": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "QueryMsg",
-    "anyOf": [
+    "oneOf": [
       {
-        "$ref": "#/definitions/AvidaVerifierTraitQueryMsg"
-      },
-      {
-        "$ref": "#/definitions/QueryMsg"
-      }
-    ],
-    "definitions": {
-      "AvidaVerifierTraitQueryMsg": {
-        "oneOf": [
-          {
+        "type": "object",
+        "required": [
+          "get_route_verification_key"
+        ],
+        "properties": {
+          "get_route_verification_key": {
             "type": "object",
             "required": [
-              "get_routes"
+              "app_addr",
+              "route_id"
             ],
             "properties": {
-              "get_routes": {
-                "type": "object",
-                "required": [
-                  "app_addr"
-                ],
-                "properties": {
-                  "app_addr": {
-                    "type": "string"
-                  }
-                }
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "get_route_requirements"
-            ],
-            "properties": {
-              "get_route_requirements": {
-                "type": "object",
-                "required": [
-                  "app_addr",
-                  "route_id"
-                ],
-                "properties": {
-                  "app_addr": {
-                    "type": "string"
-                  },
-                  "route_id": {
-                    "type": "integer",
-                    "format": "uint64",
-                    "minimum": 0.0
-                  }
-                }
+              "app_addr": {
+                "type": "string"
+              },
+              "route_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
               }
             },
             "additionalProperties": false
           }
-        ]
+        },
+        "additionalProperties": false
       },
-      "QueryMsg": {
-        "oneOf": [
-          {
+      {
+        "type": "object",
+        "required": [
+          "get_app_admin"
+        ],
+        "properties": {
+          "get_app_admin": {
             "type": "object",
             "required": [
-              "get_route_verification_key"
+              "app_addr"
             ],
             "properties": {
-              "get_route_verification_key": {
-                "type": "object",
-                "required": [
-                  "app_addr",
-                  "route_id"
-                ],
-                "properties": {
-                  "app_addr": {
-                    "type": "string"
-                  },
-                  "route_id": {
-                    "type": "integer",
-                    "format": "uint64",
-                    "minimum": 0.0
-                  }
-                }
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "required": [
-              "get_app_admin"
-            ],
-            "properties": {
-              "get_app_admin": {
-                "type": "object",
-                "required": [
-                  "app_addr"
-                ],
-                "properties": {
-                  "app_addr": {
-                    "type": "string"
-                  }
-                }
+              "app_addr": {
+                "type": "string"
               }
             },
             "additionalProperties": false
           }
-        ]
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "get_routes"
+        ],
+        "properties": {
+          "get_routes": {
+            "type": "object",
+            "required": [
+              "app_addr"
+            ],
+            "properties": {
+              "app_addr": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "get_route_requirements"
+        ],
+        "properties": {
+          "get_route_requirements": {
+            "type": "object",
+            "required": [
+              "app_addr",
+              "route_id"
+            ],
+            "properties": {
+              "app_addr": {
+                "type": "string"
+              },
+              "route_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       }
-    }
+    ]
   },
   "migrate": null,
   "sudo": null,
@@ -551,8 +535,7 @@
       "description": "Specific verification requirements for the route, by `route_id`",
       "type": "object",
       "required": [
-        "issuer_source_or_data",
-        "presentation_required"
+        "issuer_source_or_data"
       ],
       "properties": {
         "issuer_source_or_data": {
@@ -565,9 +548,12 @@
         },
         "presentation_required": {
           "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier",
-          "allOf": [
+          "anyOf": [
             {
               "$ref": "#/definitions/Binary"
+            },
+            {
+              "type": "null"
             }
           ]
         }

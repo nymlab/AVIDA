@@ -1,114 +1,102 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "QueryMsg",
-  "anyOf": [
+  "oneOf": [
     {
-      "$ref": "#/definitions/AvidaVerifierTraitQueryMsg"
-    },
-    {
-      "$ref": "#/definitions/QueryMsg"
-    }
-  ],
-  "definitions": {
-    "AvidaVerifierTraitQueryMsg": {
-      "oneOf": [
-        {
+      "type": "object",
+      "required": [
+        "get_route_verification_key"
+      ],
+      "properties": {
+        "get_route_verification_key": {
           "type": "object",
           "required": [
-            "get_routes"
+            "app_addr",
+            "route_id"
           ],
           "properties": {
-            "get_routes": {
-              "type": "object",
-              "required": [
-                "app_addr"
-              ],
-              "properties": {
-                "app_addr": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "get_route_requirements"
-          ],
-          "properties": {
-            "get_route_requirements": {
-              "type": "object",
-              "required": [
-                "app_addr",
-                "route_id"
-              ],
-              "properties": {
-                "app_addr": {
-                  "type": "string"
-                },
-                "route_id": {
-                  "type": "integer",
-                  "format": "uint64",
-                  "minimum": 0.0
-                }
-              }
+            "app_addr": {
+              "type": "string"
+            },
+            "route_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
             }
           },
           "additionalProperties": false
         }
-      ]
+      },
+      "additionalProperties": false
     },
-    "QueryMsg": {
-      "oneOf": [
-        {
+    {
+      "type": "object",
+      "required": [
+        "get_app_admin"
+      ],
+      "properties": {
+        "get_app_admin": {
           "type": "object",
           "required": [
-            "get_route_verification_key"
+            "app_addr"
           ],
           "properties": {
-            "get_route_verification_key": {
-              "type": "object",
-              "required": [
-                "app_addr",
-                "route_id"
-              ],
-              "properties": {
-                "app_addr": {
-                  "type": "string"
-                },
-                "route_id": {
-                  "type": "integer",
-                  "format": "uint64",
-                  "minimum": 0.0
-                }
-              }
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "get_app_admin"
-          ],
-          "properties": {
-            "get_app_admin": {
-              "type": "object",
-              "required": [
-                "app_addr"
-              ],
-              "properties": {
-                "app_addr": {
-                  "type": "string"
-                }
-              }
+            "app_addr": {
+              "type": "string"
             }
           },
           "additionalProperties": false
         }
-      ]
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_routes"
+      ],
+      "properties": {
+        "get_routes": {
+          "type": "object",
+          "required": [
+            "app_addr"
+          ],
+          "properties": {
+            "app_addr": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_route_requirements"
+      ],
+      "properties": {
+        "get_route_requirements": {
+          "type": "object",
+          "required": [
+            "app_addr",
+            "route_id"
+          ],
+          "properties": {
+            "app_addr": {
+              "type": "string"
+            },
+            "route_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
-  }
+  ]
 }

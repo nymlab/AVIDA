@@ -53,6 +53,6 @@ pub mod avida_verifier_trait {
             route_id: RouteId,
         ) -> Result<RouteVerificationRequirements, Self::Error>;
 
-        fn sudo(&self,  msg: AvidaVerifierSudoMsg) -> Result<Response, Self::Error>;
+        fn sudo(&self, msg: AvidaVerifierSudoMsg) -> Result<Response, Self::Error>;
     }
 }

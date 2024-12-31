@@ -1,14 +1,14 @@
 use crate::constants::GIVE_ME_DRINK_ROUTE_ID;
+use crate::msg::ExecuteMsg;
 use crate::msg::QueryMsg;
 use crate::tests::fixtures::setup_requirement;
 use crate::types::RegisterRequirement;
 use crate::{tests::fixtures::instantiate_contracts, types::GetVerifierResponse};
 use avida_common::types::RouteVerificationRequirements;
+use avida_sdjwt_verifier::msg::QueryMsg as VerifierQueryMsg;
+use avida_test_utils::sdjwt::fixtures::OWNER_ADDR;
 use cosmwasm_std::Addr;
 use cw_multi_test::{App, Executor};
-use crate::msg::ExecuteMsg;
-use avida_test_utils::sdjwt::fixtures::OWNER_ADDR;
-use avida_sdjwt_verifier::msg::QueryMsg as VerifierQueryMsg;
 #[test]
 fn get_verifier() {
     let mut app = App::default();
@@ -32,9 +32,11 @@ fn get_route_requirements() {
 
     // Setup and register requirement
     let fx_route_verification_req = setup_requirement("drink");
-    let register_msg = ExecuteMsg::RegisterRequirement{ requirements: RegisterRequirement::Drink {
-        requirements: fx_route_verification_req.clone(),
-    }};
+    let register_msg = ExecuteMsg::RegisterRequirement {
+        requirements: RegisterRequirement::Drink {
+            requirements: fx_route_verification_req.clone(),
+        },
+    };
 
     app.execute_contract(
         Addr::unchecked(OWNER_ADDR),

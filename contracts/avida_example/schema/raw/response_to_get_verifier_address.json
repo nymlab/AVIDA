@@ -1,14 +1,5 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "GetVerifierResponse",
-  "type": "object",
-  "required": [
-    "verifier"
-  ],
-  "properties": {
-    "verifier": {
-      "type": "string"
-    }
-  },
-  "additionalProperties": false
+  "title": "String",
+  "type": "string"
 }
