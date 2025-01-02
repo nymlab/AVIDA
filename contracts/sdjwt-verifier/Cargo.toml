@@ -30,7 +30,6 @@ thiserror = { workspace = true }
 sd-jwt-rs = { workspace = true }
 jsonwebtoken = { workspace = true }
 serde_json = { workspace = true, default-features = false, features = ["alloc"]}
-serde-json-wasm = {workspace = true}
 cw-utils = { workspace = true }
 
 [dev-dependencies]

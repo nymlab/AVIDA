@@ -4,8 +4,8 @@ use crate::{
     errors::{SdjwtVerifierError, SdjwtVerifierResultError},
     state::*,
     types::{
-        validate, Criterion, PendingRoute, PresentationReq,
-        VerificationRequirements, VerifyResult, _RegistrationRequest, IDX,
+        validate, Criterion, PendingRoute, PresentationReq, VerificationRequirements, VerifyResult,
+        _RegistrationRequest, IDX,
     },
 };
 use avida_cheqd::{
@@ -24,11 +24,11 @@ use cosmwasm_std::{
 use sd_jwt_rs::{SDJWTSerializationFormat, SDJWTVerifier};
 use serde_json::Value;
 
+use avida_common::types::UpdateRevocationListRequest;
 use jsonwebtoken::{
     jwk::{AlgorithmParameters, EllipticCurve, Jwk, OctetKeyPairParameters},
     DecodingKey,
 };
-use avida_common::types::UpdateRevocationListRequest;
 
 // Execute message handlers
 pub fn handle_update_revocation_list(
@@ -232,7 +232,7 @@ pub fn query_route_verification_key(
     Ok(route_req
         .issuer_pubkey
         .as_ref()
-        .map(|jwk| serde_json_wasm::to_string(jwk).unwrap()))
+        .map(|jwk| serde_json::to_string(jwk).unwrap()))
 }
 
 pub fn query_app_admin(deps: Deps, app_addr: String) -> Result<String, SdjwtVerifierError> {

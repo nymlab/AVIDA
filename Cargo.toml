@@ -27,7 +27,6 @@ thiserror = { version = "1.0.58" }
 sd-jwt-rs = { git = "https://github.com/nymlab/sd-jwt-rust", rev = "c05b255790a6b2f702e", default-features = false, features = ["no_rand"]}
 jsonwebtoken = { git = "https://github.com/nymlab/jsonwebtoken", rev = "98763b38713c54f", default-features = false, features = ["no_rand"] }
 serde_json = {version = "1.0.116", default-features = false, features = ["alloc"]}
-serde-json-wasm = "0.5.1"
 cw-utils = "2.0.0"
 
 [profile.release]

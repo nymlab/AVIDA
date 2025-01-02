@@ -1,5 +1,5 @@
-use avida_common::types::{RegisterRouteRequest, AvidaVerifierExecuteMsg as AvidaExecuteMsg};
 use crate::msg::ExecuteMsg;
+use avida_common::types::{AvidaVerifierExecuteMsg as AvidaExecuteMsg, RegisterRouteRequest};
 use avida_sdjwt_verifier::types::VerifyResult;
 use cosmwasm_std::{entry_point, Deps};
 

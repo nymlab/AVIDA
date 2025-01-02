@@ -16,6 +16,3 @@ serde = { workspace = true }
 schemars = { workspace = true }
 ursa = { git = "https://github.com/whalelephant/ursa", default-features = false, features = ["cl_onchain", "serde"], version = "0.3.7", rev = "7cdccf35fb1a0"}
 
-
-[dev-dependencies]
-serde-json-wasm = { workspace = true }

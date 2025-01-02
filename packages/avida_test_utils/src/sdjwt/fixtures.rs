@@ -92,7 +92,7 @@ pub fn rsa_issuer_jwk() -> josekit::jwk::Jwk {
 
 pub fn claims(name: &str, age: u8, active: bool, joined_at: u16, exp: Option<Expiration>) -> Value {
     let exp = match exp {
-        Some(exp) => serde_json_wasm::to_string(&exp).unwrap(),
+        Some(exp) => serde_json::to_string(&exp).unwrap(),
         None => "".to_string(),
     };
     serde_json::json!({
@@ -114,7 +114,7 @@ pub fn claims_with_revocation_idx(
     idx: u64,
 ) -> Value {
     let exp = match exp {
-        Some(exp) => serde_json_wasm::to_string(&exp).unwrap(),
+        Some(exp) => serde_json::to_string(&exp).unwrap(),
         None => "".to_string(),
     };
     serde_json::json!({

@@ -145,10 +145,9 @@ pub fn validate(
                     (Criterion::Expires(true), Some(serde_json::Value::String(exp)))
                         if attribute == CW_EXPIRATION =>
                     {
-                        let expiration: Expiration =
-                            serde_json_wasm::from_str(exp).map_err(|_| {
-                                SdjwtVerifierResultError::ExpirationStringInvalid(exp.clone())
-                            })?;
+                        let expiration: Expiration = serde_json::from_str(exp).map_err(|_| {
+                            SdjwtVerifierResultError::ExpirationStringInvalid(exp.clone())
+                        })?;
                         if expiration.is_expired(block_info) {
                             return Err(SdjwtVerifierResultError::PresentationExpired(expiration));
                         }

@@ -1,7 +1,7 @@
 use avida_cheqd::ibc::ChannelError;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::StdError;
-use serde_json_wasm::de::Error as SerdeJsonError;
+use serde_json::error::Error as SerdeJsonError;
 use thiserror::Error;
 
 #[cw_serde]
@@ -65,7 +65,7 @@ impl std::fmt::Display for SdjwtVerifierResultError {
     }
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum SdjwtVerifierError {
     #[error("Verifier Result Error {0}")]
     SdjwtVerifierResultError(SdjwtVerifierResultError),

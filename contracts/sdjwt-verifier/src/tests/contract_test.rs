@@ -8,13 +8,13 @@ use serde::{Deserialize, Serialize};
 
 use super::fixtures::instantiate_verifier_contract;
 use crate::msg::QueryMsg;
+use avida_common::types::AvidaVerifierExecuteMsg;
+use avida_common::types::UpdateRevocationListRequest;
 use avida_test_utils::sdjwt::fixtures::{
     claims_with_revocation_idx, get_route_requirement_with_empty_revocation_list,
     make_presentation, PresentationVerificationType, RouteVerificationRequirementsType,
     FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID,
 };
-use avida_common::types::AvidaVerifierExecuteMsg;
-use avida_common::types::UpdateRevocationListRequest;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
