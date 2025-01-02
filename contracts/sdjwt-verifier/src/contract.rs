@@ -1,5 +1,4 @@
-use avida_common::types::AvidaVerifierExecuteMsg;
-use avida_common::types::AvidaVerifierSudoMsg;
+use avida_common::types::{AvidaVerifierExecuteMsg, AvidaVerifierSudoMsg, MAX_PRESENTATION_LENGTH};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -13,7 +12,6 @@ use cw2::set_contract_version;
 use crate::{
     errors::SdjwtVerifierError,
     msg::{InstantiateMsg, QueryMsg},
-    state::MAX_PRESENTATION_LENGTH,
     verifier::*,
 };
 

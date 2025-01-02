@@ -5,64 +5,38 @@ use serde_json::error::Error as SerdeJsonError;
 use thiserror::Error;
 
 #[cw_serde]
+#[derive(Error)]
 pub enum SdjwtVerifierResultError {
+    #[error("Presentation too large")]
     PresentationTooLarge,
+    #[error("Verified claims type unexpected")]
     VerifiedClaimsTypeUnexpected,
+    #[error("Criterion value type unexpected")]
     CriterionValueTypeUnexpected,
+    #[error("Criterion value number invalid")]
     CriterionValueNumberInvalid,
+    #[error("Criterion value failed: {0}")]
     CriterionValueFailed(String),
+    #[error("Disclosed claim not found: {0}")]
     DisclosedClaimNotFound(String),
+    #[error("Required claims not satisfied")]
     RequiredClaimsNotSatisfied,
+    #[error("Public key not found")]
     PubKeyNotFound,
+    #[error("JWT error: {0}")]
     JwtError(String),
+    #[error("String conversion error: {0}")]
     StringConversion(String),
+    #[error("SD-JWT error: {0}")]
     SdJwt(String),
+    #[error("Expiration string invalid: {0}")]
     ExpirationStringInvalid(String),
+    #[error("Expiration key or value invalid: {0} - {1}")]
     ExpirationKeyOrValueInvalid(String, String),
+    #[error("Presentation expired: {0:?}")]
     PresentationExpired(cw_utils::Expiration),
+    #[error("IDX revoked: {0}")]
     IdxRevoked(u64),
-}
-
-impl std::fmt::Display for SdjwtVerifierResultError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SdjwtVerifierResultError::PresentationTooLarge => write!(f, "Presentation too large"),
-            SdjwtVerifierResultError::VerifiedClaimsTypeUnexpected => {
-                write!(f, "Verified claims type unexpected")
-            }
-            SdjwtVerifierResultError::CriterionValueTypeUnexpected => {
-                write!(f, "Criterion value type unexpected")
-            }
-            SdjwtVerifierResultError::CriterionValueNumberInvalid => {
-                write!(f, "Criterion value number invalid")
-            }
-            SdjwtVerifierResultError::CriterionValueFailed(msg) => {
-                write!(f, "Criterion value failed: {}", msg)
-            }
-            SdjwtVerifierResultError::DisclosedClaimNotFound(msg) => {
-                write!(f, "Disclosed claim not found: {}", msg)
-            }
-            SdjwtVerifierResultError::RequiredClaimsNotSatisfied => {
-                write!(f, "Required claims not satisfied")
-            }
-            SdjwtVerifierResultError::PubKeyNotFound => write!(f, "Public key not found"),
-            SdjwtVerifierResultError::JwtError(msg) => write!(f, "JWT error: {}", msg),
-            SdjwtVerifierResultError::StringConversion(msg) => {
-                write!(f, "String conversion error: {}", msg)
-            }
-            SdjwtVerifierResultError::SdJwt(msg) => write!(f, "SD-JWT error: {}", msg),
-            SdjwtVerifierResultError::ExpirationStringInvalid(msg) => {
-                write!(f, "Expiration string invalid: {}", msg)
-            }
-            SdjwtVerifierResultError::ExpirationKeyOrValueInvalid(key, value) => {
-                write!(f, "Expiration key or value invalid: {} - {}", key, value)
-            }
-            SdjwtVerifierResultError::PresentationExpired(exp) => {
-                write!(f, "Presentation expired: {:?}", exp)
-            }
-            SdjwtVerifierResultError::IdxRevoked(idx) => write!(f, "IDX revoked: {}", idx),
-        }
-    }
 }
 
 #[derive(Error, Debug)]

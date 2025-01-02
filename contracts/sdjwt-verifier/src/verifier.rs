@@ -14,7 +14,7 @@ use avida_cheqd::{
 };
 use avida_common::types::{
     IssuerSourceOrData, RegisterRouteRequest, RouteId, RouteVerificationRequirements,
-    TrustRegistry, VerfiablePresentation,
+    TrustRegistry, VerfiablePresentation, MAX_PRESENTATION_LENGTH,
 };
 use cosmwasm_std::{
     ensure, from_json, to_json_binary, Addr, Binary, BlockInfo, CosmosMsg, Deps, DepsMut, Env,
