@@ -13,6 +13,15 @@ pub struct RegisterRouteRequest {
     pub requirements: RouteVerificationRequirements,
 }
 
+/// A Sd-jwt specific requirement for revocation list update
+/// using Criterion::NotContainedIn
+#[cw_serde]
+pub struct UpdateRevocationListRequest {
+    pub route_id: u64,
+    pub revoke: Vec<u64>,
+    pub unrevoke: Vec<u64>,
+}
+
 /// Specific verification requirements for the route, by `route_id`
 #[cw_serde]
 pub struct RouteVerificationRequirements {
@@ -41,12 +50,13 @@ pub struct IssuerSourceOrData {
     pub data_or_location: Binary,
 }
 
+// Sudo messages (privileged operations)
 #[cw_serde]
 pub enum AvidaVerifierSudoMsg {
     Verify {
-        route_id: RouteId,
-        presentation: Binary,
         app_addr: String,
+        route_id: RouteId,
+        presentation: VerfiablePresentation,
         additional_requirements: Option<Binary>,
     },
     Update {
@@ -58,5 +68,32 @@ pub enum AvidaVerifierSudoMsg {
         app_addr: String,
         app_admin: String,
         routes: Vec<RegisterRouteRequest>,
+    },
+}
+
+// Execute messages
+#[cw_serde]
+pub enum AvidaVerifierExecuteMsg {
+    UpdateRevocationList {
+        app_addr: String,
+        request: UpdateRevocationListRequest,
+    },
+    Register {
+        app_addr: String,
+        requests: Vec<RegisterRouteRequest>,
+    },
+    Verify {
+        presentation: VerfiablePresentation,
+        route_id: RouteId,
+        app_addr: Option<String>,
+        additional_requirements: Option<Binary>,
+    },
+    Update {
+        app_addr: String,
+        route_id: RouteId,
+        route_criteria: Option<RouteVerificationRequirements>,
+    },
+    Deregister {
+        app_addr: String,
     },
 }

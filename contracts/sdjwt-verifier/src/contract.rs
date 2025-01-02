@@ -1,3 +1,5 @@
+use avida_common::types::AvidaVerifierExecuteMsg;
+use avida_common::types::AvidaVerifierSudoMsg;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -10,7 +12,7 @@ use cw2::set_contract_version;
 
 use crate::{
     errors::SdjwtVerifierError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
+    msg::{InstantiateMsg, QueryMsg},
     state::MAX_PRESENTATION_LENGTH,
     verifier::*,
 };
@@ -47,16 +49,16 @@ pub fn execute(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: ExecuteMsg,
+    msg: AvidaVerifierExecuteMsg,
 ) -> Result<Response, SdjwtVerifierError> {
     match msg {
-        ExecuteMsg::UpdateRevocationList { app_addr, request } => {
+        AvidaVerifierExecuteMsg::UpdateRevocationList { app_addr, request } => {
             handle_update_revocation_list(deps, app_addr, request)
         }
-        ExecuteMsg::Register { app_addr, requests } => {
+        AvidaVerifierExecuteMsg::Register { app_addr, requests } => {
             handle_register(deps, env, info, app_addr, requests)
         }
-        ExecuteMsg::Verify {
+        AvidaVerifierExecuteMsg::Verify {
             presentation,
             route_id,
             app_addr,
@@ -70,12 +72,12 @@ pub fn execute(
             app_addr,
             additional_requirements,
         ),
-        ExecuteMsg::Update {
+        AvidaVerifierExecuteMsg::Update {
             app_addr,
             route_id,
             route_criteria,
         } => handle_update(deps, env, info, app_addr, route_id, route_criteria),
-        ExecuteMsg::Deregister { app_addr } => handle_deregister(deps, info, app_addr),
+        AvidaVerifierExecuteMsg::Deregister { app_addr } => handle_deregister(deps, info, app_addr),
     }
 }
 
@@ -102,9 +104,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn sudo(deps: DepsMut, env: Env, msg: SudoMsg) -> Result<Response, SdjwtVerifierError> {
+pub fn sudo(
+    deps: DepsMut,
+    env: Env,
+    msg: AvidaVerifierSudoMsg,
+) -> Result<Response, SdjwtVerifierError> {
     match msg {
-        SudoMsg::Verify {
+        AvidaVerifierSudoMsg::Verify {
             app_addr,
             route_id,
             presentation,
@@ -117,12 +123,12 @@ pub fn sudo(deps: DepsMut, env: Env, msg: SudoMsg) -> Result<Response, SdjwtVeri
             presentation,
             additional_requirements,
         ),
-        SudoMsg::Update {
+        AvidaVerifierSudoMsg::Update {
             app_addr,
             route_id,
             route_criteria,
         } => handle_sudo_update(deps, env, app_addr, route_id, route_criteria),
-        SudoMsg::Register {
+        AvidaVerifierSudoMsg::Register {
             app_addr,
             app_admin,
             routes,

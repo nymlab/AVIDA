@@ -124,15 +124,6 @@ pub enum MathsOperator {
     EqualTo,
 }
 
-/// A Sd-jwt specific requirement for revocation list update
-/// using Criterion::NotContainedIn
-#[cw_serde]
-pub struct UpdateRevocationListRequest {
-    pub route_id: u64,
-    pub revoke: Vec<u64>,
-    pub unrevoke: Vec<u64>,
-}
-
 /// Validate the verified claims against the presentation request
 pub fn validate(
     presentation_request: PresentationReq,

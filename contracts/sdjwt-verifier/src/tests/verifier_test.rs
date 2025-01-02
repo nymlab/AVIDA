@@ -9,7 +9,8 @@ use serde::{Deserialize, Serialize};
 use josekit::{self};
 
 use super::fixtures::instantiate_verifier_contract;
-use crate::msg::{ExecuteMsg, QueryMsg};
+use crate::msg::QueryMsg;
+use avida_common::types::AvidaVerifierExecuteMsg;
 use avida_test_utils::sdjwt::fixtures::{
     claims, get_default_block_info, get_input_route_requirement,
     get_route_verification_requirement, get_two_input_routes_requirements, issuer_jwk,
@@ -105,7 +106,7 @@ fn verify_success_no_exp_validate_success() {
         app.execute_contract(
             first_caller_app_addr.clone(),
             contract_addr,
-            &ExecuteMsg::Verify {
+            &AvidaVerifierExecuteMsg::Verify {
                 presentation: Binary::from(presentation.as_bytes()),
                 route_id: FIRST_ROUTE_ID,
                 app_addr: Some(first_caller_app_addr.to_string()),
@@ -142,7 +143,7 @@ fn verify_success_exp_validate_success() {
     app.execute_contract(
         owner.clone(),
         contract_addr.clone(),
-        &ExecuteMsg::Register {
+        &AvidaVerifierExecuteMsg::Register {
             app_addr: second_caller_app_addr.to_string(),
             requests: vec![RegisterRouteRequest {
                 route_id: SECOND_ROUTE_ID,
@@ -173,7 +174,7 @@ fn verify_success_exp_validate_success() {
         app.execute_contract(
             second_caller_app_addr.clone(),
             contract_addr.clone(),
-            &ExecuteMsg::Verify {
+            &AvidaVerifierExecuteMsg::Verify {
                 presentation: Binary::from(presentation.as_bytes()),
                 route_id: SECOND_ROUTE_ID,
                 app_addr: Some(second_caller_app_addr.to_string()),
@@ -209,7 +210,7 @@ fn verify_success_exp_validate_success() {
         app.execute_contract(
             second_caller_app_addr.clone(),
             contract_addr,
-            &ExecuteMsg::Verify {
+            &AvidaVerifierExecuteMsg::Verify {
                 presentation: Binary::from(presentation.as_bytes()),
                 route_id: SECOND_ROUTE_ID,
                 app_addr: Some(second_caller_app_addr.to_string()),
@@ -246,7 +247,7 @@ fn verify_failed_on_expired_claim() {
     app.execute_contract(
         owner,
         contract_addr.clone(),
-        &ExecuteMsg::Register {
+        &AvidaVerifierExecuteMsg::Register {
             app_addr: second_caller_app_addr.to_string(),
             requests: vec![RegisterRouteRequest {
                 route_id: SECOND_ROUTE_ID,
@@ -270,7 +271,7 @@ fn verify_failed_on_expired_claim() {
         app.execute_contract(
             second_caller_app_addr.clone(),
             contract_addr.clone(),
-            &ExecuteMsg::Verify {
+            &AvidaVerifierExecuteMsg::Verify {
                 presentation: Binary::from(presentation.as_bytes()),
                 route_id: SECOND_ROUTE_ID,
                 app_addr: Some(second_caller_app_addr.to_string()),
@@ -302,7 +303,7 @@ fn verify_failed_on_expired_claim() {
         app.execute_contract(
             second_caller_app_addr.clone(),
             contract_addr,
-            &ExecuteMsg::Verify {
+            &AvidaVerifierExecuteMsg::Verify {
                 presentation: Binary::from(presentation.as_bytes()),
                 route_id: SECOND_ROUTE_ID,
                 app_addr: Some(second_caller_app_addr.to_string()),
@@ -344,7 +345,7 @@ fn verify_route_not_registered() {
         .execute_contract(
             first_caller_app_addr.clone(),
             contract_addr,
-            &ExecuteMsg::Verify {
+            &AvidaVerifierExecuteMsg::Verify {
                 presentation: Binary::from(presentation.as_bytes()),
                 route_id: SECOND_ROUTE_ID,
                 app_addr: Some(first_caller_app_addr.to_string()),
@@ -378,7 +379,7 @@ fn verify_success_validate_fails() {
         app.execute_contract(
             first_caller_app_addr.clone(),
             contract_addr,
-            &ExecuteMsg::Verify {
+            &AvidaVerifierExecuteMsg::Verify {
                 presentation: Binary::from(presentation.as_bytes()),
                 route_id: FIRST_ROUTE_ID,
                 app_addr: Some(first_caller_app_addr.to_string()),
@@ -415,7 +416,7 @@ fn verify_required_claims_not_satisfied() {
         app.execute_contract(
             first_caller_app_addr.clone(),
             contract_addr,
-            &ExecuteMsg::Verify {
+            &AvidaVerifierExecuteMsg::Verify {
                 presentation: Binary::from(presentation.as_bytes()),
                 route_id: FIRST_ROUTE_ID,
                 app_addr: Some(first_caller_app_addr.to_string()),
@@ -452,7 +453,7 @@ fn verify_without_sdjwt() {
         app.execute_contract(
             first_caller_app_addr.clone(),
             contract_addr,
-            &ExecuteMsg::Verify {
+            &AvidaVerifierExecuteMsg::Verify {
                 presentation: Binary::from(b""),
                 route_id: FIRST_ROUTE_ID,
                 app_addr: Some(first_caller_app_addr.to_string()),
@@ -497,7 +498,7 @@ fn verify_presentation_too_large() {
         app.execute_contract(
             first_caller_app_addr.clone(),
             contract_addr,
-            &ExecuteMsg::Verify {
+            &AvidaVerifierExecuteMsg::Verify {
                 presentation: Binary::from(presentation.as_bytes()),
                 route_id: FIRST_ROUTE_ID,
                 app_addr: Some(first_caller_app_addr.to_string()),
@@ -537,7 +538,7 @@ fn verify_success_on_no_expiration_check_for_expired_claims() {
     app.execute_contract(
         owner,
         contract_addr.clone(),
-        &ExecuteMsg::Register {
+        &AvidaVerifierExecuteMsg::Register {
             app_addr: second_caller_app_addr.to_string(),
             requests: vec![RegisterRouteRequest {
                 route_id: SECOND_ROUTE_ID,
@@ -561,7 +562,7 @@ fn verify_success_on_no_expiration_check_for_expired_claims() {
         app.execute_contract(
             second_caller_app_addr.clone(),
             contract_addr,
-            &ExecuteMsg::Verify {
+            &AvidaVerifierExecuteMsg::Verify {
                 presentation: Binary::from(presentation.as_bytes()),
                 route_id: SECOND_ROUTE_ID,
                 app_addr: Some(second_caller_app_addr.to_string()),
@@ -596,7 +597,7 @@ fn register_success() {
     app.execute_contract(
         owner,
         contract_addr.clone(),
-        &ExecuteMsg::Register {
+        &AvidaVerifierExecuteMsg::Register {
             app_addr: second_caller_app_addr.to_string(),
             requests: two_routes_verification_req.clone(),
         },
@@ -718,7 +719,7 @@ fn register_app_is_already_registered() {
     app.execute_contract(
         owner.clone(),
         contract_addr.clone(),
-        &ExecuteMsg::Register {
+        &AvidaVerifierExecuteMsg::Register {
             app_addr: second_caller_app_addr.to_string(),
             requests: two_routes_verification_req.clone(),
         },
@@ -731,7 +732,7 @@ fn register_app_is_already_registered() {
         .execute_contract(
             owner,
             contract_addr,
-            &ExecuteMsg::Register {
+            &AvidaVerifierExecuteMsg::Register {
                 app_addr: second_caller_app_addr.to_string(),
                 requests: two_routes_verification_req,
             },
@@ -770,7 +771,7 @@ fn register_serde_json_error() {
         .execute_contract(
             owner,
             contract_addr,
-            &ExecuteMsg::Register {
+            &AvidaVerifierExecuteMsg::Register {
                 app_addr: second_caller_app_addr.to_string(),
                 requests: two_routes_verification_req,
             },
@@ -805,7 +806,7 @@ fn register_unsupported_key_type() {
         .execute_contract(
             owner,
             contract_addr,
-            &ExecuteMsg::Register {
+            &AvidaVerifierExecuteMsg::Register {
                 app_addr: second_caller_app_addr.to_string(),
                 requests: vec![unsupported_key_type_route_verification_requirement],
             },
@@ -838,7 +839,7 @@ fn deregister_success() {
     app.execute_contract(
         owner.clone(),
         contract_addr.clone(),
-        &ExecuteMsg::Register {
+        &AvidaVerifierExecuteMsg::Register {
             app_addr: second_caller_app_addr.to_string(),
             requests: two_routes_verification_req,
         },
@@ -850,7 +851,7 @@ fn deregister_success() {
     app.execute_contract(
         owner,
         contract_addr.clone(),
-        &ExecuteMsg::Deregister {
+        &AvidaVerifierExecuteMsg::Deregister {
             app_addr: second_caller_app_addr.to_string(),
         },
         &[],
@@ -888,7 +889,7 @@ fn deregister_app_not_registered() {
         .execute_contract(
             owner,
             contract_addr,
-            &ExecuteMsg::Deregister {
+            &AvidaVerifierExecuteMsg::Deregister {
                 app_addr: second_caller_app_addr.to_string(),
             },
             &[],
@@ -919,7 +920,7 @@ fn deregister_unauthorized() {
     app.execute_contract(
         owner,
         contract_addr.clone(),
-        &ExecuteMsg::Register {
+        &AvidaVerifierExecuteMsg::Register {
             app_addr: second_caller_app_addr.to_string(),
             requests: two_routes_verification_req,
         },
@@ -932,7 +933,7 @@ fn deregister_unauthorized() {
         .execute_contract(
             second_caller_app_addr.clone(),
             contract_addr,
-            &ExecuteMsg::Deregister {
+            &AvidaVerifierExecuteMsg::Deregister {
                 app_addr: second_caller_app_addr.to_string(),
             },
             &[],
@@ -963,7 +964,7 @@ fn update_success() {
     app.execute_contract(
         owner.clone(),
         contract_addr.clone(),
-        &ExecuteMsg::Register {
+        &AvidaVerifierExecuteMsg::Register {
             app_addr: second_caller_app_addr.to_string(),
             requests: two_routes_verification_req,
         },
@@ -981,7 +982,7 @@ fn update_success() {
     app.execute_contract(
         owner.clone(),
         contract_addr.clone(),
-        &ExecuteMsg::Update {
+        &AvidaVerifierExecuteMsg::Update {
             app_addr: second_caller_app_addr.to_string(),
             route_id: SECOND_ROUTE_ID,
             route_criteria: Some(updated_route_verification_req.clone()),
@@ -1016,7 +1017,7 @@ fn update_success() {
     app.execute_contract(
         owner,
         contract_addr.clone(),
-        &ExecuteMsg::Update {
+        &AvidaVerifierExecuteMsg::Update {
             app_addr: second_caller_app_addr.to_string(),
             route_id: SECOND_ROUTE_ID,
             route_criteria: None,
@@ -1060,7 +1061,7 @@ fn update_app_not_registered() {
         .execute_contract(
             owner,
             contract_addr,
-            &ExecuteMsg::Update {
+            &AvidaVerifierExecuteMsg::Update {
                 app_addr: second_caller_app_addr.to_string(),
                 route_id: SECOND_ROUTE_ID,
                 route_criteria: Some(updated_route_verification_req),
@@ -1093,7 +1094,7 @@ fn update_unauthorized() {
     app.execute_contract(
         owner,
         contract_addr.clone(),
-        &ExecuteMsg::Register {
+        &AvidaVerifierExecuteMsg::Register {
             app_addr: second_caller_app_addr.to_string(),
             requests: two_routes_verification_req,
         },
@@ -1112,7 +1113,7 @@ fn update_unauthorized() {
         .execute_contract(
             second_caller_app_addr.clone(),
             contract_addr,
-            &ExecuteMsg::Update {
+            &AvidaVerifierExecuteMsg::Update {
                 app_addr: second_caller_app_addr.to_string(),
                 route_id: SECOND_ROUTE_ID,
                 route_criteria: Some(updated_route_verification_req),
@@ -1145,7 +1146,7 @@ fn update_serde_json_error() {
     app.execute_contract(
         owner.clone(),
         contract_addr.clone(),
-        &ExecuteMsg::Register {
+        &AvidaVerifierExecuteMsg::Register {
             app_addr: second_caller_app_addr.to_string(),
             requests: two_routes_verification_req,
         },
@@ -1166,7 +1167,7 @@ fn update_serde_json_error() {
         .execute_contract(
             owner,
             contract_addr,
-            &ExecuteMsg::Update {
+            &AvidaVerifierExecuteMsg::Update {
                 app_addr: second_caller_app_addr.to_string(),
                 route_id: SECOND_ROUTE_ID,
                 route_criteria: Some(updated_route_verification_req),
@@ -1202,7 +1203,7 @@ fn update_unsupported_key_type() {
     app.execute_contract(
         owner.clone(),
         contract_addr.clone(),
-        &ExecuteMsg::Register {
+        &AvidaVerifierExecuteMsg::Register {
             app_addr: second_caller_app_addr.to_string(),
             requests: vec![RegisterRouteRequest {
                 route_id: SECOND_ROUTE_ID,
@@ -1222,7 +1223,7 @@ fn update_unsupported_key_type() {
         .execute_contract(
             owner,
             contract_addr,
-            &ExecuteMsg::Update {
+            &AvidaVerifierExecuteMsg::Update {
                 app_addr: second_caller_app_addr.to_string(),
                 route_id: unsupported_key_type_route_verification_requirement.route_id,
                 route_criteria: Some(

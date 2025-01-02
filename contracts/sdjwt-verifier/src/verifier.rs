@@ -4,7 +4,7 @@ use crate::{
     errors::{SdjwtVerifierError, SdjwtVerifierResultError},
     state::*,
     types::{
-        validate, Criterion, PendingRoute, PresentationReq, UpdateRevocationListRequest,
+        validate, Criterion, PendingRoute, PresentationReq,
         VerificationRequirements, VerifyResult, _RegistrationRequest, IDX,
     },
 };
@@ -28,6 +28,7 @@ use jsonwebtoken::{
     jwk::{AlgorithmParameters, EllipticCurve, Jwk, OctetKeyPairParameters},
     DecodingKey,
 };
+use avida_common::types::UpdateRevocationListRequest;
 
 // Execute message handlers
 pub fn handle_update_revocation_list(

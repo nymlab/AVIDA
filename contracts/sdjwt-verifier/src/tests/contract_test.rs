@@ -7,12 +7,14 @@ use crate::types::{Criterion, PresentationReq, ReqAttr, VerifyResult};
 use serde::{Deserialize, Serialize};
 
 use super::fixtures::instantiate_verifier_contract;
-use crate::msg::{ExecuteMsg, QueryMsg};
+use crate::msg::QueryMsg;
 use avida_test_utils::sdjwt::fixtures::{
     claims_with_revocation_idx, get_route_requirement_with_empty_revocation_list,
     make_presentation, PresentationVerificationType, RouteVerificationRequirementsType,
     FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID,
 };
+use avida_common::types::AvidaVerifierExecuteMsg;
+use avida_common::types::UpdateRevocationListRequest;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -36,7 +38,7 @@ fn test_update_revocation_list() {
     let revocation_test_caller = app.api().addr_make(REVOCATION_TEST_CALLER);
 
     // Register the app with exp requirements
-    let register_app_msg = ExecuteMsg::Register {
+    let register_app_msg = AvidaVerifierExecuteMsg::Register {
         app_addr: revocation_test_caller.to_string(),
         requests: vec![route_verification_req.clone()],
     };
@@ -70,9 +72,9 @@ fn test_update_revocation_list() {
     assert_eq!(revocation_list.criterion, Criterion::NotContainedIn(vec![]));
 
     // Update revocation list
-    let update_revocation_list_msg = ExecuteMsg::UpdateRevocationList {
+    let update_revocation_list_msg = AvidaVerifierExecuteMsg::UpdateRevocationList {
         app_addr: revocation_test_caller.to_string(),
-        request: crate::types::UpdateRevocationListRequest {
+        request: UpdateRevocationListRequest {
             route_id: REVOCATION_ROUTE_ID,
             revoke: vec![1, 2, 3],
             unrevoke: vec![4, 5],
@@ -109,9 +111,9 @@ fn test_update_revocation_list() {
         Criterion::NotContainedIn(vec![1, 2, 3])
     );
 
-    let update_revocation_list_msg = ExecuteMsg::UpdateRevocationList {
+    let update_revocation_list_msg = AvidaVerifierExecuteMsg::UpdateRevocationList {
         app_addr: revocation_test_caller.to_string(),
-        request: crate::types::UpdateRevocationListRequest {
+        request: UpdateRevocationListRequest {
             route_id: REVOCATION_ROUTE_ID,
             revoke: vec![7, 1, 7],
             unrevoke: vec![2, 5],
@@ -168,7 +170,7 @@ fn test_revoked_presentation_cannot_be_used() {
     let revocation_test_caller = app.api().addr_make(REVOCATION_TEST_CALLER);
 
     // Register the app with exp requirements
-    let register_app_msg = ExecuteMsg::Register {
+    let register_app_msg = AvidaVerifierExecuteMsg::Register {
         app_addr: revocation_test_caller.to_string(),
         requests: vec![route_verification_req.clone()],
     };
@@ -181,9 +183,9 @@ fn test_revoked_presentation_cannot_be_used() {
     )
     .unwrap();
 
-    let update_revocation_list_msg = ExecuteMsg::UpdateRevocationList {
+    let update_revocation_list_msg = AvidaVerifierExecuteMsg::UpdateRevocationList {
         app_addr: revocation_test_caller.to_string(),
-        request: crate::types::UpdateRevocationListRequest {
+        request: UpdateRevocationListRequest {
             route_id: REVOCATION_ROUTE_ID,
             revoke: vec![revoked_idx],
             unrevoke: vec![unrevoked_idx],
@@ -208,7 +210,7 @@ fn test_revoked_presentation_cannot_be_used() {
     let valid_presentation =
         make_presentation(unrevoked_claims, PresentationVerificationType::Success);
 
-    let verify_msg = ExecuteMsg::Verify {
+    let verify_msg = AvidaVerifierExecuteMsg::Verify {
         presentation: Binary::from(revoked_presentation.as_bytes()),
         route_id: REVOCATION_ROUTE_ID,
         app_addr: Some(revocation_test_caller.to_string()),
@@ -230,7 +232,7 @@ fn test_revoked_presentation_cannot_be_used() {
 
     assert_eq!(err, SdjwtVerifierResultError::IdxRevoked(revoked_idx));
 
-    let verify_msg = ExecuteMsg::Verify {
+    let verify_msg = AvidaVerifierExecuteMsg::Verify {
         presentation: Binary::from(valid_presentation.as_bytes()),
         route_id: REVOCATION_ROUTE_ID,
         app_addr: Some(revocation_test_caller.to_string()),
@@ -273,7 +275,7 @@ fn test_addition_requirements_with_revocation_list() {
     // Additional requirements should be checked if revoked_claims is revoked and should error
     let first_caller_app_addr = app.api().addr_make(FIRST_CALLER_APP_ADDR);
 
-    let verify_msg = ExecuteMsg::Verify {
+    let verify_msg = AvidaVerifierExecuteMsg::Verify {
         presentation: Binary::from(revoked_presentation.as_bytes()),
         route_id: FIRST_ROUTE_ID,
         app_addr: Some(first_caller_app_addr.to_string()),
@@ -295,7 +297,7 @@ fn test_addition_requirements_with_revocation_list() {
     assert_eq!(err, SdjwtVerifierResultError::IdxRevoked(revoked_idx));
 
     // Additional requirements not present, revoked_claims is not checked and should ok
-    let verify_msg = ExecuteMsg::Verify {
+    let verify_msg = AvidaVerifierExecuteMsg::Verify {
         presentation: Binary::from(revoked_presentation.as_bytes()),
         route_id: FIRST_ROUTE_ID,
         app_addr: Some(first_caller_app_addr.to_string()),
