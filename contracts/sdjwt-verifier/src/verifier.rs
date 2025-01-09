@@ -125,9 +125,6 @@ pub fn handle_verify(
     );
 
     let data = to_json_binary(&VerifyResult { result: res })?;
-    println!("Data: {:?}", data);
-    let verify_result: VerifyResult = from_json(&data)?;
-    println!("Verify Result: {:?}", verify_result);
     Ok(Response::default().set_data(data))
 }
 
