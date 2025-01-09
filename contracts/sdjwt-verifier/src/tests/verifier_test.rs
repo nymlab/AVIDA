@@ -323,9 +323,6 @@ fn verify_failed_on_expired_claim() {
     );
 }
 
-// Continue with remaining tests following the same pattern...
-// I'll continue with more tests if you'd like, just let me know
-
 #[test]
 fn verify_route_not_registered() {
     let mut app = App::default();
