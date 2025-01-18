@@ -3,7 +3,7 @@ use cosmwasm_std::{to_json_binary, Binary, IbcChannel};
 use cw_storage_plus::Item;
 
 /// This is set for the verifier to prevent the presentation from being too large
-pub type Channel<'a> = Item<'a, IbcChannel>;
+pub type Channel = Item<IbcChannel>;
 pub const CHANNEL: Channel = Item::new("mpl");
 
 #[cw_serde]

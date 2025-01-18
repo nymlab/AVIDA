@@ -7,11 +7,16 @@ use avida_test_utils::sdjwt::fixtures::{
     PresentationVerificationType, RouteVerificationRequirementsType,
 };
 
-use crate::contract::{sv::mt::CodeId as RestaurantCodeID, RestaurantContract};
-use avida_sdjwt_verifier::contract::sv::mt::CodeId as VerifierCodeID;
-use avida_test_utils::sdjwt::fixtures::{MAX_PRESENTATION_LEN, OWNER_ADDR as caller};
-use sylvia::cw_multi_test::App as MtApp;
-use sylvia::multitest::{App, Proxy};
+use crate::contract;
+use crate::msg::InstantiateMsg as RestaurantInstantiateMsg;
+use avida_sdjwt_verifier::contract as verifier_contract;
+use avida_sdjwt_verifier::msg::InstantiateMsg as VerifierInstantiateMsg;
+use avida_test_utils::sdjwt::fixtures::{MAX_PRESENTATION_LEN, OWNER_ADDR};
+use cosmwasm_std::{Addr, Empty};
+use cw_multi_test::{App, Contract, ContractWrapper, Executor};
+
+const VERIFIER_CONTRACT_LABEL: &str = "Verifier";
+const RESTAURANT_CONTRACT_LABEL: &str = "Restaurant";
 
 pub fn create_presentation(age: u8) -> String {
     let claims = claims("Alice", age, true, 2021, None);
@@ -69,21 +74,58 @@ pub fn setup_requirement_with_expiration() -> RouteVerificationRequirements {
     )
 }
 
-pub fn instantiate_contracts(app: &App<MtApp>) -> Proxy<'_, MtApp, RestaurantContract<'_>> {
+pub fn verifier_contract() -> Box<dyn Contract<Empty>> {
+    Box::new(ContractWrapper::new_with_empty(
+        verifier_contract::execute,
+        verifier_contract::instantiate,
+        verifier_contract::query,
+    ))
+}
+
+pub fn restaurant_contract() -> Box<dyn Contract<Empty>> {
+    Box::new(
+        ContractWrapper::new_with_empty(contract::execute, contract::instantiate, contract::query)
+            .with_reply_empty(contract::reply),
+    )
+}
+
+pub fn instantiate_contracts(app: &mut App) -> (Addr, Addr) {
     // Storages for contracts
-    let code_id_verifier = VerifierCodeID::store_code(app);
-    let code_id_restaurant = RestaurantCodeID::store_code(app);
+    let code_id_verifier = app.store_code(verifier_contract());
+    let code_id_restaurant = app.store_code(restaurant_contract());
 
     // Instantiate contracts
-    let contract_verifier = code_id_verifier
-        .instantiate(MAX_PRESENTATION_LEN, vec![])
-        .with_label("Verifier")
-        .call(caller)
+    let verifier_instantiate_msg = VerifierInstantiateMsg {
+        max_presentation_len: MAX_PRESENTATION_LEN,
+        init_registrations: vec![],
+    };
+
+    let caller = app.api().addr_make(OWNER_ADDR);
+
+    let contract_verifier = app
+        .instantiate_contract(
+            code_id_verifier,
+            caller.clone(),
+            &verifier_instantiate_msg,
+            &[],
+            VERIFIER_CONTRACT_LABEL,
+            None,
+        )
         .unwrap();
 
-    code_id_restaurant
-        .instantiate(contract_verifier.contract_addr.to_string())
-        .with_label("Restaurant")
-        .call(caller)
-        .unwrap()
+    let restaurant_instantiate_msg = RestaurantInstantiateMsg {
+        verifier: contract_verifier.to_string(),
+    };
+    (
+        app.instantiate_contract(
+            code_id_restaurant,
+            caller,
+            &restaurant_instantiate_msg,
+            &[],
+            RESTAURANT_CONTRACT_LABEL,
+            None,
+        )
+        .unwrap(),
+        contract_verifier,
+    )
 }

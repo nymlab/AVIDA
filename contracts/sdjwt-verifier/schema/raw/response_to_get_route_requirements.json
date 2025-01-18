@@ -4,8 +4,7 @@
   "description": "Specific verification requirements for the route, by `route_id`",
   "type": "object",
   "required": [
-    "issuer_source_or_data",
-    "presentation_required"
+    "issuer_source_or_data"
   ],
   "properties": {
     "issuer_source_or_data": {
@@ -18,9 +17,12 @@
     },
     "presentation_required": {
       "description": "The presentation request is the criteria required for the presentation, for example required certains claims to be disclosed This value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier",
-      "allOf": [
+      "anyOf": [
         {
           "$ref": "#/definitions/Binary"
+        },
+        {
+          "type": "null"
         }
       ]
     }

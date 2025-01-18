@@ -1,13 +1,9 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Binary;
 use cw_storage_plus::Item;
-
-/// This is set for the verifier to prevent the presentation from being too large
-pub type MaxPresentationLen<'a> = Item<'a, usize>;
-pub const MAX_PRESENTATION_LEN: MaxPresentationLen = Item::new("mpl");
-
 /// The verifiable presentation type is encoded as Binary
 pub type VerfiablePresentation = Binary;
+pub const MAX_PRESENTATION_LENGTH: Item<usize> = Item::new("max_presentation_length");
 
 pub type RouteId = u64;
 
@@ -16,6 +12,15 @@ pub type RouteId = u64;
 pub struct RegisterRouteRequest {
     pub route_id: RouteId,
     pub requirements: RouteVerificationRequirements,
+}
+
+/// A Sd-jwt specific requirement for revocation list update
+/// using Criterion::NotContainedIn
+#[cw_serde]
+pub struct UpdateRevocationListRequest {
+    pub route_id: u64,
+    pub revoke: Vec<u64>,
+    pub unrevoke: Vec<u64>,
 }
 
 /// Specific verification requirements for the route, by `route_id`
@@ -46,12 +51,13 @@ pub struct IssuerSourceOrData {
     pub data_or_location: Binary,
 }
 
+// Sudo messages (privileged operations)
 #[cw_serde]
 pub enum AvidaVerifierSudoMsg {
     Verify {
-        route_id: RouteId,
-        presentation: Binary,
         app_addr: String,
+        route_id: RouteId,
+        presentation: VerfiablePresentation,
         additional_requirements: Option<Binary>,
     },
     Update {
@@ -63,5 +69,32 @@ pub enum AvidaVerifierSudoMsg {
         app_addr: String,
         app_admin: String,
         routes: Vec<RegisterRouteRequest>,
+    },
+}
+
+// Execute messages
+#[cw_serde]
+pub enum AvidaVerifierExecuteMsg {
+    UpdateRevocationList {
+        app_addr: String,
+        request: UpdateRevocationListRequest,
+    },
+    Register {
+        app_addr: String,
+        requests: Vec<RegisterRouteRequest>,
+    },
+    Verify {
+        presentation: VerfiablePresentation,
+        route_id: RouteId,
+        app_addr: Option<String>,
+        additional_requirements: Option<Binary>,
+    },
+    Update {
+        app_addr: String,
+        route_id: RouteId,
+        route_criteria: Option<RouteVerificationRequirements>,
+    },
+    Deregister {
+        app_addr: String,
     },
 }

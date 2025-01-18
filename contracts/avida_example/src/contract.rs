@@ -1,197 +1,202 @@
-use avida_common::traits::avida_verifier_trait::sv::AvidaVerifierTraitExecMsg;
-use avida_common::types::RegisterRouteRequest;
-
+use crate::msg::ExecuteMsg;
+use avida_common::types::{AvidaVerifierExecuteMsg as AvidaExecuteMsg, RegisterRouteRequest};
 use avida_sdjwt_verifier::types::VerifyResult;
-use sylvia::cw_std::{from_json, Reply, Response, StdResult, SubMsg};
-use sylvia::cw_std::{to_json_binary, WasmMsg};
-use sylvia::types::{QueryCtx, ReplyCtx};
-use sylvia::{contract, entry_points, schemars, types::InstantiateCtx};
+use cosmwasm_std::{entry_point, Deps};
 
-use cw_storage_plus::{Item, Map};
+use cosmwasm_std::{
+    from_json, to_json_binary, Binary, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    SubMsg, WasmMsg,
+};
 use cw_utils::{parse_execute_response_data, MsgExecuteContractResponse};
 
 use crate::constants::{
     GIVE_ME_DRINK_ROUTE_ID, GIVE_ME_FOOD_ROUTE_ID, REGISTER_REQUIREMENT_REPLY_ID,
 };
 use crate::error::ContractError;
-use crate::types::{
-    GetVerifierResponse, GiveMeSomeDrink, GiveMeSomeFood, OrderSubject, RegisterRequirement,
-};
+use crate::msg::{InstantiateMsg, QueryMsg};
+use crate::state::{PENDING_ORDER_SUBJECTS, VERIFIER};
+use crate::types::{GetVerifierResponse, GiveMeSomeDrink, GiveMeSomeFood, RegisterRequirement};
 
-pub struct RestaurantContract<'a> {
-    verifier: Item<'a, String>,
-    pending_order_subjects: Map<'a, u64, OrderSubject>,
-}
-
-#[cfg_attr(not(feature = "library"), entry_points)]
-#[contract]
-impl RestaurantContract<'_> {
-    pub const fn new() -> Self {
-        Self {
-            verifier: Item::new("verifier"),
-            pending_order_subjects: Map::new("pending_transactions"),
+#[cfg_attr(not(feature = "library"), entry_point)]
+#[allow(deprecated)]
+pub fn reply(deps: DepsMut, _: Env, reply: Reply) -> Result<Response, ContractError> {
+    match (reply.id, reply.result.into_result()) {
+        (REGISTER_REQUIREMENT_REPLY_ID, Err(err)) => Err(ContractError::RegistrationError(err)),
+        (REGISTER_REQUIREMENT_REPLY_ID, Ok(_)) => Ok(Response::new()),
+        (GIVE_ME_DRINK_ROUTE_ID | GIVE_ME_FOOD_ROUTE_ID, Err(err)) => {
+            Err(ContractError::VerificationProcessError(err))
         }
-    }
-
-    #[sv::msg(instantiate)]
-    pub fn instantiate(&self, ctx: InstantiateCtx, verifier: String) -> StdResult<Response> {
-        let InstantiateCtx { deps, .. } = ctx;
-        self.verifier.save(deps.storage, &verifier)?;
-        Ok(Response::default())
-    }
-
-    // Register the permission policy
-    #[sv::msg(exec)]
-    pub fn register_requirement(
-        &self,
-        ctx: sylvia::types::ExecCtx,
-        msg: RegisterRequirement,
-    ) -> StdResult<Response> {
-        let route_requirements: RegisterRouteRequest = match msg {
-            RegisterRequirement::Drink { requirements } => RegisterRouteRequest {
-                route_id: GIVE_ME_DRINK_ROUTE_ID,
-                requirements,
-            },
-            RegisterRequirement::Food { requirements } => RegisterRouteRequest {
-                route_id: GIVE_ME_FOOD_ROUTE_ID,
-                requirements,
-            },
-        };
-
-        let register_msg = AvidaVerifierTraitExecMsg::Register {
-            app_addr: ctx.env.contract.address.to_string(),
-            requests: vec![route_requirements],
-        };
-
-        let verifier_contract = self.verifier.load(ctx.deps.storage)?;
-
-        let sub_msg = SubMsg::reply_always(
-            WasmMsg::Execute {
-                contract_addr: verifier_contract,
-                msg: to_json_binary(&register_msg)?,
-                funds: vec![],
-            },
-            REGISTER_REQUIREMENT_REPLY_ID,
-        );
-
-        Ok(Response::new().add_submessage(sub_msg))
-    }
-
-    // Ask for the portion
-    #[sv::msg(exec)]
-    pub fn give_me_some_drink(
-        &self,
-        ctx: sylvia::types::ExecCtx,
-        msg: GiveMeSomeDrink,
-    ) -> StdResult<Response> {
-        // 1. Save the transaction
-        // 2. Send the request to verifier
-        self.pending_order_subjects
-            .save(ctx.deps.storage, GIVE_ME_DRINK_ROUTE_ID, &msg.kind)?;
-        let verifier_contract = self.verifier.load(ctx.deps.storage)?;
-
-        let verify_request = AvidaVerifierTraitExecMsg::Verify {
-            presentation: msg.proof,
-            route_id: GIVE_ME_DRINK_ROUTE_ID,
-            app_addr: Some(ctx.env.contract.address.to_string()),
-            additional_requirements: None,
-        };
-        let sub_msg = SubMsg::reply_always(
-            WasmMsg::Execute {
-                contract_addr: verifier_contract,
-                msg: to_json_binary(&verify_request)?,
-                funds: vec![],
-            },
-            GIVE_ME_DRINK_ROUTE_ID,
-        );
-
-        Ok(Response::new().add_submessage(sub_msg))
-    }
-
-    // Ask for the portion
-    #[sv::msg(exec)]
-    pub fn give_me_some_food(
-        &self,
-        ctx: sylvia::types::ExecCtx,
-        msg: GiveMeSomeFood,
-    ) -> StdResult<Response> {
-        // 1. Save the transaction
-        // 2. Send the request to verifier
-        self.pending_order_subjects
-            .save(ctx.deps.storage, GIVE_ME_FOOD_ROUTE_ID, &msg.kind)?;
-        let verifier_contract = self.verifier.load(ctx.deps.storage)?;
-        let verify_request = AvidaVerifierTraitExecMsg::Verify {
-            presentation: msg.proof,
-            route_id: GIVE_ME_FOOD_ROUTE_ID,
-            app_addr: Some(ctx.env.contract.address.to_string()),
-            additional_requirements: None,
-        };
-
-        let sub_msg = SubMsg::reply_always(
-            WasmMsg::Execute {
-                contract_addr: verifier_contract,
-                msg: to_json_binary(&verify_request)?,
-                funds: vec![],
-            },
-            GIVE_ME_FOOD_ROUTE_ID,
-        );
-
-        Ok(Response::new().add_submessage(sub_msg))
-    }
-
-    #[sv::msg(query)]
-    fn get_verifier_address(&self, ctx: QueryCtx) -> Result<GetVerifierResponse, ContractError> {
-        let verifier = self.verifier.load(ctx.deps.storage)?;
-        Ok(GetVerifierResponse { verifier })
-    }
-
-    #[sv::msg(reply)]
-    fn reply(&self, ctx: ReplyCtx, reply: Reply) -> Result<Response, ContractError> {
-        match (reply.id, reply.result.into_result()) {
-            (REGISTER_REQUIREMENT_REPLY_ID, Err(err)) => Err(ContractError::RegistrationError(err)),
-            (REGISTER_REQUIREMENT_REPLY_ID, Ok(_)) => Ok(Response::new()),
-            (GIVE_ME_DRINK_ROUTE_ID | GIVE_ME_FOOD_ROUTE_ID, Err(err)) => {
-                Err(ContractError::VerificationProcessError(err))
-            }
-            (rid @ GIVE_ME_DRINK_ROUTE_ID, Ok(res)) | (rid @ GIVE_ME_FOOD_ROUTE_ID, Ok(res)) => {
-                if let MsgExecuteContractResponse {
-                    data: Some(verify_result_bz),
-                } = parse_execute_response_data(&res.data.ok_or(
-                    ContractError::VerificationProcessError("VerifyResult not set".to_string()),
-                )?)
-                .map_err(|_| ContractError::ParseReplyError)?
-                {
-                    let verify_result: VerifyResult = from_json(verify_result_bz)?;
-                    match verify_result.result {
-                        Ok(_) if rid == GIVE_ME_DRINK_ROUTE_ID => Ok(Response::new()
-                            .add_attribute("action", "give_me_some_drink")
-                            .add_attribute(
-                                "Drink kind",
-                                self.pending_order_subjects.load(ctx.deps.storage, rid)?,
-                            )),
-                        Ok(_) => Ok(Response::new()
-                            .add_attribute("action", "give_me_some_food")
-                            .add_attribute(
-                                "Food kind",
-                                self.pending_order_subjects.load(ctx.deps.storage, rid)?,
-                            )),
-                        Err(err) => Err(ContractError::VerificationProcessError(format!(
-                            "{:?}",
-                            err
-                        ))),
-                    }
-                } else {
-                    Err(ContractError::VerificationProcessError(
-                        "VerifyResult not set".to_string(),
-                    ))
+        (rid @ GIVE_ME_DRINK_ROUTE_ID, Ok(res)) | (rid @ GIVE_ME_FOOD_ROUTE_ID, Ok(res)) => {
+            if let MsgExecuteContractResponse {
+                data: Some(verify_result_bz),
+            } = parse_execute_response_data(&res.data.ok_or(
+                ContractError::VerificationProcessError("VerifyResult not set".to_string()),
+            )?)
+            .map_err(|_| ContractError::ParseReplyError)?
+            {
+                let verify_result: VerifyResult = from_json(verify_result_bz)?;
+                match verify_result.result {
+                    Ok(_) if rid == GIVE_ME_DRINK_ROUTE_ID => Ok(Response::new()
+                        .add_attribute("action", "give_me_some_drink")
+                        .add_attribute(
+                            "Drink kind",
+                            PENDING_ORDER_SUBJECTS.load(deps.storage, rid)?,
+                        )),
+                    Ok(_) => Ok(Response::new()
+                        .add_attribute("action", "give_me_some_food")
+                        .add_attribute(
+                            "Food kind",
+                            PENDING_ORDER_SUBJECTS.load(deps.storage, rid)?,
+                        )),
+                    Err(err) => Err(ContractError::VerificationProcessError(format!(
+                        "{:?}",
+                        err
+                    ))),
                 }
+            } else {
+                Err(ContractError::VerificationProcessError(
+                    "VerifyResult not set".to_string(),
+                ))
             }
-            _ => Err(ContractError::InvalidRouteId),
+        }
+        _ => Err(ContractError::InvalidRouteId),
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn instantiate(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    msg: InstantiateMsg,
+) -> StdResult<Response> {
+    deps.api.addr_validate(&msg.verifier)?;
+    VERIFIER.save(deps.storage, &msg.verifier)?;
+    Ok(Response::default())
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn execute(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    msg: ExecuteMsg,
+) -> StdResult<Response> {
+    match msg {
+        ExecuteMsg::RegisterRequirement { requirements } => {
+            handle_register_requirement(deps, env, requirements)
+        }
+        ExecuteMsg::GiveMeSomeDrink(give_me_some_drink) => {
+            handle_give_me_some_drink(deps, env, give_me_some_drink)
+        }
+        ExecuteMsg::GiveMeSomeFood(give_me_some_food) => {
+            handle_give_me_some_food(deps, env, give_me_some_food)
         }
     }
 }
-impl Default for RestaurantContract<'_> {
-    fn default() -> Self {
-        Self::new()
+
+// Register the permission policy
+pub fn handle_register_requirement(
+    deps: DepsMut,
+    env: Env,
+    msg: RegisterRequirement,
+) -> StdResult<Response> {
+    let route_requirements: RegisterRouteRequest = match msg {
+        RegisterRequirement::Drink { requirements } => RegisterRouteRequest {
+            route_id: GIVE_ME_DRINK_ROUTE_ID,
+            requirements,
+        },
+        RegisterRequirement::Food { requirements } => RegisterRouteRequest {
+            route_id: GIVE_ME_FOOD_ROUTE_ID,
+            requirements,
+        },
+    };
+
+    let register_msg = AvidaExecuteMsg::Register {
+        app_addr: env.contract.address.to_string(),
+        requests: vec![route_requirements],
+    };
+
+    let verifier_contract = VERIFIER.load(deps.storage)?;
+
+    let sub_msg = SubMsg::reply_always(
+        WasmMsg::Execute {
+            contract_addr: verifier_contract,
+            msg: to_json_binary(&register_msg)?,
+            funds: vec![],
+        },
+        REGISTER_REQUIREMENT_REPLY_ID,
+    );
+
+    Ok(Response::new().add_submessage(sub_msg))
+}
+
+// Ask for the portion
+pub fn handle_give_me_some_drink(
+    deps: DepsMut,
+    env: Env,
+    msg: GiveMeSomeDrink,
+) -> StdResult<Response> {
+    // 1. Save the transaction
+    // 2. Send the request to verifier
+    PENDING_ORDER_SUBJECTS.save(deps.storage, GIVE_ME_DRINK_ROUTE_ID, &msg.kind)?;
+    let verifier_contract = VERIFIER.load(deps.storage)?;
+
+    let verify_request = AvidaExecuteMsg::Verify {
+        presentation: msg.proof,
+        route_id: GIVE_ME_DRINK_ROUTE_ID,
+        app_addr: Some(env.contract.address.to_string()),
+        additional_requirements: None,
+    };
+    let sub_msg = SubMsg::reply_always(
+        WasmMsg::Execute {
+            contract_addr: verifier_contract,
+            msg: to_json_binary(&verify_request)?,
+            funds: vec![],
+        },
+        GIVE_ME_DRINK_ROUTE_ID,
+    );
+
+    Ok(Response::new().add_submessage(sub_msg))
+}
+
+// Ask for the portion
+pub fn handle_give_me_some_food(
+    deps: DepsMut,
+    env: Env,
+    msg: GiveMeSomeFood,
+) -> StdResult<Response> {
+    // 1. Save the transaction
+    // 2. Send the request to verifier
+    PENDING_ORDER_SUBJECTS.save(deps.storage, GIVE_ME_FOOD_ROUTE_ID, &msg.kind)?;
+    let verifier_contract = VERIFIER.load(deps.storage)?;
+    let verify_request = AvidaExecuteMsg::Verify {
+        presentation: msg.proof,
+        route_id: GIVE_ME_FOOD_ROUTE_ID,
+        app_addr: Some(env.contract.address.to_string()),
+        additional_requirements: None,
+    };
+
+    let sub_msg = SubMsg::reply_always(
+        WasmMsg::Execute {
+            contract_addr: verifier_contract,
+            msg: to_json_binary(&verify_request)?,
+            funds: vec![],
+        },
+        GIVE_ME_FOOD_ROUTE_ID,
+    );
+
+    Ok(Response::new().add_submessage(sub_msg))
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::GetVerifierAddress {} => to_json_binary(&get_verifier_address(deps)?),
     }
+}
+
+fn get_verifier_address(deps: Deps) -> Result<GetVerifierResponse, ContractError> {
+    let verifier = VERIFIER.load(deps.storage)?;
+    Ok(GetVerifierResponse { verifier })
 }

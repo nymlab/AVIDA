@@ -6,6 +6,7 @@ use cosmwasm_std::{from_json, Binary, BlockInfo, SubMsg};
 use cw_utils::Expiration;
 use jsonwebtoken::jwk::Jwk;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// This is the key to be used in claims that specifies expiration using `cw_util::Expiration`
 pub const CW_EXPIRATION: &str = "cw_exp";
@@ -15,7 +16,7 @@ pub const IDX: &str = "idx";
 
 #[cw_serde]
 pub struct VerifyResult {
-    pub result: Result<(), SdjwtVerifierResultError>,
+    pub result: Result<Value, SdjwtVerifierResultError>,
 }
 
 #[cw_serde]
@@ -123,15 +124,6 @@ pub enum MathsOperator {
     EqualTo,
 }
 
-/// A Sd-jwt specific requirement for revocation list update
-/// using Criterion::NotContainedIn
-#[cw_serde]
-pub struct UpdateRevocationListRequest {
-    pub route_id: u64,
-    pub revoke: Vec<u64>,
-    pub unrevoke: Vec<u64>,
-}
-
 /// Validate the verified claims against the presentation request
 pub fn validate(
     presentation_request: PresentationReq,
@@ -153,10 +145,9 @@ pub fn validate(
                     (Criterion::Expires(true), Some(serde_json::Value::String(exp)))
                         if attribute == CW_EXPIRATION =>
                     {
-                        let expiration: Expiration =
-                            serde_json_wasm::from_str(exp).map_err(|_| {
-                                SdjwtVerifierResultError::ExpirationStringInvalid(exp.clone())
-                            })?;
+                        let expiration: Expiration = serde_json::from_str(exp).map_err(|_| {
+                            SdjwtVerifierResultError::ExpirationStringInvalid(exp.clone())
+                        })?;
                         if expiration.is_expired(block_info) {
                             return Err(SdjwtVerifierResultError::PresentationExpired(expiration));
                         }
