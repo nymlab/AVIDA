@@ -14,6 +14,9 @@ pub const CW_EXPIRATION: &str = "cw_exp";
 /// This is the  key to be used in revocation_list in Criterion::NotContainedIn(revocation_list)
 pub const IDX: &str = "idx";
 
+// This is the key to be used in claims that specifies the issuer of the JWT
+pub const ISS_KEY: &str = "iss";
+
 #[cw_serde]
 pub struct VerifyResult {
     pub result: Result<Value, SdjwtVerifierResultError>,

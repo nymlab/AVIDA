@@ -37,6 +37,8 @@ pub enum SdjwtVerifierResultError {
     PresentationExpired(cw_utils::Expiration),
     #[error("IDX revoked: {0}")]
     IdxRevoked(u64),
+    #[error("Issuer not found")]
+    IssuerNotFound,
 }
 
 #[derive(Error, Debug)]

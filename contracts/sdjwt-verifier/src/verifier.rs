@@ -5,7 +5,7 @@ use crate::{
     state::*,
     types::{
         validate, Criterion, PendingRoute, PresentationReq, VerificationRequirements, VerifyResult,
-        _RegistrationRequest, IDX,
+        _RegistrationRequest, IDX, ISS_KEY,
     },
 };
 use avida_cheqd::{
@@ -310,6 +310,13 @@ pub fn _verify(
     } else {
         requirements.presentation_required
     };
+    
+    let unverified_payload = sdjwt_verifier.get_sdjwt_engine().get_unverified_input_sd_jwt_payload()
+       .ok_or(SdjwtVerifierResultError::SdJwt("unverified payload not found".to_string()))?;
+
+    let issuer = unverified_payload.get(ISS_KEY).ok_or(SdjwtVerifierResultError::IssuerNotFound)?;
+
+    
 
     // We validate the verified claims against the requirements
     validate(
@@ -317,6 +324,7 @@ pub fn _verify(
         sdjwt_verifier.verified_claims.clone(),
         block_info,
     )?;
+
     Ok(sdjwt_verifier.verified_claims)
 }
 

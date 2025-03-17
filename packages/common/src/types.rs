@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Binary;
 use cw_storage_plus::Item;
@@ -27,7 +29,7 @@ pub struct UpdateRevocationListRequest {
 #[cw_serde]
 pub struct RouteVerificationRequirements {
     /// This defines where the source data for verification is
-    pub issuer_source_or_data: IssuerSourceOrData,
+    pub issuer_source_or_data: HashMap<String, IssuerSourceOrData>,
     /// The presentation request is the criteria required for the presentation,
     /// for example required certains claims to be disclosed
     /// This value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier
