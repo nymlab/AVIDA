@@ -273,50 +273,52 @@ pub fn _verify(
         SdjwtVerifierResultError::PresentationTooLarge
     );
 
-    let decoding_key = DecodingKey::from_jwk(
-        requirements
-            .issuer_pubkey
-            .as_ref()
-            .ok_or(SdjwtVerifierResultError::PubKeyNotFound)?,
-    )
-    .map_err(|e| SdjwtVerifierResultError::JwtError(e.to_string()))?;
+    let decoding_keys = requirements
+        .issuer_pubkeys
+        .as_ref()
+        .ok_or(SdjwtVerifierResultError::PubKeyNotFound)?;
 
-    // We verify the presentation
-    let sdjwt_verifier = SDJWTVerifier::new(
-        String::from_utf8(presentation.to_vec())
-            .map_err(|e| SdjwtVerifierResultError::StringConversion(e.to_string()))?,
-        Box::new(move |_, _| decoding_key.clone()),
-        None, // This version does not support key binding
-        None, // This version does not support key binding
-        SDJWTSerializationFormat::Compact,
-    )
-    .map_err(|e| SdjwtVerifierResultError::SdJwt(e.to_string()))?;
+    for decoding_key in decoding_keys.into_iter() {
+        let decoding_key = DecodingKey::from_jwk(decoding_key)
+            .map_err(|e| SdjwtVerifierResultError::JwtError(e.to_string()))?;
 
-    let combined_requirements = if let Some(additional_requirements) = additional_requirements {
-        let mut combined_requirements = requirements.presentation_required.clone();
-        combined_requirements.extend(additional_requirements);
-        combined_requirements
-    } else {
-        requirements.presentation_required
-    };
+        // We verify the presentation
+        let sdjwt_verifier = SDJWTVerifier::new(
+            String::from_utf8(presentation.to_vec())
+                .map_err(|e| SdjwtVerifierResultError::StringConversion(e.to_string()))?,
+            Box::new(move |_, _| decoding_key.clone()),
+            None, // This version does not support key binding
+            None, // This version does not support key binding
+            SDJWTSerializationFormat::Compact,
+        )
+        .map_err(|e| SdjwtVerifierResultError::SdJwt(e.to_string()))?;
 
-    let unverified_payload = sdjwt_verifier
-        .get_sdjwt_engine()
-        .get_unverified_input_sd_jwt_payload()
-        .ok_or(SdjwtVerifierResultError::SdJwt(
-            "unverified payload not found".to_string(),
-        ))?;
+        let combined_requirements = if let Some(additional_requirements) = additional_requirements {
+            let mut combined_requirements = requirements.presentation_required.clone();
+            combined_requirements.extend(additional_requirements);
+            combined_requirements
+        } else {
+            requirements.presentation_required
+        };
 
-    let issuer = unverified_payload
-        .get(ISS_KEY)
-        .ok_or(SdjwtVerifierResultError::IssuerNotFound)?;
+        let unverified_payload = sdjwt_verifier
+            .get_sdjwt_engine()
+            .get_unverified_input_sd_jwt_payload()
+            .ok_or(SdjwtVerifierResultError::SdJwt(
+                "unverified payload not found".to_string(),
+            ))?;
 
-    // We validate the verified claims against the requirements
-    validate(
-        combined_requirements,
-        sdjwt_verifier.verified_claims.clone(),
-        block_info,
-    )?;
+        let issuer = unverified_payload
+            .get(ISS_KEY)
+            .ok_or(SdjwtVerifierResultError::IssuerNotFound)?;
+
+        // We validate the verified claims against the requirements
+        validate(
+            combined_requirements,
+            sdjwt_verifier.verified_claims.clone(),
+            block_info,
+        )?;
+    }
 
     Ok(sdjwt_verifier.verified_claims)
 }
@@ -329,14 +331,12 @@ pub fn _register(
     app_addr: &str,
     route_criteria: Vec<RegisterRouteRequest>,
 ) -> Result<Response, SdjwtVerifierError> {
-    if APP_TRUST_DATA_SOURCE.has(storage, app_addr)
-        || APP_ROUTES_REQUIREMENTS.has(storage, app_addr)
-    {
+    if APP_ROUTES_REQUIREMENTS.has(storage, app_addr) {
         return Err(SdjwtVerifierError::AppAlreadyRegistered);
     }
 
     let mut req_map: HashMap<u64, VerificationRequirements> = HashMap::new();
-    let mut data_sources: HashMap<u64, IssuerSourceOrData> = HashMap::new();
+    let mut data_sources: HashMap<u64, HashMap<String, IssuerSourceOrData>> = HashMap::new();
 
     let mut response = Response::default();
 
@@ -361,7 +361,6 @@ pub fn _register(
     }
 
     // Save the registered trust data sources and route requirements
-    APP_TRUST_DATA_SOURCE.save(storage, app_addr, &data_sources)?;
     APP_ROUTES_REQUIREMENTS.save(storage, app_addr, &req_map)?;
     APP_ADMINS.save(storage, app_addr, admin)?;
 
@@ -370,7 +369,6 @@ pub fn _register(
 
 /// Performs a deregister of an application and all its routes
 fn _deregister(storage: &mut dyn Storage, app_addr: &str) -> Result<Response, SdjwtVerifierError> {
-    APP_TRUST_DATA_SOURCE.remove(storage, app_addr);
     APP_ROUTES_REQUIREMENTS.remove(storage, app_addr);
     APP_ADMINS.remove(storage, app_addr);
 
@@ -386,21 +384,16 @@ fn _update(
     route_criteria: Option<RouteVerificationRequirements>,
 ) -> Result<Response, SdjwtVerifierError> {
     // Ensure the app with this address is registered
-    if !APP_TRUST_DATA_SOURCE.has(storage, app_addr)
-        || !APP_ROUTES_REQUIREMENTS.has(storage, app_addr)
-    {
+    if !APP_ROUTES_REQUIREMENTS.has(storage, app_addr) {
         return Err(SdjwtVerifierError::AppIsNotRegistered);
     }
 
     let mut req_map = APP_ROUTES_REQUIREMENTS.load(storage, app_addr)?;
-    let mut data_sources = APP_TRUST_DATA_SOURCE.load(storage, app_addr)?;
 
     let mut response: Response = Response::default();
 
     // On registration we check if the dApp has request for IBC data
     if let Some(route_criteria) = route_criteria {
-        data_sources.insert(route_id, route_criteria.issuer_source_or_data.clone());
-
         // Make a verification request for specified app addr and route id with a provided route criteria
         let _RegistrationRequest {
             verification_requirements,
@@ -413,16 +406,13 @@ fn _update(
             response = response.add_submessage(ibc_msg);
         }
     } else {
-        data_sources.remove(&route_id);
         req_map.remove(&route_id);
     }
 
-    if data_sources.is_empty() && req_map.is_empty() {
+    if req_map.is_empty() {
         // If there are no more routes, deregister the app
         _deregister(storage, app_addr)
     } else {
-        // Save the updated trust data sources and route requirements
-        APP_TRUST_DATA_SOURCE.save(storage, app_addr, &data_sources)?;
         APP_ROUTES_REQUIREMENTS.save(storage, app_addr, &req_map)?;
 
         Ok(response)
