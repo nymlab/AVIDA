@@ -160,9 +160,7 @@ pub fn handle_deregister(
     info: MessageInfo,
     app_addr: String,
 ) -> Result<Response, SdjwtVerifierError> {
-    if !APP_TRUST_DATA_SOURCE.has(deps.storage, &app_addr)
-        || !APP_ROUTES_REQUIREMENTS.has(deps.storage, &app_addr)
-    {
+    if !APP_ROUTES_REQUIREMENTS.has(deps.storage, &app_addr) {
         return Err(SdjwtVerifierError::AppIsNotRegistered);
     }
 
@@ -223,15 +221,19 @@ pub fn query_route_verification_key(
     deps: Deps,
     app_addr: String,
     route_id: RouteId,
-) -> Result<Option<String>, SdjwtVerifierError> {
+) -> Result<Option<Vec<String>>, SdjwtVerifierError> {
     let req = APP_ROUTES_REQUIREMENTS.load(deps.storage, &app_addr)?;
     let route_req = req
         .get(&route_id)
         .ok_or(SdjwtVerifierError::RouteNotRegistered)?;
-    Ok(route_req
-        .issuer_pubkey
-        .as_ref()
-        .map(|jwk| serde_json::to_string(jwk).unwrap()))
+
+    let keys = route_req.issuer_pubkeys.as_ref().map(|jwks| {
+        jwks.iter()
+            .map(|jwk| serde_json::to_string(jwk).unwrap())
+            .collect()
+    });
+
+    Ok(keys)
 }
 
 pub fn query_app_admin(deps: Deps, app_addr: String) -> Result<String, SdjwtVerifierError> {
@@ -249,25 +251,12 @@ pub fn query_route_requirements(
     deps: Deps,
     app_addr: String,
     route_id: RouteId,
-) -> Result<RouteVerificationRequirements, SdjwtVerifierError> {
+) -> Result<VerificationRequirements, SdjwtVerifierError> {
     let req = APP_ROUTES_REQUIREMENTS.load(deps.storage, &app_addr)?;
-    let route_req = req
+    Ok(req
         .get(&route_id)
-        .ok_or(SdjwtVerifierError::RouteNotRegistered)?;
-
-    let trust_data = APP_TRUST_DATA_SOURCE.load(deps.storage, &app_addr)?;
-    let route_td = trust_data
-        .get(&route_id)
-        .ok_or(SdjwtVerifierError::RouteNotRegistered)?;
-
-    Ok(RouteVerificationRequirements {
-        issuer_source_or_data: route_td.clone(),
-        presentation_required: if route_req.presentation_required.is_empty() {
-            None
-        } else {
-            Some(to_json_binary(&route_req.presentation_required)?)
-        },
-    })
+        .ok_or(SdjwtVerifierError::RouteNotRegistered)?
+        .clone())
 }
 
 /// Verify the provided presentation within the context of the given route
@@ -310,13 +299,17 @@ pub fn _verify(
     } else {
         requirements.presentation_required
     };
-    
-    let unverified_payload = sdjwt_verifier.get_sdjwt_engine().get_unverified_input_sd_jwt_payload()
-       .ok_or(SdjwtVerifierResultError::SdJwt("unverified payload not found".to_string()))?;
 
-    let issuer = unverified_payload.get(ISS_KEY).ok_or(SdjwtVerifierResultError::IssuerNotFound)?;
+    let unverified_payload = sdjwt_verifier
+        .get_sdjwt_engine()
+        .get_unverified_input_sd_jwt_payload()
+        .ok_or(SdjwtVerifierResultError::SdJwt(
+            "unverified payload not found".to_string(),
+        ))?;
 
-    
+    let issuer = unverified_payload
+        .get(ISS_KEY)
+        .ok_or(SdjwtVerifierResultError::IssuerNotFound)?;
 
     // We validate the verified claims against the requirements
     validate(

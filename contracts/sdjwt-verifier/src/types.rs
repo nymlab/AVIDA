@@ -82,20 +82,20 @@ pub struct VerificationRequirements {
     /// it is sent from presentation_request in the `RouteVerificationRequirements`
     pub presentation_required: PresentationReq,
     /// Usig this type as it is ser/deserializable
-    pub issuer_pubkey: Option<Jwk>,
+    pub issuer_pubkeys: Option<Vec<Jwk>>,
 }
 
 impl VerificationRequirements {
     pub fn new(
         presentation_request: Option<Binary>,
-        issuer_pubkey: Option<Jwk>,
+        issuer_pubkeys: Option<Vec<Jwk>>,
     ) -> Result<Self, SdjwtVerifierError> {
         Ok(VerificationRequirements {
             presentation_required: match presentation_request {
                 Some(binary) => from_json(&binary)?,
                 None => vec![],
             },
-            issuer_pubkey,
+            issuer_pubkeys,
         })
     }
 }
