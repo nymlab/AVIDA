@@ -335,6 +335,7 @@ pub fn _register(
         return Err(SdjwtVerifierError::AppAlreadyRegistered);
     }
 
+    // Probably do not need these
     let mut req_map: HashMap<u64, VerificationRequirements> = HashMap::new();
     let mut data_sources: HashMap<u64, HashMap<String, IssuerSourceOrData>> = HashMap::new();
 
@@ -344,6 +345,7 @@ pub fn _register(
         route_id,
         requirements,
     } in route_criteria
+    // here we get the iss to insert into the APP_ROUTES_REQUIREMENTS
     {
         data_sources.insert(route_id, requirements.issuer_source_or_data.clone());
         // On registration we check if the dApp has request for IBC data
