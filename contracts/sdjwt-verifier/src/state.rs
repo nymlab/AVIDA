@@ -1,7 +1,5 @@
 // State structure
 
-use std::collections::HashMap;
-
 use avida_common::types::RouteId;
 use cosmwasm_std::Addr;
 use cw_storage_plus::{Item, Map};
@@ -9,10 +7,8 @@ use cw_storage_plus::{Item, Map};
 use crate::types::{PendingRoute, VerificationRequirements};
 
 // Map of the app addr and route id to the verification requirements
-pub const APP_ROUTES_REQUIREMENTS: Map<
-    (&str, RouteId),
-    HashMap<RouteId, VerificationRequirements>,
-> = Map::new("app_routes_requirements");
+pub const APP_ROUTES_REQUIREMENTS: Map<(String, RouteId), VerificationRequirements> =
+    Map::new("app_routes_requirements");
 
 pub const APP_ADMINS: Map<&str, Addr> = Map::new("app_admins");
 pub const CHANNEL_ID: Item<String> = Item::new("channel_id");

@@ -83,7 +83,7 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetRouteVerificationKey { app_addr, route_id } => {
-            let route_verification_key = query_route_verification_key(deps, app_addr, route_id)?;
+            let route_verification_key = query_route_verification_keys(deps, app_addr, route_id)?;
             to_json_binary(&route_verification_key)
         }
         QueryMsg::GetAppAdmin { app_addr } => {

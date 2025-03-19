@@ -83,13 +83,13 @@ pub struct VerificationRequirements {
     pub presentation_required: PresentationReq,
     /// Usig this type as it is ser/deserializable
     // use the `iss` value here as the key of the map
-    pub issuer_pubkeys: Option<HashMap<&str, Jwk>>,
+    pub issuer_pubkeys: Option<HashMap<String, Jwk>>,
 }
 
 impl VerificationRequirements {
     pub fn new(
         presentation_request: Option<Binary>,
-        issuer_pubkeys: Option<Vec<Jwk>>,
+        issuer_pubkeys: Option<HashMap<String, Jwk>>,
     ) -> Result<Self, SdjwtVerifierError> {
         Ok(VerificationRequirements {
             presentation_required: match presentation_request {
