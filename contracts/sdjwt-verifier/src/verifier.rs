@@ -269,14 +269,18 @@ pub fn _verify(
         SdjwtVerifierResultError::PresentationTooLarge
     );
 
-    let decoding_keys = requirements
-        .issuer_pubkeys
-        .as_ref()
-        .ok_or(SdjwtVerifierResultError::PubKeyNotFound)?;
+    // This is actually where we need to parse the compact jwt
+    // we should not wait until AFTER we get the `SDJWTVerifier` struct
+    // to parse the compact jwt
+    // psuedo code:
+    let iss = presentation
+        .get(ISS_KEY)
+        .ok_or(SdjwtVerifierResultError::IssuerNotFound)?;
 
-    for decoding_key in decoding_keys.into_iter() {
-        let decoding_key = DecodingKey::from_jwk(decoding_key)
-            .map_err(|e| SdjwtVerifierResultError::JwtError(e.to_string()))?;
+    if let Some(pubkeys) = requirements.issuer_pubkeys {
+        if !pubkeys.contains_key(iss) {
+            return Err(SdjwtVerifierResultError::PubKeyNotFound);
+        }
 
         // We verify the presentation
         let sdjwt_verifier = SDJWTVerifier::new(
@@ -314,9 +318,12 @@ pub fn _verify(
             sdjwt_verifier.verified_claims.clone(),
             block_info,
         )?;
+        Ok(sdjwt_verifier.verified_claims)
     }
-
-    Ok(sdjwt_verifier.verified_claims)
+    // If the issuer is not in the requirements, we return an error
+    else {
+        Err(SdjwtVerifierResultError::IssuerNotFound)
+    }
 }
 
 /// Performs a registration of an application and all its routes
@@ -356,7 +363,11 @@ pub fn _register(
         } = make_internal_registration_request(storage, env, app_addr, route_id, requirements)?;
 
         // Save the registered trust data sources and route requirements
-        APP_ROUTES_REQUIREMENTS.save(storage, (app_addr.to_owned(), route_id), &verification_requirements)?;
+        APP_ROUTES_REQUIREMENTS.save(
+            storage,
+            (app_addr.to_owned(), route_id),
+            &verification_requirements,
+        )?;
 
         if let Some(ibc_msg) = ibc_msg {
             response = response.add_submessage(ibc_msg);
