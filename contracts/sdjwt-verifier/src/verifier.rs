@@ -504,55 +504,28 @@ fn make_internal_registration_request(
     route_id: RouteId,
     route_criteria: RouteVerificationRequirements,
 ) -> Result<_RegistrationRequest, SdjwtVerifierError> {
-    
-    if let Some(registry) = route_criteria.issuer_source_or_data.source {
-        match registry {
-            TrustRegistry::Cheqd => {
-                // For Cheqd, the data is in the ResourceReqPacket
-                let resource_req_packat: ResourceReqPacket =
-                    from_json(&route_criteria.issuer_source_or_data.data_or_location)?;
+    let mut issuer_pubkeys = HashMap::new();
 
-                let ibc_msg = SubMsg::new(CosmosMsg::Ibc(cosmwasm_std::IbcMsg::SendPacket {
-                    channel_id: CHANNEL_ID.load(storage)?,
-                    data: to_json_binary(&resource_req_packat)?,
-                    timeout: IbcTimeout::with_timestamp(get_timeout_timestamp(
-                        env,
-                        HOUR_PACKET_LIFETIME,
-                    )),
-                }));
-
-                PENDING_VERIFICATION_REQ_REQUESTS.save(
-                    storage,
-                    &resource_req_packat.to_string(),
-                    &PendingRoute {
-                        app_addr: app_addr.to_string(),
-                        route_id,
-                    },
-                )?;
-
-                let verification_req =
-                    VerificationRequirements::new(route_criteria.presentation_required, None)?;
-                Ok(_RegistrationRequest::new(verification_req, Some(ibc_msg)))
-            }
-        }
-    } else {
-        let issuer_pubkey: Jwk = from_json(&route_criteria.issuer_source_or_data.data_or_location)?;
+    for issuer_source_or_data in route_criteria.issuer_source_or_data {
+        let issuer_pubkey: Jwk = from_json(&issuer_source_or_data.data_or_location)?;
 
         if let AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
             curve: EllipticCurve::Ed25519,
             ..
         }) = issuer_pubkey.algorithm
         {
-            let verification_req = VerificationRequirements::new(
-                route_criteria.presentation_required,
-                Some(issuer_pubkey),
-            )?;
 
-            Ok(_RegistrationRequest::new(verification_req, None))
+            issuer_pubkeys.insert(app_addr.to_owned(), issuer_pubkey);
         } else {
-            Err(SdjwtVerifierError::UnsupportedKeyType)
+            return Err(SdjwtVerifierError::UnsupportedKeyType)
         }
     }
+
+    let verification_req = VerificationRequirements::new(
+        route_criteria.presentation_required,
+        Some(issuer_pubkeys),
+    )?;
+    Ok(_RegistrationRequest::new(verification_req, None))
 }
 
 // Functions in the `impl` block has access to the state of the contract
