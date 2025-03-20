@@ -24,7 +24,7 @@ cw2 = "2.0.0"
 schemars = "0.8.16"
 serde = { version = "1.0.197", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.58" }
-sd-jwt-rs = { git = "https://github.com/nymlab/sd-jwt-rust", rev = "95799f578068406135cbabc767fcfaa2b8963d01", default-features = false, features = ["no_rand"]}
+sd-jwt-rs = { git = "https://github.com/nymlab/sd-jwt-rust", rev = "5fc046ce204dfc568b2d91b365534fee8e059e5b", default-features = false, features = ["no_rand"]}
 jsonwebtoken = { git = "https://github.com/nymlab/jsonwebtoken", rev = "98763b38713c54f", default-features = false, features = ["no_rand"] }
 serde_json = {version = "1.0.116", default-features = false, features = ["alloc"]}
 cw-utils = "2.0.0"

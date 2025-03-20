@@ -29,6 +29,52 @@ use jsonwebtoken::{
     jwk::{AlgorithmParameters, EllipticCurve, Jwk, OctetKeyPairParameters},
     DecodingKey,
 };
+use sd_jwt_rs::error::Error as SdJwtError;
+use sd_jwt_rs::utils::jwt_payload_decode;
+use sd_jwt_rs::{COMBINED_SERIALIZATION_FORMAT_SEPARATOR, JWT_SEPARATOR};
+
+fn parse_compact_sd_jwt(
+    sd_jwt_with_disclosures: String,
+) -> Result<serde_json::Map<String, Value>, SdJwtError> {
+    let parts: Vec<&str> = sd_jwt_with_disclosures
+        .split(COMBINED_SERIALIZATION_FORMAT_SEPARATOR)
+        .collect();
+    if parts.len() < 2 {
+        // minimal number of SD-JWT parts according to the standard
+        return Err(SdJwtError::InvalidInput(format!(
+            "Invalid SD-JWT length: {}",
+            parts.len()
+        )));
+    }
+    let idx = parts.len();
+    let mut parts = parts.into_iter();
+    let sd_jwt = parts.next().ok_or(SdJwtError::IndexOutOfBounds {
+        idx: 0,
+        length: parts.len(),
+        msg: format!("Invalid SD-JWT: {}", sd_jwt_with_disclosures),
+    })?;
+    parts.next_back().ok_or(SdJwtError::IndexOutOfBounds {
+        idx: idx - 1,
+        length: idx,
+        msg: format!(
+            "Invalid SD-JWT. Key binding not found: {}",
+            sd_jwt_with_disclosures
+        ),
+    })?;
+    let unverified_sd_jwt = Some(sd_jwt.to_owned());
+
+    let mut sd_jwt = sd_jwt.split(JWT_SEPARATOR);
+    sd_jwt.next();
+    let jwt_body = sd_jwt.next().ok_or(SdJwtError::IndexOutOfBounds {
+        idx: 1,
+        length: 3,
+        msg: format!(
+            "Invalid JWT: Cannot extract JWT payload: {}",
+            unverified_sd_jwt.to_owned().unwrap_or("".to_string())
+        ),
+    })?;
+    jwt_payload_decode(jwt_body)
+}
 
 // Execute message handlers
 pub fn handle_update_revocation_list(
@@ -269,18 +315,24 @@ pub fn _verify(
         SdjwtVerifierResultError::PresentationTooLarge
     );
 
-    // This is actually where we need to parse the compact jwt
-    // we should not wait until AFTER we get the `SDJWTVerifier` struct
-    // to parse the compact jwt
-    // psuedo code:
-    let iss = presentation
+    let compact_sdjwt = parse_compact_sd_jwt(
+        String::from_utf8(presentation.to_vec())
+            .map_err(|e| SdjwtVerifierResultError::StringConversion(e.to_string()))?,
+    ).map_err(|e| SdjwtVerifierResultError::SdJwt(e.to_string()))?;
+
+    
+    let iss = compact_sdjwt
         .get(ISS_KEY)
-        .ok_or(SdjwtVerifierResultError::IssuerNotFound)?;
+        .ok_or(SdjwtVerifierResultError::IssuerNotFound)?
+        .as_str()
+        .ok_or(SdjwtVerifierResultError::StringConversion("Iss is not a string".to_owned()))?;
 
     if let Some(pubkeys) = requirements.issuer_pubkeys {
-        if !pubkeys.contains_key(iss) {
+        let decoding_key = if let Some(pubkey) = pubkeys.get(iss) {
+            DecodingKey::from_jwk(pubkey).map_err(|e| SdjwtVerifierResultError::JwtError(e.to_string()))?
+        } else {
             return Err(SdjwtVerifierResultError::PubKeyNotFound);
-        }
+        };
 
         // We verify the presentation
         let sdjwt_verifier = SDJWTVerifier::new(
@@ -301,16 +353,16 @@ pub fn _verify(
             requirements.presentation_required
         };
 
-        let unverified_payload = sdjwt_verifier
-            .get_sdjwt_engine()
-            .get_unverified_input_sd_jwt_payload()
-            .ok_or(SdjwtVerifierResultError::SdJwt(
-                "unverified payload not found".to_string(),
-            ))?;
+        // let unverified_payload = sdjwt_verifier
+        //     .get_sdjwt_engine()
+        //     .get_unverified_input_sd_jwt_payload()
+        //     .ok_or(SdjwtVerifierResultError::SdJwt(
+        //         "unverified payload not found".to_string(),
+        //     ))?;
 
-        let issuer = unverified_payload
-            .get(ISS_KEY)
-            .ok_or(SdjwtVerifierResultError::IssuerNotFound)?;
+        // let issuer = unverified_payload
+        //     .get(ISS_KEY)
+        //     .ok_or(SdjwtVerifierResultError::IssuerNotFound)?;
 
         // We validate the verified claims against the requirements
         validate(
@@ -452,6 +504,7 @@ fn make_internal_registration_request(
     route_id: RouteId,
     route_criteria: RouteVerificationRequirements,
 ) -> Result<_RegistrationRequest, SdjwtVerifierError> {
+    
     if let Some(registry) = route_criteria.issuer_source_or_data.source {
         match registry {
             TrustRegistry::Cheqd => {
@@ -528,17 +581,17 @@ pub fn ibc_packet_ack_handler(
     PENDING_VERIFICATION_REQ_REQUESTS.remove(deps.storage, &resource_req_packet.to_string());
 
     // Checks the return data is the expected format
-    let pubkey: Jwk = from_json(resource.linked_resource.data)
+    let pubkeys: HashMap<String, Jwk> = from_json(resource.linked_resource.data)
         .map_err(|e| SdjwtVerifierError::ReturnedResourceFormat(e.to_string()))?;
 
     let mut req = APP_ROUTES_REQUIREMENTS
         .load(
             deps.storage,
-            (pending_route.app_addr, pending_route.route_id),
+            (pending_route.app_addr.clone(), pending_route.route_id),
         )
         .map_err(|_| SdjwtVerifierError::NoRequirementsForRoute)?;
 
-    req.issuer_pubkey = Some(pubkey);
+    req.issuer_pubkeys = Some(pubkeys);
 
     APP_ROUTES_REQUIREMENTS.save(
         deps.storage,
