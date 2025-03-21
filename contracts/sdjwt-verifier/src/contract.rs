@@ -51,7 +51,7 @@ pub fn execute(
 ) -> Result<Response, SdjwtVerifierError> {
     match msg {
         AvidaVerifierExecuteMsg::UpdateRevocationList { app_addr, request } => {
-            handle_update_revocation_list(deps, app_addr, request)
+            handle_update_revocation_list(deps, info, app_addr, request)
         }
         AvidaVerifierExecuteMsg::Register { app_addr, requests } => {
             handle_register(deps, env, info, app_addr, requests)

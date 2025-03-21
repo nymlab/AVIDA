@@ -34,6 +34,7 @@ use sd_jwt_rs::SDJWTCommon;
 // Execute message handlers
 pub fn handle_update_revocation_list(
     deps: DepsMut,
+    info: MessageInfo,
     app_addr: String,
     request: UpdateRevocationListRequest,
 ) -> Result<Response, SdjwtVerifierError> {
@@ -45,6 +46,16 @@ pub fn handle_update_revocation_list(
 
     let mut route_requirements =
         APP_ROUTES_REQUIREMENTS.load(deps.storage, (app_addr.clone(), route_id))?;
+
+    let valid_app_addr = deps.api.addr_validate(&app_addr)?;
+
+    let app_admin = APP_ADMINS
+        .load(deps.storage, valid_app_addr.as_str())
+        .map_err(|_| SdjwtVerifierError::AppIsNotRegistered)?;
+
+    if app_admin != info.sender {
+        return Err(SdjwtVerifierError::Unauthorised);
+    }
 
     route_requirements
         .presentation_required
