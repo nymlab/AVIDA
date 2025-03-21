@@ -2,8 +2,8 @@ use crate::{
     errors::{SdjwtVerifierError, SdjwtVerifierResultError},
     state::*,
     types::{
-        validate, Criterion, PendingRoute, PresentationReq, VerificationRequirements, VerifyResult,
-        _RegistrationRequest, IDX, ISS_KEY,
+        validate, Criterion, JwkInfo, PendingRoute, PresentationReq, VerificationRequirements,
+        VerifyResult, _RegistrationRequest, IDX, ISS_KEY,
     },
 };
 use avida_cheqd::{
@@ -29,52 +29,7 @@ use jsonwebtoken::{
     jwk::{AlgorithmParameters, EllipticCurve, Jwk, OctetKeyPairParameters},
     DecodingKey,
 };
-use sd_jwt_rs::error::Error as SdJwtError;
-use sd_jwt_rs::utils::jwt_payload_decode;
-use sd_jwt_rs::{COMBINED_SERIALIZATION_FORMAT_SEPARATOR, JWT_SEPARATOR};
-
-fn parse_compact_sd_jwt(
-    sd_jwt_with_disclosures: String,
-) -> Result<serde_json::Map<String, Value>, SdJwtError> {
-    let parts: Vec<&str> = sd_jwt_with_disclosures
-        .split(COMBINED_SERIALIZATION_FORMAT_SEPARATOR)
-        .collect();
-    if parts.len() < 2 {
-        // minimal number of SD-JWT parts according to the standard
-        return Err(SdJwtError::InvalidInput(format!(
-            "Invalid SD-JWT length: {}",
-            parts.len()
-        )));
-    }
-    let idx = parts.len();
-    let mut parts = parts.into_iter();
-    let sd_jwt = parts.next().ok_or(SdJwtError::IndexOutOfBounds {
-        idx: 0,
-        length: parts.len(),
-        msg: format!("Invalid SD-JWT: {}", sd_jwt_with_disclosures),
-    })?;
-    parts.next_back().ok_or(SdJwtError::IndexOutOfBounds {
-        idx: idx - 1,
-        length: idx,
-        msg: format!(
-            "Invalid SD-JWT. Key binding not found: {}",
-            sd_jwt_with_disclosures
-        ),
-    })?;
-    let unverified_sd_jwt = Some(sd_jwt.to_owned());
-
-    let mut sd_jwt = sd_jwt.split(JWT_SEPARATOR);
-    sd_jwt.next();
-    let jwt_body = sd_jwt.next().ok_or(SdJwtError::IndexOutOfBounds {
-        idx: 1,
-        length: 3,
-        msg: format!(
-            "Invalid JWT: Cannot extract JWT payload: {}",
-            unverified_sd_jwt.to_owned().unwrap_or("".to_string())
-        ),
-    })?;
-    jwt_payload_decode(jwt_body)
-}
+use sd_jwt_rs::SDJWTCommon;
 
 // Execute message handlers
 pub fn handle_update_revocation_list(
@@ -315,21 +270,28 @@ pub fn _verify(
         SdjwtVerifierResultError::PresentationTooLarge
     );
 
-    let compact_sdjwt = parse_compact_sd_jwt(
+    let mut common = SDJWTCommon::default();
+    common.parse_compact_sd_jwt(
         String::from_utf8(presentation.to_vec())
             .map_err(|e| SdjwtVerifierResultError::StringConversion(e.to_string()))?,
-    ).map_err(|e| SdjwtVerifierResultError::SdJwt(e.to_string()))?;
+    )?;
 
-    
-    let iss = compact_sdjwt
+    let payload = common
+        .unverified_input_sd_jwt_payload
+        .ok_or(SdjwtVerifierResultError::IssuerNotFound)?;
+
+    let iss = payload
         .get(ISS_KEY)
         .ok_or(SdjwtVerifierResultError::IssuerNotFound)?
         .as_str()
-        .ok_or(SdjwtVerifierResultError::StringConversion("Iss is not a string".to_owned()))?;
+        .ok_or(SdjwtVerifierResultError::StringConversion(
+            "Iss is not a string".to_owned(),
+        ))?;
 
     if let Some(pubkeys) = requirements.issuer_pubkeys {
         let decoding_key = if let Some(pubkey) = pubkeys.get(iss) {
-            DecodingKey::from_jwk(pubkey).map_err(|e| SdjwtVerifierResultError::JwtError(e.to_string()))?
+            DecodingKey::from_jwk(pubkey)
+                .map_err(|e| SdjwtVerifierResultError::JwtError(e.to_string()))?
         } else {
             return Err(SdjwtVerifierResultError::PubKeyNotFound);
         };
@@ -352,17 +314,6 @@ pub fn _verify(
         } else {
             requirements.presentation_required
         };
-
-        // let unverified_payload = sdjwt_verifier
-        //     .get_sdjwt_engine()
-        //     .get_unverified_input_sd_jwt_payload()
-        //     .ok_or(SdjwtVerifierResultError::SdJwt(
-        //         "unverified payload not found".to_string(),
-        //     ))?;
-
-        // let issuer = unverified_payload
-        //     .get(ISS_KEY)
-        //     .ok_or(SdjwtVerifierResultError::IssuerNotFound)?;
 
         // We validate the verified claims against the requirements
         validate(
@@ -411,7 +362,7 @@ pub fn _register(
         // Make a verification request for specified app addr and route id with a provided route criteria
         let _RegistrationRequest {
             verification_requirements,
-            ibc_msg,
+            ibc_msgs,
         } = make_internal_registration_request(storage, env, app_addr, route_id, requirements)?;
 
         // Save the registered trust data sources and route requirements
@@ -421,8 +372,8 @@ pub fn _register(
             &verification_requirements,
         )?;
 
-        if let Some(ibc_msg) = ibc_msg {
-            response = response.add_submessage(ibc_msg);
+        if let Some(ibc_msgs) = ibc_msgs {
+            response = response.add_submessages(ibc_msgs);
         }
     }
 
@@ -466,7 +417,7 @@ fn _update(
         // Make a verification request for specified app addr and route id with a provided route criteria
         let _RegistrationRequest {
             verification_requirements,
-            ibc_msg,
+            ibc_msgs,
         } = make_internal_registration_request(storage, env, app_addr, route_id, route_criteria)?;
 
         APP_ROUTES_REQUIREMENTS.save(
@@ -475,8 +426,8 @@ fn _update(
             &verification_requirements,
         )?;
 
-        if let Some(ibc_msg) = ibc_msg {
-            response = response.add_submessage(ibc_msg);
+        if let Some(ibc_msgs) = ibc_msgs {
+            response = response.add_submessages(ibc_msgs);
         }
 
         Ok(response)
@@ -504,28 +455,64 @@ fn make_internal_registration_request(
     route_id: RouteId,
     route_criteria: RouteVerificationRequirements,
 ) -> Result<_RegistrationRequest, SdjwtVerifierError> {
-    let mut issuer_pubkeys = HashMap::new();
+    let mut ibc_submsgs: Vec<SubMsg> = Vec::new();
+    let mut issuer_pubkeys: HashMap<String, Jwk> = HashMap::new();
 
-    for issuer_source_or_data in route_criteria.issuer_source_or_data {
-        let issuer_pubkey: Jwk = from_json(&issuer_source_or_data.data_or_location)?;
+    let mut vr = VerificationRequirements::new(route_criteria.presentation_required, None)?;
 
-        if let AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
-            curve: EllipticCurve::Ed25519,
-            ..
-        }) = issuer_pubkey.algorithm
-        {
+    for isd in route_criteria.issuer_source_or_data.iter() {
+        if let Some(registry) = &isd.source {
+            match registry {
+                // We query this data via IBC
+                TrustRegistry::Cheqd => {
+                    // For Cheqd, the data is in the ResourceReqPacket
+                    let resource_req_packat: ResourceReqPacket = from_json(&isd.data_or_location)?;
 
-            issuer_pubkeys.insert(app_addr.to_owned(), issuer_pubkey);
+                    let ibc_msg = SubMsg::new(CosmosMsg::Ibc(cosmwasm_std::IbcMsg::SendPacket {
+                        channel_id: CHANNEL_ID.load(storage)?,
+                        data: to_json_binary(&resource_req_packat)?,
+                        timeout: IbcTimeout::with_timestamp(get_timeout_timestamp(
+                            env,
+                            HOUR_PACKET_LIFETIME,
+                        )),
+                    }));
+
+                    PENDING_VERIFICATION_REQ_REQUESTS.save(
+                        storage,
+                        &resource_req_packat.to_string(),
+                        &PendingRoute {
+                            app_addr: app_addr.to_string(),
+                            route_id,
+                        },
+                    )?;
+
+                    ibc_submsgs.push(ibc_msg);
+                }
+            }
         } else {
-            return Err(SdjwtVerifierError::UnsupportedKeyType)
+            let issuer_pubkey_info: JwkInfo = from_json(&isd.data_or_location)?;
+            let pubkey: Jwk = from_json(&issuer_pubkey_info.jwk)?;
+
+            if let AlgorithmParameters::OctetKeyPair(OctetKeyPairParameters {
+                curve: EllipticCurve::Ed25519,
+                ..
+            }) = pubkey.algorithm
+            {
+                issuer_pubkeys.insert(issuer_pubkey_info.issuer, pubkey);
+            } else {
+                return Err(SdjwtVerifierError::UnsupportedKeyType);
+            }
         }
     }
 
-    let verification_req = VerificationRequirements::new(
-        route_criteria.presentation_required,
-        Some(issuer_pubkeys),
-    )?;
-    Ok(_RegistrationRequest::new(verification_req, None))
+    // Update vr with the latest issuer_pubkeys
+    vr.issuer_pubkeys = issuer_pubkeys.into();
+
+    if !ibc_submsgs.is_empty() {
+        Ok(_RegistrationRequest::new(vr, Some(ibc_submsgs)))
+    } else {
+        Ok(_RegistrationRequest::new(vr, None))
+    }
 }
 
 // Functions in the `impl` block has access to the state of the contract

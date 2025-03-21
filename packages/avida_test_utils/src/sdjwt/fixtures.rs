@@ -1,6 +1,8 @@
+use avida_sdjwt_verifier::types::JwkInfo;
 use avida_sdjwt_verifier::types::NumberCriterion;
 use avida_sdjwt_verifier::types::ReqAttr;
 use avida_sdjwt_verifier::types::IDX;
+use cosmwasm_std::to_json_binary;
 use cosmwasm_std::BlockInfo;
 use cw_utils::Expiration;
 use jsonwebtoken::EncodingKey;
@@ -176,12 +178,17 @@ pub fn make_route_verification_requirements(
         }
     };
 
+    let jwk_info = JwkInfo {
+        jwk: Binary::from(data_or_location.as_bytes()),
+        issuer: "issuer".to_string(),
+    };
+
     // Add some default criteria as presentation request
     RouteVerificationRequirements {
-        issuer_source_or_data: IssuerSourceOrData {
+        issuer_source_or_data: vec![IssuerSourceOrData {
             source: None,
-            data_or_location: Binary::from(data_or_location.as_bytes()),
-        },
+            data_or_location: to_json_binary(&jwk_info).unwrap(),
+        }],
         presentation_required: Some(Binary::from(re.as_bytes())),
     }
 }

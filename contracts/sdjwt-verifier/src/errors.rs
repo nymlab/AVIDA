@@ -1,6 +1,7 @@
 use avida_cheqd::ibc::ChannelError;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::StdError;
+use sd_jwt_rs::error::Error as SdJwtRsError;
 use serde_json::error::Error as SerdeJsonError;
 use thiserror::Error;
 
@@ -37,8 +38,16 @@ pub enum SdjwtVerifierResultError {
     PresentationExpired(cw_utils::Expiration),
     #[error("IDX revoked: {0}")]
     IdxRevoked(u64),
-    #[error("Issuer not found")]
+    #[error("Issuer not found in Payload")]
     IssuerNotFound,
+    #[error("SdJwtRsError: {0}")]
+    SdJwtRsError(String),
+}
+
+impl From<SdJwtRsError> for SdjwtVerifierResultError {
+    fn from(err: SdJwtRsError) -> SdjwtVerifierResultError {
+        SdjwtVerifierResultError::SdJwtRsError(err.to_string())
+    }
 }
 
 #[derive(Error, Debug)]

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Binary;
 use cw_storage_plus::Item;
@@ -49,8 +47,7 @@ pub struct IssuerSourceOrData {
     /// The data or location of the verification data at the trust registry
     /// For TrustRegistry::Cheqd, it is the `ResourceReqPacket` in avida-cheqd
     /// For data, the contracts should have the expected type
-    /// In Sdjwt-Verifier, this is expected to be jwk
-    //
+    /// In Sdjwt-Verifier, this is expected to be the JwkInfo struct
     pub data_or_location: Binary,
 }
 

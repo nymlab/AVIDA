@@ -18,6 +18,12 @@ pub const IDX: &str = "idx";
 pub const ISS_KEY: &str = "iss";
 
 #[cw_serde]
+pub struct JwkInfo {
+    pub jwk: Binary,
+    pub issuer: String,
+}
+
+#[cw_serde]
 pub struct VerifyResult {
     pub result: Result<Value, SdjwtVerifierResultError>,
 }
@@ -40,18 +46,18 @@ pub struct PendingRoute {
 /// 2. if issuer data is directly provided, it will validate the jwk
 pub(crate) struct _RegistrationRequest {
     pub verification_requirements: VerificationRequirements,
-    pub ibc_msg: Option<SubMsg>,
+    pub ibc_msgs: Option<Vec<SubMsg>>,
 }
 
 impl _RegistrationRequest {
     /// Create a new verification request
     pub fn new(
         verification_requirements: VerificationRequirements,
-        ibc_msg: Option<SubMsg>,
+        ibc_msgs: Option<Vec<SubMsg>>,
     ) -> Self {
         _RegistrationRequest {
             verification_requirements,
-            ibc_msg,
+            ibc_msgs,
         }
     }
 }
