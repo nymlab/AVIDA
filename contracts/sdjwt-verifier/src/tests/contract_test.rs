@@ -1,9 +1,8 @@
-use avida_common::types::RouteVerificationRequirements;
 use cosmwasm_std::{from_json, to_json_binary, Binary};
 use cw_multi_test::{App, Executor};
 
 use crate::errors::SdjwtVerifierResultError;
-use crate::types::{Criterion, PresentationReq, ReqAttr, VerifyResult};
+use crate::types::{Criterion, ReqAttr, VerificationRequirements, VerifyResult};
 use serde::{Deserialize, Serialize};
 
 use super::fixtures::instantiate_verifier_contract;
@@ -51,7 +50,7 @@ fn test_update_revocation_list() {
     )
     .unwrap();
 
-    let req: RouteVerificationRequirements = app
+    let req: VerificationRequirements = app
         .wrap()
         .query_wasm_smart(
             contract_addr.clone(),
@@ -62,13 +61,12 @@ fn test_update_revocation_list() {
         )
         .unwrap();
 
-    let presentation_required: PresentationReq =
-        from_json(req.presentation_required.unwrap()).unwrap();
-
-    let revocation_list = presentation_required
+    let revocation_list = req
+        .presentation_required
         .iter()
         .find(|req| req.attribute == "idx")
         .unwrap();
+
     assert_eq!(revocation_list.criterion, Criterion::NotContainedIn(vec![]));
 
     // Update revocation list
@@ -88,7 +86,7 @@ fn test_update_revocation_list() {
     )
     .unwrap();
 
-    let req: RouteVerificationRequirements = app
+    let req: VerificationRequirements = app
         .wrap()
         .query_wasm_smart(
             contract_addr.clone(),
@@ -99,10 +97,8 @@ fn test_update_revocation_list() {
         )
         .unwrap();
 
-    let presentation_required: PresentationReq =
-        from_json(req.presentation_required.unwrap()).unwrap();
-
-    let revocation_list = presentation_required
+    let revocation_list = req
+        .presentation_required
         .iter()
         .find(|req| req.attribute == "idx")
         .unwrap();
@@ -128,7 +124,7 @@ fn test_update_revocation_list() {
     )
     .unwrap();
 
-    let req: RouteVerificationRequirements = app
+    let req: VerificationRequirements = app
         .wrap()
         .query_wasm_smart(
             contract_addr,
@@ -139,10 +135,8 @@ fn test_update_revocation_list() {
         )
         .unwrap();
 
-    let presentation_required: PresentationReq =
-        from_json(req.presentation_required.unwrap()).unwrap();
-
-    let revocation_list = presentation_required
+    let revocation_list = req
+        .presentation_required
         .iter()
         .find(|req| req.attribute == "idx")
         .unwrap();
