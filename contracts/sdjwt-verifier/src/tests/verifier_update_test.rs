@@ -1,17 +1,23 @@
-use cosmwasm_std::Binary;
+use cosmwasm_std::{to_json_binary, Binary};
 use cw_multi_test::{App, Executor};
 
-use crate::errors::SdjwtVerifierError;
-use avida_common::types::RegisterRouteRequest;
+use crate::{
+    errors::SdjwtVerifierError,
+    types::{Criterion, JwkInfo, ReqAttr, CW_EXPIRATION},
+};
+use avida_common::types::{
+    AvidaVerifierExecuteMsg, IssuerSourceOrData, RegisterRouteRequest,
+    RouteVerificationRequirements,
+};
 use serde::{Deserialize, Serialize};
 
 use super::fixtures::default_instantiate_verifier_contract;
 use crate::msg::QueryMsg;
-use avida_common::types::AvidaVerifierExecuteMsg;
 use avida_test_utils::sdjwt::fixtures::{
     get_default_presentation_required, get_input_route_requirement,
-    get_two_input_routes_requirements, make_route_verification_requirements, ExpirationCheck,
-    KeyType, OWNER_ADDR, SECOND_CALLER_APP_ADDR, SECOND_ROUTE_ID,
+    get_two_input_routes_requirements, issuer_jwk, make_route_verification_requirements,
+    ExpirationCheck, KeyType, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID, OWNER_ADDR,
+    SECOND_CALLER_APP_ADDR, SECOND_ROUTE_ID,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -21,43 +27,71 @@ pub struct Claims {
 }
 
 #[test]
-fn update_adding_and_remove_extra_route() {
+fn update_adding_new_jwk() {
     let mut app = App::default();
 
     // Instantiate verifier contract with some predefined parameters
     let (contract_addr, _) = default_instantiate_verifier_contract(&mut app);
+    let app_admin = app.api().addr_make(FIRST_CALLER_APP_ADDR);
+    let default_issuer = "issuer";
+    let new_jwk_issuer = "new-jwk-issuer";
 
-    // Get input verification requirements for 2 routes
-    let two_routes_verification_req = get_two_input_routes_requirements();
-    let second_caller_app_addr = app.api().addr_make(SECOND_CALLER_APP_ADDR);
+    // Get existing route pubkeys
+    let existing_registered_req = app
+        .wrap()
+        .query_wasm_smart::<crate::types::VerificationRequirements>(
+            contract_addr.clone(),
+            &QueryMsg::GetRouteRequirements {
+                app_addr: app_admin.to_string(),
+                route_id: FIRST_ROUTE_ID,
+            },
+        )
+        .unwrap();
 
-    let owner = app.api().addr_make(OWNER_ADDR);
+    let pks = existing_registered_req.issuer_pubkeys.unwrap();
+    assert!(pks.len() == 1);
+    assert!(pks.contains_key("issuer"));
+    let jwk = pks.get("issuer").unwrap();
+    let data_or_location = serde_json::to_string(&jwk).unwrap();
+    // Transform the first one back into the right format
+    let existing_jwk_info = JwkInfo {
+        jwk: Binary::from(data_or_location.as_bytes()),
+        issuer: default_issuer.to_string(),
+    };
 
-    // Register the app with the two routes
-    app.execute_contract(
-        owner.clone(),
-        contract_addr.clone(),
-        &AvidaVerifierExecuteMsg::Register {
-            app_addr: second_caller_app_addr.to_string(),
-            requests: two_routes_verification_req,
-        },
-        &[],
-    )
-    .unwrap();
+    // Create the second pubkey
+    let data_or_location = serde_json::to_string(&issuer_jwk()).unwrap();
+    let new_jwk_info = JwkInfo {
+        jwk: Binary::from(data_or_location.as_bytes()),
+        issuer: new_jwk_issuer.to_string(),
+    };
 
-    // Get route verification requirements for a single route
-    let updated_req = get_default_presentation_required(ExpirationCheck::Expires);
-    let updated_route_verification_req =
-        make_route_verification_requirements(updated_req, KeyType::Ed25519);
+    let rvr = RouteVerificationRequirements {
+        issuer_source_or_data: vec![
+            IssuerSourceOrData {
+                source: None,
+                data_or_location: to_json_binary(&new_jwk_info).unwrap(),
+            },
+            IssuerSourceOrData {
+                source: None,
+                data_or_location: to_json_binary(&existing_jwk_info).unwrap(),
+            },
+        ],
+        presentation_required: Some(Binary::from(
+            serde_json::to_string(&existing_registered_req.presentation_required)
+                .unwrap()
+                .as_bytes(),
+        )),
+    };
 
     // Update the route verification requirements
     app.execute_contract(
-        owner.clone(),
+        app_admin.clone(),
         contract_addr.clone(),
         &AvidaVerifierExecuteMsg::Update {
-            app_addr: second_caller_app_addr.to_string(),
-            route_id: SECOND_ROUTE_ID,
-            route_criteria: Some(updated_route_verification_req.clone()),
+            app_addr: app_admin.to_string(),
+            route_id: FIRST_ROUTE_ID,
+            route_criteria: Some(rvr),
         },
         &[],
     )
@@ -69,38 +103,16 @@ fn update_adding_and_remove_extra_route() {
         .query_wasm_smart::<crate::types::VerificationRequirements>(
             contract_addr.clone(),
             &QueryMsg::GetRouteRequirements {
-                app_addr: second_caller_app_addr.to_string(),
-                route_id: SECOND_ROUTE_ID,
+                app_addr: app_admin.to_string(),
+                route_id: FIRST_ROUTE_ID,
             },
         )
         .unwrap();
 
     let pks = updated_registered_req.issuer_pubkeys.unwrap();
-
-    // Remove route requirements
-    app.execute_contract(
-        owner,
-        contract_addr.clone(),
-        &AvidaVerifierExecuteMsg::Update {
-            app_addr: second_caller_app_addr.to_string(),
-            route_id: SECOND_ROUTE_ID,
-            route_criteria: None,
-        },
-        &[],
-    )
-    .unwrap();
-
-    // Verify route requirements are removed
-    assert!(app
-        .wrap()
-        .query_wasm_smart::<crate::types::VerificationRequirements>(
-            contract_addr,
-            &QueryMsg::GetRouteRequirements {
-                app_addr: second_caller_app_addr.to_string(),
-                route_id: SECOND_ROUTE_ID,
-            },
-        )
-        .is_err());
+    assert!(pks.len() == 2);
+    assert!(pks.contains_key("issuer"));
+    assert!(pks.contains_key("new-jwk-issuer"));
 }
 
 #[test]
@@ -293,4 +305,98 @@ fn update_unsupported_key_type() {
         err.downcast().unwrap(),
         SdjwtVerifierError::UnsupportedKeyType
     ));
+}
+
+#[test]
+fn update_adding_and_remove_extra_route() {
+    let mut app = App::default();
+
+    // Instantiate verifier contract with some predefined parameters
+    let (contract_addr, _) = default_instantiate_verifier_contract(&mut app);
+
+    // Get input verification requirements for 2 routes
+    let two_routes_verification_req = get_two_input_routes_requirements();
+    let second_caller_app_addr = app.api().addr_make(SECOND_CALLER_APP_ADDR);
+
+    let owner = app.api().addr_make(OWNER_ADDR);
+
+    // Register the app with the two routes
+    app.execute_contract(
+        owner.clone(),
+        contract_addr.clone(),
+        &AvidaVerifierExecuteMsg::Register {
+            app_addr: second_caller_app_addr.to_string(),
+            requests: two_routes_verification_req.clone(),
+        },
+        &[],
+    )
+    .unwrap();
+
+    // Get route verification requirements for a single route
+    let updated_req = get_default_presentation_required(ExpirationCheck::Expires);
+    let updated_route_verification_req =
+        make_route_verification_requirements(updated_req, KeyType::Ed25519);
+
+    // Update the route verification requirements
+    app.execute_contract(
+        owner.clone(),
+        contract_addr.clone(),
+        &AvidaVerifierExecuteMsg::Update {
+            app_addr: second_caller_app_addr.to_string(),
+            route_id: SECOND_ROUTE_ID,
+            route_criteria: Some(updated_route_verification_req.clone()),
+        },
+        &[],
+    )
+    .unwrap();
+
+    // Ensure that the route verification requirements are updated
+    let updated_registered_req = app
+        .wrap()
+        .query_wasm_smart::<crate::types::VerificationRequirements>(
+            contract_addr.clone(),
+            &QueryMsg::GetRouteRequirements {
+                app_addr: second_caller_app_addr.to_string(),
+                route_id: SECOND_ROUTE_ID,
+            },
+        )
+        .unwrap();
+
+    let exp = updated_registered_req
+        .presentation_required
+        .iter()
+        .find(|attr| {
+            **attr
+                == ReqAttr {
+                    attribute: CW_EXPIRATION.to_string(),
+                    criterion: Criterion::Expires(true),
+                }
+        });
+
+    assert!(exp.is_some());
+
+    // Remove route requirements
+    app.execute_contract(
+        owner,
+        contract_addr.clone(),
+        &AvidaVerifierExecuteMsg::Update {
+            app_addr: second_caller_app_addr.to_string(),
+            route_id: SECOND_ROUTE_ID,
+            route_criteria: None,
+        },
+        &[],
+    )
+    .unwrap();
+
+    // Verify route requirements are removed
+    assert!(app
+        .wrap()
+        .query_wasm_smart::<crate::types::VerificationRequirements>(
+            contract_addr,
+            &QueryMsg::GetRouteRequirements {
+                app_addr: second_caller_app_addr.to_string(),
+                route_id: SECOND_ROUTE_ID,
+            },
+        )
+        .is_err());
 }
