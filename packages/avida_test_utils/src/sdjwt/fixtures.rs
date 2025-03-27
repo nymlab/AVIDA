@@ -47,9 +47,9 @@ pub enum ExpirationCheck {
 }
 
 /// This is used to test different cases for route verification requirements
-pub enum RouteVerificationRequirementsType {
-    Supported,
-    UnsupportedKeyType,
+pub enum KeyType {
+    Ed25519,
+    RSA,
 }
 
 /// This is used to test different cases for presentation verification
@@ -166,16 +166,12 @@ pub fn make_presentation(
 /// Is used to get route verification requirements
 pub fn make_route_verification_requirements(
     presentation_req: PresentationReq,
-    route_verification_requirements_type: RouteVerificationRequirementsType,
+    keytype: KeyType,
 ) -> RouteVerificationRequirements {
     let re = serde_json::to_string(&presentation_req).unwrap();
-    let data_or_location = match route_verification_requirements_type {
-        RouteVerificationRequirementsType::Supported => {
-            serde_json::to_string(&issuer_jwk()).unwrap()
-        }
-        RouteVerificationRequirementsType::UnsupportedKeyType => {
-            serde_json::to_string(&rsa_issuer_jwk()).unwrap()
-        }
+    let data_or_location = match keytype {
+        KeyType::Ed25519 => serde_json::to_string(&issuer_jwk()).unwrap(),
+        KeyType::RSA => serde_json::to_string(&rsa_issuer_jwk()).unwrap(),
     };
 
     let jwk_info = JwkInfo {
@@ -203,7 +199,7 @@ pub fn get_route_requirement_with_empty_revocation_list(route_id: u64) -> Regist
         route_id,
         requirements: make_route_verification_requirements(
             first_presentation_req,
-            RouteVerificationRequirementsType::Supported,
+            KeyType::Ed25519,
         ),
     }
 }
@@ -246,32 +242,26 @@ pub fn get_two_input_routes_requirements() -> Vec<RegisterRouteRequest> {
         },
     ];
 
-    let pretty_json = serde_json::to_string(&first_presentation_req).unwrap();
-    println!("reg {:?}", pretty_json);
-
     vec![
         RegisterRouteRequest {
             route_id: SECOND_ROUTE_ID,
             requirements: make_route_verification_requirements(
                 first_presentation_req,
-                RouteVerificationRequirementsType::Supported,
+                KeyType::Ed25519,
             ),
         },
         RegisterRouteRequest {
             route_id: THIRD_ROUTE_ID,
             requirements: make_route_verification_requirements(
                 second_presentation_req,
-                RouteVerificationRequirementsType::Supported,
+                KeyType::Ed25519,
             ),
         },
     ]
 }
 
 /// Is used to get route verification requirements for a single route
-pub fn get_route_verification_requirement(
-    expiration_check: ExpirationCheck,
-    route_verification_requirements_type: RouteVerificationRequirementsType,
-) -> RouteVerificationRequirements {
+pub fn get_default_presentation_required(expiration_check: ExpirationCheck) -> PresentationReq {
     let mut presentation_req: PresentationReq = vec![
         ReqAttr {
             attribute: "age".to_string(),
@@ -299,13 +289,11 @@ pub fn get_route_verification_requirement(
         ))
     };
 
-    make_route_verification_requirements(presentation_req, route_verification_requirements_type)
+    presentation_req
 }
 
 /// Is used to get route verification requirements for a single route
-pub fn get_input_route_requirement(
-    route_verification_requirements_type: RouteVerificationRequirementsType,
-) -> RegisterRouteRequest {
+pub fn get_input_route_requirement(key_type: KeyType) -> RegisterRouteRequest {
     let presentation_req: PresentationReq = vec![
         ReqAttr {
             attribute: "age".to_string(),
@@ -328,10 +316,7 @@ pub fn get_input_route_requirement(
     ];
     RegisterRouteRequest {
         route_id: SECOND_ROUTE_ID,
-        requirements: make_route_verification_requirements(
-            presentation_req,
-            route_verification_requirements_type,
-        ),
+        requirements: make_route_verification_requirements(presentation_req, key_type),
     }
 }
 
