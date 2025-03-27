@@ -36,3 +36,4 @@ sd-jwt-rs = "0.7.0"
 jsonwebtoken = { version="9.3.0", features=["use_pem"]}
 avida-test-utils = { path = "../../packages/avida_test_utils/", features = ["sdjwt"]}
 cw-multi-test = {version = "2", features = ["staking", "stargate", "cosmwasm_2_1"]}
+serde = { workspace = true }

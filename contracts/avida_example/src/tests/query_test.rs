@@ -4,11 +4,12 @@ use crate::msg::QueryMsg;
 use crate::tests::fixtures::setup_requirement;
 use crate::types::RegisterRequirement;
 use crate::{tests::fixtures::instantiate_contracts, types::GetVerifierResponse};
-use avida_common::types::RouteVerificationRequirements;
 use avida_sdjwt_verifier::msg::QueryMsg as VerifierQueryMsg;
+use avida_sdjwt_verifier::types::{JwkInfo, VerificationRequirements};
 use avida_test_utils::sdjwt::fixtures::OWNER_ADDR;
-use cosmwasm_std::Addr;
+use cosmwasm_std::{from_json, to_json_binary, Addr};
 use cw_multi_test::{App, Executor};
+use josekit::jwk::Jwk;
 #[test]
 fn get_verifier() {
     let mut app = App::default();
@@ -47,7 +48,7 @@ fn get_route_requirements() {
     .unwrap();
 
     // Query route requirements
-    let requirements: RouteVerificationRequirements = app
+    let requirements: VerificationRequirements = app
         .wrap()
         .query_wasm_smart(
             verifier_addr,
@@ -58,6 +59,26 @@ fn get_route_requirements() {
         )
         .unwrap();
 
-    // Verify the requirements match what we registered
-    assert_eq!(requirements, fx_route_verification_req);
+    let mut registered_pubkeys: Vec<JwkInfo> = requirements
+        .issuer_pubkeys
+        .unwrap_or_default() // Handle the Option, default to empty HashMap if None
+        .into_iter()
+        .map(|(iss, key)| JwkInfo {
+            issuer: iss,
+            jwk: to_json_binary(&key).unwrap(),
+        })
+        .collect();
+
+    let mut expected_pub_keys: Vec<JwkInfo> = fx_route_verification_req
+        .issuer_source_or_data
+        .into_iter()
+        .map(|isd| from_json::<JwkInfo>(isd.data_or_location).unwrap()) // Consider error handling
+        .collect();
+
+    assert_eq!(expected_pub_keys.len(), registered_pubkeys.len());
+
+    // Pop and deserialize for comparison
+    let reg_jwk: Jwk = from_json(&registered_pubkeys.pop().unwrap().jwk).unwrap();
+    let exp_jwk: Jwk = from_json(&expected_pub_keys.pop().unwrap().jwk).unwrap();
+    assert_eq!(reg_jwk, exp_jwk);
 }

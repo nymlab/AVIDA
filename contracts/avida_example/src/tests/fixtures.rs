@@ -4,7 +4,7 @@ use avida_sdjwt_verifier::types::{
 };
 use avida_test_utils::sdjwt::fixtures::{
     claims, get_default_block_info, make_presentation, make_route_verification_requirements,
-    PresentationVerificationType, RouteVerificationRequirementsType,
+    KeyType, PresentationVerificationType,
 };
 
 use crate::contract;
@@ -46,10 +46,7 @@ pub fn setup_requirement(order: &str) -> RouteVerificationRequirements {
         "food" => vec![],
         _ => vec![],
     };
-    make_route_verification_requirements(
-        presentation_req,
-        RouteVerificationRequirementsType::Supported,
-    )
+    make_route_verification_requirements(presentation_req, KeyType::Ed25519)
 }
 
 pub fn setup_requirement_with_expiration() -> RouteVerificationRequirements {
@@ -68,10 +65,7 @@ pub fn setup_requirement_with_expiration() -> RouteVerificationRequirements {
         },
     ];
 
-    make_route_verification_requirements(
-        presentation_req,
-        RouteVerificationRequirementsType::Supported,
-    )
+    make_route_verification_requirements(presentation_req, KeyType::Ed25519)
 }
 
 pub fn verifier_contract() -> Box<dyn Contract<Empty>> {

@@ -1,6 +1,6 @@
 use avida_test_utils::sdjwt::fixtures::{
-    get_route_verification_requirement, ExpirationCheck, RouteVerificationRequirementsType,
-    FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID, MAX_PRESENTATION_LEN, OWNER_ADDR,
+    get_default_presentation_required, make_route_verification_requirements, ExpirationCheck,
+    KeyType, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID, MAX_PRESENTATION_LEN, OWNER_ADDR,
     VERIFIER_CONTRACT_LABEL,
 };
 
@@ -22,21 +22,17 @@ fn notarised_odp_contract() -> Box<dyn Contract<Empty>> {
 }
 
 /// Is used to instantiate verifier contract with some predefined parameters
-pub fn instantiate_verifier_contract(
+pub fn default_instantiate_verifier_contract(
     app: &mut MtApp,
-    route_verification_requirements_type: RouteVerificationRequirementsType,
 ) -> (Addr, RouteVerificationRequirements) {
-    let fx_route_verification_req = get_route_verification_requirement(
-        ExpirationCheck::NoExpiry,
-        route_verification_requirements_type,
-    );
+    let presentation_required = get_default_presentation_required(ExpirationCheck::NoExpiry);
+
+    let fx_route_verification_req =
+        make_route_verification_requirements(presentation_required, KeyType::Ed25519);
 
     let contract = notarised_odp_contract();
     let code_id = app.store_code(contract);
     let first_caller_app_addr = app.api().addr_make(FIRST_CALLER_APP_ADDR);
-    // String, // Admin
-    // String, // App Addr
-    // Vec<(RouteId, RouteVerificationRequirements)>,
     let init_registrations = vec![InitRegistration {
         app_admin: first_caller_app_addr.to_string(),
         app_addr: first_caller_app_addr.to_string(),

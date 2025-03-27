@@ -1,5 +1,4 @@
 use super::errors::{SdjwtVerifierError, SdjwtVerifierResultError};
-
 use avida_common::types::RegisterRouteRequest;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{from_json, Binary, BlockInfo, SubMsg};
@@ -7,12 +6,22 @@ use cw_utils::Expiration;
 use jsonwebtoken::jwk::Jwk;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 
 /// This is the key to be used in claims that specifies expiration using `cw_util::Expiration`
 pub const CW_EXPIRATION: &str = "cw_exp";
 
 /// This is the  key to be used in revocation_list in Criterion::NotContainedIn(revocation_list)
 pub const IDX: &str = "idx";
+
+// This is the key to be used in claims that specifies the issuer of the JWT
+pub const ISS_KEY: &str = "iss";
+
+#[cw_serde]
+pub struct JwkInfo {
+    pub jwk: Binary,
+    pub issuer: String,
+}
 
 #[cw_serde]
 pub struct VerifyResult {
@@ -37,18 +46,18 @@ pub struct PendingRoute {
 /// 2. if issuer data is directly provided, it will validate the jwk
 pub(crate) struct _RegistrationRequest {
     pub verification_requirements: VerificationRequirements,
-    pub ibc_msg: Option<SubMsg>,
+    pub ibc_msgs: Option<Vec<SubMsg>>,
 }
 
 impl _RegistrationRequest {
     /// Create a new verification request
     pub fn new(
         verification_requirements: VerificationRequirements,
-        ibc_msg: Option<SubMsg>,
+        ibc_msgs: Option<Vec<SubMsg>>,
     ) -> Self {
         _RegistrationRequest {
             verification_requirements,
-            ibc_msg,
+            ibc_msgs,
         }
     }
 }
@@ -79,20 +88,21 @@ pub struct VerificationRequirements {
     /// it is sent from presentation_request in the `RouteVerificationRequirements`
     pub presentation_required: PresentationReq,
     /// Usig this type as it is ser/deserializable
-    pub issuer_pubkey: Option<Jwk>,
+    // use the `iss` value here as the key of the map
+    pub issuer_pubkeys: Option<HashMap<String, Jwk>>,
 }
 
 impl VerificationRequirements {
     pub fn new(
         presentation_request: Option<Binary>,
-        issuer_pubkey: Option<Jwk>,
+        issuer_pubkeys: Option<HashMap<String, Jwk>>,
     ) -> Result<Self, SdjwtVerifierError> {
         Ok(VerificationRequirements {
             presentation_required: match presentation_request {
                 Some(binary) => from_json(&binary)?,
                 None => vec![],
             },
-            issuer_pubkey,
+            issuer_pubkeys,
         })
     }
 }

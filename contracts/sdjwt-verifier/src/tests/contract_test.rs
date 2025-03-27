@@ -1,19 +1,17 @@
-use avida_common::types::RouteVerificationRequirements;
 use cosmwasm_std::{from_json, to_json_binary, Binary};
 use cw_multi_test::{App, Executor};
 
 use crate::errors::SdjwtVerifierResultError;
-use crate::types::{Criterion, PresentationReq, ReqAttr, VerifyResult};
+use crate::types::{Criterion, ReqAttr, VerificationRequirements, VerifyResult};
 use serde::{Deserialize, Serialize};
 
-use super::fixtures::instantiate_verifier_contract;
+use super::fixtures::default_instantiate_verifier_contract;
 use crate::msg::QueryMsg;
 use avida_common::types::AvidaVerifierExecuteMsg;
 use avida_common::types::UpdateRevocationListRequest;
 use avida_test_utils::sdjwt::fixtures::{
     claims_with_revocation_idx, get_route_requirement_with_empty_revocation_list,
-    make_presentation, PresentationVerificationType, RouteVerificationRequirementsType,
-    FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID,
+    make_presentation, PresentationVerificationType, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -28,8 +26,7 @@ const REVOCATION_TEST_CALLER: &str = "revocation_test_caller";
 fn test_update_revocation_list() {
     let mut app = App::default();
 
-    let (contract_addr, _) =
-        instantiate_verifier_contract(&mut app, RouteVerificationRequirementsType::Supported);
+    let (contract_addr, _) = default_instantiate_verifier_contract(&mut app);
 
     // Get route verification requirements for a single route with expiration
     let route_verification_req =
@@ -51,7 +48,7 @@ fn test_update_revocation_list() {
     )
     .unwrap();
 
-    let req: RouteVerificationRequirements = app
+    let req: VerificationRequirements = app
         .wrap()
         .query_wasm_smart(
             contract_addr.clone(),
@@ -62,13 +59,12 @@ fn test_update_revocation_list() {
         )
         .unwrap();
 
-    let presentation_required: PresentationReq =
-        from_json(req.presentation_required.unwrap()).unwrap();
-
-    let revocation_list = presentation_required
+    let revocation_list = req
+        .presentation_required
         .iter()
         .find(|req| req.attribute == "idx")
         .unwrap();
+
     assert_eq!(revocation_list.criterion, Criterion::NotContainedIn(vec![]));
 
     // Update revocation list
@@ -88,7 +84,7 @@ fn test_update_revocation_list() {
     )
     .unwrap();
 
-    let req: RouteVerificationRequirements = app
+    let req: VerificationRequirements = app
         .wrap()
         .query_wasm_smart(
             contract_addr.clone(),
@@ -99,10 +95,8 @@ fn test_update_revocation_list() {
         )
         .unwrap();
 
-    let presentation_required: PresentationReq =
-        from_json(req.presentation_required.unwrap()).unwrap();
-
-    let revocation_list = presentation_required
+    let revocation_list = req
+        .presentation_required
         .iter()
         .find(|req| req.attribute == "idx")
         .unwrap();
@@ -128,7 +122,7 @@ fn test_update_revocation_list() {
     )
     .unwrap();
 
-    let req: RouteVerificationRequirements = app
+    let req: VerificationRequirements = app
         .wrap()
         .query_wasm_smart(
             contract_addr,
@@ -139,10 +133,8 @@ fn test_update_revocation_list() {
         )
         .unwrap();
 
-    let presentation_required: PresentationReq =
-        from_json(req.presentation_required.unwrap()).unwrap();
-
-    let revocation_list = presentation_required
+    let revocation_list = req
+        .presentation_required
         .iter()
         .find(|req| req.attribute == "idx")
         .unwrap();
@@ -160,8 +152,7 @@ fn test_revoked_presentation_cannot_be_used() {
     let mut app = App::default();
 
     // Instantiate verifier contract with some predefined parameters
-    let (contract_addr, _) =
-        instantiate_verifier_contract(&mut app, RouteVerificationRequirementsType::Supported);
+    let (contract_addr, _) = default_instantiate_verifier_contract(&mut app);
 
     // Get route verification requirements for a single route with expiration
     let route_verification_req =
@@ -257,8 +248,7 @@ fn test_addition_requirements_with_revocation_list() {
 
     // Instantiate verifier contract with some predefined parameters
     // By default there is no revocation list
-    let (contract_addr, _) =
-        instantiate_verifier_contract(&mut app, RouteVerificationRequirementsType::Supported);
+    let (contract_addr, _) = default_instantiate_verifier_contract(&mut app);
 
     // Now we create additional requirements for the route
     let addition_requirement = vec![ReqAttr {
