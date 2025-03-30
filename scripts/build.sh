@@ -1,10 +1,10 @@
 #!/bin/bash
 
-OS="`uname -p`"
+OS="`uname -m`"
 
 echo "Building for arch = $OS"
 
-if [ $OS = 'arm' ]; then
+if [ $OS = 'arm64' ]; then
   OPTIMIZER="ghcr.io/nymlab/optimizer-arm64:0.15.1-clang"
 elif [ $OS = 'x86_64' ]; then
   OPTIMIZER="ghcr.io/nymlab/rust-optimizer:39077c998b881011f3db2cb5c1dbe9904e6be8f1"
