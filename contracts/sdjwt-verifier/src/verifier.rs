@@ -54,7 +54,10 @@ pub fn handle_update_revocation_list(
         .map_err(|_| SdjwtVerifierError::AppIsNotRegistered)?;
 
     if app_admin != info.sender {
-        return Err(SdjwtVerifierError::Unauthorised);
+        return Err(SdjwtVerifierError::Unauthorised(
+            app_admin.to_string(),
+            info.sender.to_string(),
+        ));
     }
 
     route_requirements
@@ -147,7 +150,10 @@ pub fn handle_update(
         .map_err(|_| SdjwtVerifierError::AppIsNotRegistered)?;
 
     if app_admin != info.sender {
-        return Err(SdjwtVerifierError::Unauthorised);
+        return Err(SdjwtVerifierError::Unauthorised(
+            app_admin.to_string(),
+            info.sender.to_string(),
+        ));
     }
 
     _update(
@@ -177,7 +183,10 @@ pub fn handle_deregister(
     let app_admin = APP_ADMINS.load(deps.storage, app_addr.as_str())?;
 
     if app_admin != info.sender {
-        return Err(SdjwtVerifierError::Unauthorised);
+        return Err(SdjwtVerifierError::Unauthorised(
+            app_admin.to_string(),
+            info.sender.to_string(),
+        ));
     }
 
     _deregister(deps.storage, app_addr.as_str())
