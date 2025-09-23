@@ -52,7 +52,7 @@ fn verify_success_no_exp_validate_success() {
     )
     .unwrap();
 
-    assert!(res.result.is_ok());
+    assert!(res.success);
 }
 
 #[test]
@@ -117,7 +117,7 @@ fn verify_success_exp_validate_success() {
     )
     .unwrap();
 
-    assert!(res.result.is_ok());
+    assert!(res.success);
 
     // Make a presentation with some claims with block height
     let valid_blockheigh_claims = claims(
@@ -153,7 +153,7 @@ fn verify_success_exp_validate_success() {
     )
     .unwrap();
 
-    assert!(res.result.is_ok());
+    assert!(res.success);
 }
 
 #[test]
@@ -212,7 +212,7 @@ fn verify_failed_on_expired_claim() {
     .unwrap();
 
     assert_eq!(
-        res.result.unwrap_err(),
+        res.error.unwrap(),
         SdjwtVerifierResultError::PresentationExpired(exp)
     );
 
@@ -244,7 +244,7 @@ fn verify_failed_on_expired_claim() {
     .unwrap();
 
     assert_eq!(
-        res.result.unwrap_err(),
+        res.error.unwrap(),
         SdjwtVerifierResultError::PresentationExpired(exp)
     );
 }
@@ -304,5 +304,5 @@ fn verify_success_on_no_expiration_check_for_expired_claims() {
     )
     .unwrap();
 
-    assert!(res.result.is_ok());
+    assert!(res.success);
 }

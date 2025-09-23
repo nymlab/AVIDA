@@ -10,8 +10,8 @@ keywords = { workspace = true }
 crate-type = ["cdylib", "rlib"]
 
 [features]
-# for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
+# backtraces feature removed in CosmWasm 3.0
+# for more explicit tests, cargo test --features=backtraces (no longer available)
 # use library feature to disable all instantiate/execute/query exports
 library = []
 

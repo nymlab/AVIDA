@@ -219,7 +219,8 @@ fn test_revoked_presentation_cannot_be_used() {
         )
         .unwrap();
     let verify_res: VerifyResult = from_json(res.data.unwrap()).unwrap();
-    let err = verify_res.result.unwrap_err();
+    assert!(!verify_res.success);
+    let err = verify_res.error.unwrap();
 
     assert_eq!(err, SdjwtVerifierResultError::IdxRevoked(revoked_idx));
 
@@ -237,7 +238,7 @@ fn test_revoked_presentation_cannot_be_used() {
     )
     .unwrap();
 
-    assert!(res.result.is_ok());
+    assert!(res.success);
 }
 
 #[test]
@@ -283,7 +284,8 @@ fn test_addition_requirements_with_revocation_list() {
         .unwrap(),
     )
     .unwrap();
-    let err = res.result.unwrap_err();
+    assert!(!res.success);
+    let err = res.error.unwrap();
     assert_eq!(err, SdjwtVerifierResultError::IdxRevoked(revoked_idx));
 
     // Additional requirements not present, revoked_claims is not checked and should ok
@@ -306,5 +308,5 @@ fn test_addition_requirements_with_revocation_list() {
     )
     .unwrap();
 
-    assert!(res.result.is_ok());
+    assert!(res.success);
 }

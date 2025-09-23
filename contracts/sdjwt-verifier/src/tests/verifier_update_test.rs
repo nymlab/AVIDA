@@ -145,7 +145,7 @@ fn update_app_not_registered() {
         .unwrap_err();
 
     assert!(matches!(
-        err.downcast().unwrap(),
+        err.downcast_ref().unwrap(),
         SdjwtVerifierError::AppIsNotRegistered
     ));
 }
@@ -195,7 +195,7 @@ fn update_unauthorized() {
         .unwrap_err();
 
     assert!(matches!(
-        err.downcast().unwrap(),
+        err.downcast_ref().unwrap(),
         SdjwtVerifierError::Unauthorised
     ));
 }
@@ -247,7 +247,7 @@ fn update_serde_json_error() {
         .unwrap_err();
 
     assert!(matches!(
-        err.downcast().unwrap(),
+        err.downcast_ref().unwrap(),
         SdjwtVerifierError::Std(_)
     ));
 }
@@ -302,7 +302,7 @@ fn update_unsupported_key_type() {
         .unwrap_err();
 
     assert!(matches!(
-        err.downcast().unwrap(),
+        err.downcast_ref().unwrap(),
         SdjwtVerifierError::UnsupportedKeyType
     ));
 }

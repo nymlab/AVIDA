@@ -50,7 +50,7 @@ fn verify_route_not_registered() {
         .unwrap_err();
 
     assert!(matches!(
-        err.downcast().unwrap(),
+        err.downcast_ref().unwrap(),
         SdjwtVerifierError::RouteNotRegistered
     ));
 }
@@ -194,7 +194,7 @@ fn register_app_is_already_registered() {
         .unwrap_err();
 
     assert!(matches!(
-        err.downcast().unwrap(),
+        err.downcast_ref().unwrap(),
         SdjwtVerifierError::AppAlreadyRegistered
     ));
 }
@@ -232,7 +232,7 @@ fn register_serde_json_error() {
         .unwrap_err();
 
     assert!(matches!(
-        err.downcast().unwrap(),
+        err.downcast_ref().unwrap(),
         SdjwtVerifierError::Std(_)
     ));
 }
@@ -266,7 +266,7 @@ fn register_unsupported_key_type() {
         .unwrap_err();
 
     assert!(matches!(
-        err.downcast().unwrap(),
+        err.downcast_ref().unwrap(),
         SdjwtVerifierError::UnsupportedKeyType
     ));
 }
@@ -345,10 +345,16 @@ fn deregister_app_not_registered() {
         )
         .unwrap_err();
 
-    assert!(matches!(
-        err.downcast().unwrap(),
-        SdjwtVerifierError::AppIsNotRegistered
-    ));
+    let inner = *er
+
+    match err.kind() {
+        cosmwasm_std::StdErrorKind::Other => {
+            assert!(err
+                .to_string()
+                .contains(SdjwtVerifierError::AppIsNotRegistered.to_string()));
+        }
+        _ => panic!("Unexpected error kind"),
+    }
 }
 
 #[test]
@@ -389,7 +395,7 @@ fn deregister_unauthorized() {
         .unwrap_err();
 
     assert!(matches!(
-        err.downcast().unwrap(),
+        err.downcast_ref().unwrap(),
         SdjwtVerifierError::Unauthorised
     ));
 }

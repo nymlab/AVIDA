@@ -34,5 +34,5 @@ cw-utils = { workspace = true }
 
 [dev-dependencies]
 avida-test-utils = { path = "../../packages/avida_test_utils/", features = ["sdjwt"]}
-cw-multi-test = {version = "2", features = ["staking", "stargate", "cosmwasm_2_1"]}
+cw-multi-test = {version = "3", features = ["staking", "stargate", "cosmwasm_3_0"]}
 josekit = "0.8.6"

@@ -35,23 +35,27 @@ pub fn reply(deps: DepsMut, _: Env, reply: Reply) -> Result<Response, ContractEr
             .map_err(|_| ContractError::ParseReplyError)?
             {
                 let verify_result: VerifyResult = from_json(verify_result_bz)?;
-                match verify_result.result {
-                    Ok(_) if rid == GIVE_ME_DRINK_ROUTE_ID => Ok(Response::new()
-                        .add_attribute("action", "give_me_some_drink")
-                        .add_attribute(
-                            "Drink kind",
-                            PENDING_ORDER_SUBJECTS.load(deps.storage, rid)?,
-                        )),
-                    Ok(_) => Ok(Response::new()
-                        .add_attribute("action", "give_me_some_food")
-                        .add_attribute(
-                            "Food kind",
-                            PENDING_ORDER_SUBJECTS.load(deps.storage, rid)?,
-                        )),
-                    Err(err) => Err(ContractError::VerificationProcessError(format!(
+                if verify_result.success {
+                    if rid == GIVE_ME_DRINK_ROUTE_ID {
+                        Ok(Response::new()
+                            .add_attribute("action", "give_me_some_drink")
+                            .add_attribute(
+                                "Drink kind",
+                                PENDING_ORDER_SUBJECTS.load(deps.storage, rid)?,
+                            ))
+                    } else {
+                        Ok(Response::new()
+                            .add_attribute("action", "give_me_some_food")
+                            .add_attribute(
+                                "Food kind",
+                                PENDING_ORDER_SUBJECTS.load(deps.storage, rid)?,
+                            ))
+                    }
+                } else {
+                    Err(ContractError::VerificationProcessError(format!(
                         "{:?}",
-                        err
-                    ))),
+                        verify_result.error
+                    )))
                 }
             } else {
                 Err(ContractError::VerificationProcessError(

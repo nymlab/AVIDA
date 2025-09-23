@@ -110,9 +110,47 @@ pub fn handle_verify(
     app_addr: Option<String>,
     additional_requirements: Option<Binary>,
 ) -> Result<Response, SdjwtVerifierError> {
+    let app_addr = app_addr.unwrap_or_else(|| info.sender.to_string());
+
+    _handle_verify(
+        deps,
+        env,
+        app_addr,
+        route_id,
+        presentation,
+        additional_requirements,
+    )
+}
+
+// Sudo message handlers
+pub fn handle_sudo_verify(
+    deps: DepsMut,
+    env: Env,
+    app_addr: String,
+    route_id: RouteId,
+    presentation: VerfiablePresentation,
+    additional_requirements: Option<Binary>,
+) -> Result<Response, SdjwtVerifierError> {
+    _handle_verify(
+        deps,
+        env,
+        app_addr,
+        route_id,
+        presentation,
+        additional_requirements,
+    )
+}
+
+pub fn _handle_verify(
+    deps: DepsMut,
+    env: Env,
+    app_addr: String,
+    route_id: RouteId,
+    presentation: VerfiablePresentation,
+    additional_requirements: Option<Binary>,
+) -> Result<Response, SdjwtVerifierError> {
     let additional_requirements: Option<PresentationReq> =
         additional_requirements.map(from_json).transpose()?;
-    let app_addr = app_addr.unwrap_or_else(|| info.sender.to_string());
 
     let requirements = APP_ROUTES_REQUIREMENTS
         .load(deps.storage, (app_addr, route_id))
@@ -128,8 +166,7 @@ pub fn handle_verify(
         additional_requirements,
     );
 
-    let data = to_json_binary(&VerifyResult { result: res })?;
-    Ok(Response::default().set_data(data))
+    create_verify_response(res)
 }
 
 pub fn handle_update(
@@ -182,38 +219,6 @@ pub fn handle_deregister(
 
     _deregister(deps.storage, app_addr.as_str())
 }
-
-// Sudo message handlers
-pub fn handle_sudo_verify(
-    deps: DepsMut,
-    env: Env,
-    app_addr: String,
-    route_id: RouteId,
-    presentation: VerfiablePresentation,
-    additional_requirements: Option<Binary>,
-) -> Result<Response, SdjwtVerifierError> {
-    let additional_requirements: Option<PresentationReq> =
-        additional_requirements.map(from_json).transpose()?;
-
-    let requirements = APP_ROUTES_REQUIREMENTS
-        .load(deps.storage, (app_addr, route_id))
-        .map_err(|_| SdjwtVerifierError::RouteNotRegistered)?
-        .clone();
-    let max_len = MAX_PRESENTATION_LENGTH.load(deps.storage)?;
-
-    let res = _verify(
-        presentation,
-        requirements,
-        max_len,
-        &env.block,
-        additional_requirements,
-    )
-    .map(|res| to_json_binary(&VerifyResult { result: Ok(res) }))
-    .map_err(SdjwtVerifierError::SdjwtVerifierResultError)??;
-
-    Ok(Response::default().set_data(res))
-}
-
 pub fn handle_sudo_update(
     deps: DepsMut,
     env: Env,
@@ -265,6 +270,32 @@ pub fn query_route_requirements(
         .load(deps.storage, (app_addr, route_id))
         .map_err(|_| SdjwtVerifierError::RouteNotRegistered)?;
     Ok(req)
+}
+
+fn create_verify_response(
+    res: Result<Value, SdjwtVerifierResultError>,
+) -> Result<Response, SdjwtVerifierError> {
+    let verify_result = match res {
+        Ok(value) => {
+            let binary_value = Binary::from(serde_json::to_vec(&value).map_err(|e| {
+                SdjwtVerifierError::SdjwtVerifierResultError(
+                    SdjwtVerifierResultError::VerifiedClaimsToBinaryError(e.to_string()),
+                )
+            })?);
+            VerifyResult {
+                success: true,
+                value: Some(binary_value),
+                error: None,
+            }
+        }
+        Err(error) => VerifyResult {
+            success: false,
+            value: None,
+            error: Some(error),
+        },
+    };
+    let data = to_json_binary(&verify_result)?;
+    Ok(Response::default().set_data(data))
 }
 
 /// Verify the provided presentation within the context of the given route
@@ -332,6 +363,7 @@ pub fn _verify(
             sdjwt_verifier.verified_claims.clone(),
             block_info,
         )?;
+
         Ok(sdjwt_verifier.verified_claims)
     }
     // If the issuer is not in the requirements, we return an error

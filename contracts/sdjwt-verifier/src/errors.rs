@@ -40,6 +40,8 @@ pub enum SdjwtVerifierResultError {
     IdxRevoked(u64),
     #[error("Issuer not found in Payload")]
     IssuerNotFound,
+    #[error("verified claims to binary error: {0}")]
+    VerifiedClaimsToBinaryError(String),
     #[error("SdJwtRsError: {0}")]
     SdJwtRsError(String),
 }
@@ -84,10 +86,4 @@ pub enum SdjwtVerifierError {
     IDXNotInRequirement,
     #[error("Revocation List type")]
     RevocationListType,
-}
-
-impl From<SdjwtVerifierError> for StdError {
-    fn from(err: SdjwtVerifierError) -> StdError {
-        StdError::generic_err(err.to_string())
-    }
 }
