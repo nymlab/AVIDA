@@ -49,10 +49,9 @@ fn verify_route_not_registered() {
         )
         .unwrap_err();
 
-    assert!(matches!(
-        err.downcast_ref().unwrap(),
-        SdjwtVerifierError::RouteNotRegistered
-    ));
+    assert!(err
+        .to_string()
+        .contains(&SdjwtVerifierError::RouteNotRegistered.to_string()));
 }
 
 #[test]
@@ -193,10 +192,9 @@ fn register_app_is_already_registered() {
         )
         .unwrap_err();
 
-    assert!(matches!(
-        err.downcast_ref().unwrap(),
-        SdjwtVerifierError::AppAlreadyRegistered
-    ));
+    assert!(err
+        .to_string()
+        .contains(&SdjwtVerifierError::AppAlreadyRegistered.to_string()));
 }
 
 #[test]
@@ -231,10 +229,7 @@ fn register_serde_json_error() {
         )
         .unwrap_err();
 
-    assert!(matches!(
-        err.downcast_ref().unwrap(),
-        SdjwtVerifierError::Std(_)
-    ));
+    assert!(err.to_string().contains("Serialization"));
 }
 
 #[test]
@@ -265,10 +260,9 @@ fn register_unsupported_key_type() {
         )
         .unwrap_err();
 
-    assert!(matches!(
-        err.downcast_ref().unwrap(),
-        SdjwtVerifierError::UnsupportedKeyType
-    ));
+    assert!(err
+        .to_string()
+        .contains(&SdjwtVerifierError::UnsupportedKeyType.to_string()));
 }
 
 #[test]
@@ -345,16 +339,9 @@ fn deregister_app_not_registered() {
         )
         .unwrap_err();
 
-    let inner = *er
-
-    match err.kind() {
-        cosmwasm_std::StdErrorKind::Other => {
-            assert!(err
-                .to_string()
-                .contains(SdjwtVerifierError::AppIsNotRegistered.to_string()));
-        }
-        _ => panic!("Unexpected error kind"),
-    }
+    assert!(err
+        .to_string()
+        .contains(&SdjwtVerifierError::AppIsNotRegistered.to_string()));
 }
 
 #[test]
@@ -394,8 +381,7 @@ fn deregister_unauthorized() {
         )
         .unwrap_err();
 
-    assert!(matches!(
-        err.downcast_ref().unwrap(),
-        SdjwtVerifierError::Unauthorised
-    ));
+    assert!(err
+        .to_string()
+        .contains(&SdjwtVerifierError::Unauthorised.to_string()));
 }

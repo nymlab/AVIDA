@@ -144,10 +144,9 @@ fn update_app_not_registered() {
         )
         .unwrap_err();
 
-    assert!(matches!(
-        err.downcast_ref().unwrap(),
-        SdjwtVerifierError::AppIsNotRegistered
-    ));
+    assert!(err
+        .to_string()
+        .contains(&SdjwtVerifierError::AppIsNotRegistered.to_string()));
 }
 
 #[test]
@@ -194,10 +193,9 @@ fn update_unauthorized() {
         )
         .unwrap_err();
 
-    assert!(matches!(
-        err.downcast_ref().unwrap(),
-        SdjwtVerifierError::Unauthorised
-    ));
+    assert!(err
+        .to_string()
+        .contains(&SdjwtVerifierError::Unauthorised.to_string()));
 }
 
 #[test]
@@ -246,10 +244,7 @@ fn update_serde_json_error() {
         )
         .unwrap_err();
 
-    assert!(matches!(
-        err.downcast_ref().unwrap(),
-        SdjwtVerifierError::Std(_)
-    ));
+    assert!(err.to_string().contains("Serialization"));
 }
 
 #[test]
@@ -301,10 +296,9 @@ fn update_unsupported_key_type() {
         )
         .unwrap_err();
 
-    assert!(matches!(
-        err.downcast_ref().unwrap(),
-        SdjwtVerifierError::UnsupportedKeyType
-    ));
+    assert!(err
+        .to_string()
+        .contains(&SdjwtVerifierError::UnsupportedKeyType.to_string()));
 }
 
 #[test]
