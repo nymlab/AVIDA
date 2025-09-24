@@ -1,0 +1,498 @@
+{
+  "contract_name": "avida-sdjwt-verifier",
+  "contract_version": "0.1.0",
+  "idl_version": "1.0.0",
+  "instantiate": {
+    "type": "v1",
+    "root": 0,
+    "definitions": [
+      {
+        "name": "avida_sdjwt_verifier_msg_InstantiateMsg",
+        "type": "struct",
+        "properties": {
+          "init_registrations": {
+            "value": 14
+          },
+          "max_presentation_len": {
+            "value": 1
+          }
+        }
+      },
+      {
+        "name": "usize",
+        "type": "integer",
+        "precision": 64,
+        "signed": false
+      },
+      {
+        "name": "avida_sdjwt_verifier_types_InitRegistration",
+        "type": "struct",
+        "properties": {
+          "app_addr": {
+            "value": 3
+          },
+          "app_admin": {
+            "value": 3
+          },
+          "routes": {
+            "value": 13
+          }
+        }
+      },
+      {
+        "name": "String",
+        "type": "string"
+      },
+      {
+        "name": "avida_common_types_RegisterRouteRequest",
+        "description": "Routes Requiments used in Registration (and Initiation)",
+        "type": "struct",
+        "properties": {
+          "requirements": {
+            "value": 6
+          },
+          "route_id": {
+            "value": 5
+          }
+        }
+      },
+      {
+        "name": "u64",
+        "type": "integer",
+        "precision": 64,
+        "signed": false
+      },
+      {
+        "name": "avida_common_types_RouteVerificationRequirements",
+        "description": "Specific verification requirements for the route, by `route_id`",
+        "type": "struct",
+        "properties": {
+          "issuer_source_or_data": {
+            "description": "This defines where the source data for verification is",
+            "value": 11
+          },
+          "presentation_required": {
+            "description": "The presentation request is the criteria required for the presentation,\nfor example required certains claims to be disclosed\nThis value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier",
+            "value": 12
+          }
+        }
+      },
+      {
+        "name": "avida_common_types_IssuerSourceOrData",
+        "description": "Location to obtain the verification data from",
+        "type": "struct",
+        "properties": {
+          "data_or_location": {
+            "description": "The data or location of the verification data at the trust registry\nFor TrustRegistry::Cheqd, it is the `ResourceReqPacket` in avida-cheqd\nFor data, the contracts should have the expected type\nIn Sdjwt-Verifier, this is expected to be the JwkInfo struct",
+            "value": 10
+          },
+          "source": {
+            "description": "If `None`, this means data is directly provided",
+            "value": 9
+          }
+        }
+      },
+      {
+        "name": "avida_common_types_TrustRegistry",
+        "type": "enum",
+        "cases": {
+          "cheqd": {
+            "type": "unit"
+          }
+        }
+      },
+      {
+        "name": "core::option::Option<avida_common::types::TrustRegistry>",
+        "type": "optional",
+        "inner": 8
+      },
+      {
+        "name": "cosmwasm_std_binary_Binary",
+        "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization\nwith serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>.\nSee also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+        "type": "binary"
+      },
+      {
+        "name": "alloc::vec::Vec<avida_common::types::IssuerSourceOrData>",
+        "type": "array",
+        "items": 7
+      },
+      {
+        "name": "core::option::Option<cosmwasm_std::binary::Binary>",
+        "type": "optional",
+        "inner": 10
+      },
+      {
+        "name": "alloc::vec::Vec<avida_common::types::RegisterRouteRequest>",
+        "type": "array",
+        "items": 4
+      },
+      {
+        "name": "alloc::vec::Vec<avida_sdjwt_verifier::types::InitRegistration>",
+        "type": "array",
+        "items": 2
+      }
+    ]
+  },
+  "execute": {
+    "type": "v1",
+    "root": 0,
+    "definitions": [
+      {
+        "name": "avida_common_types_AvidaVerifierExecuteMsg",
+        "type": "enum",
+        "cases": {
+          "deregister": {
+            "type": "named",
+            "properties": {
+              "app_addr": {
+                "value": 1
+              }
+            }
+          },
+          "register": {
+            "type": "named",
+            "properties": {
+              "app_addr": {
+                "value": 1
+              },
+              "requests": {
+                "value": 13
+              }
+            }
+          },
+          "update": {
+            "type": "named",
+            "properties": {
+              "app_addr": {
+                "value": 1
+              },
+              "route_criteria": {
+                "value": 15
+              },
+              "route_id": {
+                "value": 3
+              }
+            }
+          },
+          "update_revocation_list": {
+            "type": "named",
+            "properties": {
+              "app_addr": {
+                "value": 1
+              },
+              "request": {
+                "value": 2
+              }
+            }
+          },
+          "verify": {
+            "type": "named",
+            "properties": {
+              "additional_requirements": {
+                "value": 12
+              },
+              "app_addr": {
+                "value": 14
+              },
+              "presentation": {
+                "value": 10
+              },
+              "route_id": {
+                "value": 3
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "String",
+        "type": "string"
+      },
+      {
+        "name": "avida_common_types_UpdateRevocationListRequest",
+        "description": "A Sd-jwt specific requirement for revocation list update\nusing Criterion::NotContainedIn",
+        "type": "struct",
+        "properties": {
+          "revoke": {
+            "value": 4
+          },
+          "route_id": {
+            "value": 3
+          },
+          "unrevoke": {
+            "value": 4
+          }
+        }
+      },
+      {
+        "name": "u64",
+        "type": "integer",
+        "precision": 64,
+        "signed": false
+      },
+      {
+        "name": "alloc::vec::Vec<u64>",
+        "type": "array",
+        "items": 3
+      },
+      {
+        "name": "avida_common_types_RegisterRouteRequest",
+        "description": "Routes Requiments used in Registration (and Initiation)",
+        "type": "struct",
+        "properties": {
+          "requirements": {
+            "value": 6
+          },
+          "route_id": {
+            "value": 3
+          }
+        }
+      },
+      {
+        "name": "avida_common_types_RouteVerificationRequirements",
+        "description": "Specific verification requirements for the route, by `route_id`",
+        "type": "struct",
+        "properties": {
+          "issuer_source_or_data": {
+            "description": "This defines where the source data for verification is",
+            "value": 11
+          },
+          "presentation_required": {
+            "description": "The presentation request is the criteria required for the presentation,\nfor example required certains claims to be disclosed\nThis value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier",
+            "value": 12
+          }
+        }
+      },
+      {
+        "name": "avida_common_types_IssuerSourceOrData",
+        "description": "Location to obtain the verification data from",
+        "type": "struct",
+        "properties": {
+          "data_or_location": {
+            "description": "The data or location of the verification data at the trust registry\nFor TrustRegistry::Cheqd, it is the `ResourceReqPacket` in avida-cheqd\nFor data, the contracts should have the expected type\nIn Sdjwt-Verifier, this is expected to be the JwkInfo struct",
+            "value": 10
+          },
+          "source": {
+            "description": "If `None`, this means data is directly provided",
+            "value": 9
+          }
+        }
+      },
+      {
+        "name": "avida_common_types_TrustRegistry",
+        "type": "enum",
+        "cases": {
+          "cheqd": {
+            "type": "unit"
+          }
+        }
+      },
+      {
+        "name": "core::option::Option<avida_common::types::TrustRegistry>",
+        "type": "optional",
+        "inner": 8
+      },
+      {
+        "name": "cosmwasm_std_binary_Binary",
+        "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization\nwith serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>.\nSee also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+        "type": "binary"
+      },
+      {
+        "name": "alloc::vec::Vec<avida_common::types::IssuerSourceOrData>",
+        "type": "array",
+        "items": 7
+      },
+      {
+        "name": "core::option::Option<cosmwasm_std::binary::Binary>",
+        "type": "optional",
+        "inner": 10
+      },
+      {
+        "name": "alloc::vec::Vec<avida_common::types::RegisterRouteRequest>",
+        "type": "array",
+        "items": 5
+      },
+      {
+        "name": "core::option::Option<alloc::string::String>",
+        "type": "optional",
+        "inner": 1
+      },
+      {
+        "name": "core::option::Option<avida_common::types::RouteVerificationRequirements>",
+        "type": "optional",
+        "inner": 6
+      }
+    ]
+  },
+  "query": {
+    "type": "v1",
+    "root": 0,
+    "definitions": [
+      {
+        "name": "avida_sdjwt_verifier_msg_QueryMsg",
+        "type": "enum",
+        "cases": {
+          "get_app_admin": {
+            "type": "named",
+            "properties": {
+              "app_addr": {
+                "value": 1
+              }
+            }
+          },
+          "get_route_requirements": {
+            "type": "named",
+            "properties": {
+              "app_addr": {
+                "value": 1
+              },
+              "route_id": {
+                "value": 2
+              }
+            }
+          },
+          "get_route_verification_key": {
+            "type": "named",
+            "properties": {
+              "app_addr": {
+                "value": 1
+              },
+              "route_id": {
+                "value": 2
+              }
+            }
+          },
+          "get_routes": {
+            "type": "named",
+            "properties": {
+              "app_addr": {
+                "value": 1
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "String",
+        "type": "string"
+      },
+      {
+        "name": "u64",
+        "type": "integer",
+        "precision": 64,
+        "signed": false
+      }
+    ]
+  },
+  "migrate": null,
+  "sudo": null,
+  "responses": {
+    "get_app_admin": {
+      "type": "v1",
+      "root": 0,
+      "definitions": [
+        {
+          "name": "String",
+          "type": "string"
+        }
+      ]
+    },
+    "get_route_requirements": {
+      "type": "v1",
+      "root": 0,
+      "definitions": [
+        {
+          "name": "avida_common_types_RouteVerificationRequirements",
+          "description": "Specific verification requirements for the route, by `route_id`",
+          "type": "struct",
+          "properties": {
+            "issuer_source_or_data": {
+              "description": "This defines where the source data for verification is",
+              "value": 5
+            },
+            "presentation_required": {
+              "description": "The presentation request is the criteria required for the presentation,\nfor example required certains claims to be disclosed\nThis value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier",
+              "value": 6
+            }
+          }
+        },
+        {
+          "name": "avida_common_types_IssuerSourceOrData",
+          "description": "Location to obtain the verification data from",
+          "type": "struct",
+          "properties": {
+            "data_or_location": {
+              "description": "The data or location of the verification data at the trust registry\nFor TrustRegistry::Cheqd, it is the `ResourceReqPacket` in avida-cheqd\nFor data, the contracts should have the expected type\nIn Sdjwt-Verifier, this is expected to be the JwkInfo struct",
+              "value": 4
+            },
+            "source": {
+              "description": "If `None`, this means data is directly provided",
+              "value": 3
+            }
+          }
+        },
+        {
+          "name": "avida_common_types_TrustRegistry",
+          "type": "enum",
+          "cases": {
+            "cheqd": {
+              "type": "unit"
+            }
+          }
+        },
+        {
+          "name": "core::option::Option<avida_common::types::TrustRegistry>",
+          "type": "optional",
+          "inner": 2
+        },
+        {
+          "name": "cosmwasm_std_binary_Binary",
+          "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization\nwith serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>.\nSee also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+          "type": "binary"
+        },
+        {
+          "name": "alloc::vec::Vec<avida_common::types::IssuerSourceOrData>",
+          "type": "array",
+          "items": 1
+        },
+        {
+          "name": "core::option::Option<cosmwasm_std::binary::Binary>",
+          "type": "optional",
+          "inner": 4
+        }
+      ]
+    },
+    "get_route_verification_key": {
+      "type": "v1",
+      "root": 1,
+      "definitions": [
+        {
+          "name": "String",
+          "type": "string"
+        },
+        {
+          "name": "core::option::Option<alloc::string::String>",
+          "type": "optional",
+          "inner": 0
+        }
+      ]
+    },
+    "get_routes": {
+      "type": "v1",
+      "root": 1,
+      "definitions": [
+        {
+          "name": "u64",
+          "type": "integer",
+          "precision": 64,
+          "signed": false
+        },
+        {
+          "name": "alloc::vec::Vec<u64>",
+          "type": "array",
+          "items": 0
+        }
+      ]
+    }
+  }
+}

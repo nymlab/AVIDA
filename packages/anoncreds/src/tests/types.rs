@@ -14,7 +14,7 @@ fn it_serde_json_correctly() {
     let string = String::from_utf8(bin.0).unwrap();
     let expected = "{\"resourceId\":\"resuorce_id\",\"collectionId\":\"collection_id\"}";
 
-    let req_de = serde_json_wasm::from_str(expected).unwrap();
+    let req_de = serde_json::from_str(expected).unwrap();
     assert_eq!(&string, expected);
     assert_eq!(req, req_de)
 }

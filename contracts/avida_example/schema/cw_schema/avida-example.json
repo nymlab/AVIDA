@@ -1,0 +1,194 @@
+{
+  "contract_name": "avida-example",
+  "contract_version": "0.1.0",
+  "idl_version": "1.0.0",
+  "instantiate": {
+    "type": "v1",
+    "root": 0,
+    "definitions": [
+      {
+        "name": "avida_example_msg_InstantiateMsg",
+        "type": "struct",
+        "properties": {
+          "verifier": {
+            "value": 1
+          }
+        }
+      },
+      {
+        "name": "String",
+        "type": "string"
+      }
+    ]
+  },
+  "execute": {
+    "type": "v1",
+    "root": 0,
+    "definitions": [
+      {
+        "name": "avida_example_msg_ExecuteMsg",
+        "type": "enum",
+        "cases": {
+          "give_me_some_drink": {
+            "type": "tuple",
+            "items": [
+              9
+            ]
+          },
+          "give_me_some_food": {
+            "type": "tuple",
+            "items": [
+              11
+            ]
+          },
+          "register_requirement": {
+            "type": "named",
+            "properties": {
+              "requirements": {
+                "value": 1
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "avida_example_types_RegisterRequirement",
+        "type": "enum",
+        "cases": {
+          "drink": {
+            "type": "named",
+            "properties": {
+              "requirements": {
+                "value": 2
+              }
+            }
+          },
+          "food": {
+            "type": "named",
+            "properties": {
+              "requirements": {
+                "value": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "avida_common_types_RouteVerificationRequirements",
+        "description": "Specific verification requirements for the route, by `route_id`",
+        "type": "struct",
+        "properties": {
+          "issuer_source_or_data": {
+            "description": "This defines where the source data for verification is",
+            "value": 7
+          },
+          "presentation_required": {
+            "description": "The presentation request is the criteria required for the presentation,\nfor example required certains claims to be disclosed\nThis value is stored as `VerificationRequirements.presentation_required` on sdjwtVerifier",
+            "value": 8
+          }
+        }
+      },
+      {
+        "name": "avida_common_types_IssuerSourceOrData",
+        "description": "Location to obtain the verification data from",
+        "type": "struct",
+        "properties": {
+          "data_or_location": {
+            "description": "The data or location of the verification data at the trust registry\nFor TrustRegistry::Cheqd, it is the `ResourceReqPacket` in avida-cheqd\nFor data, the contracts should have the expected type\nIn Sdjwt-Verifier, this is expected to be the JwkInfo struct",
+            "value": 6
+          },
+          "source": {
+            "description": "If `None`, this means data is directly provided",
+            "value": 5
+          }
+        }
+      },
+      {
+        "name": "avida_common_types_TrustRegistry",
+        "type": "enum",
+        "cases": {
+          "cheqd": {
+            "type": "unit"
+          }
+        }
+      },
+      {
+        "name": "core::option::Option<avida_common::types::TrustRegistry>",
+        "type": "optional",
+        "inner": 4
+      },
+      {
+        "name": "cosmwasm_std_binary_Binary",
+        "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization\nwith serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>.\nSee also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+        "type": "binary"
+      },
+      {
+        "name": "alloc::vec::Vec<avida_common::types::IssuerSourceOrData>",
+        "type": "array",
+        "items": 3
+      },
+      {
+        "name": "core::option::Option<cosmwasm_std::binary::Binary>",
+        "type": "optional",
+        "inner": 6
+      },
+      {
+        "name": "avida_example_types_GiveMeSomeDrink",
+        "type": "struct",
+        "properties": {
+          "kind": {
+            "value": 10
+          },
+          "proof": {
+            "value": 6
+          }
+        }
+      },
+      {
+        "name": "String",
+        "type": "string"
+      },
+      {
+        "name": "avida_example_types_GiveMeSomeFood",
+        "type": "struct",
+        "properties": {
+          "kind": {
+            "value": 10
+          },
+          "proof": {
+            "value": 6
+          }
+        }
+      }
+    ]
+  },
+  "query": {
+    "type": "v1",
+    "root": 0,
+    "definitions": [
+      {
+        "name": "avida_example_msg_QueryMsg",
+        "type": "enum",
+        "cases": {
+          "get_verifier_address": {
+            "type": "unit"
+          }
+        }
+      }
+    ]
+  },
+  "migrate": null,
+  "sudo": null,
+  "responses": {
+    "get_verifier_address": {
+      "type": "v1",
+      "root": 0,
+      "definitions": [
+        {
+          "name": "String",
+          "type": "string"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "type": "v1",
+  "root": 0,
+  "definitions": [
+    {
+      "name": "avida_sdjwt_verifier_msg_QueryMsg",
+      "type": "enum",
+      "cases": {
+        "get_app_admin": {
+          "type": "named",
+          "properties": {
+            "app_addr": {
+              "value": 1
+            }
+          }
+        },
+        "get_route_requirements": {
+          "type": "named",
+          "properties": {
+            "app_addr": {
+              "value": 1
+            },
+            "route_id": {
+              "value": 2
+            }
+          }
+        },
+        "get_route_verification_key": {
+          "type": "named",
+          "properties": {
+            "app_addr": {
+              "value": 1
+            },
+            "route_id": {
+              "value": 2
+            }
+          }
+        },
+        "get_routes": {
+          "type": "named",
+          "properties": {
+            "app_addr": {
+              "value": 1
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "String",
+      "type": "string"
+    },
+    {
+      "name": "u64",
+      "type": "integer",
+      "precision": 64,
+      "signed": false
+    }
+  ]
+}

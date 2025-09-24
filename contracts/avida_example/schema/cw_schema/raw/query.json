@@ -1,0 +1,15 @@
+{
+  "type": "v1",
+  "root": 0,
+  "definitions": [
+    {
+      "name": "avida_example_msg_QueryMsg",
+      "type": "enum",
+      "cases": {
+        "get_verifier_address": {
+          "type": "unit"
+        }
+      }
+    }
+  ]
+}
