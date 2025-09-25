@@ -272,8 +272,8 @@ pub fn query_route_verification_keys(
         .map_err(|_| SdjwtVerifierError::RouteNotRegistered)?;
 
     let keys = route_req.issuer_pubkeys.as_ref().map(|jwks| {
-        jwks.iter()
-            .map(|(_, jwk)| serde_json::to_string(jwk).unwrap())
+        jwks.values()
+            .map(|jwk| serde_json::to_string(jwk).unwrap())
             .collect()
     });
 

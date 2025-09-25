@@ -1,2 +1,10 @@
+[net]
+git-fetch-with-cli = true
+
+[url."https://github.com/"]
+insteadOf = "git@github.com:"
+
 [alias]
-wasm = "build --lib --release --target wasm32-unknown-unknown --workspace --exclude avida-test-utils"
+wasm = "build --target wasm32-unknown-unknown --release --lib"
+wasm-debug = "build --target wasm32-unknown-unknown --lib"
+schema = "run schema"
