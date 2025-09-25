@@ -26,7 +26,7 @@ pub struct JwkInfo {
 pub struct VerifyResult {
     pub success: bool,
     pub value: Option<Binary>,
-    pub error: Option<SdjwtVerifierResultError>,
+    pub error: Option<String>,
 }
 
 #[cw_serde]

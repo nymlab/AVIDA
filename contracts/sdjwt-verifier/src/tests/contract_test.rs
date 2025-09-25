@@ -222,7 +222,10 @@ fn test_revoked_presentation_cannot_be_used() {
     assert!(!verify_res.success);
     let err = verify_res.error.unwrap();
 
-    assert_eq!(err, SdjwtVerifierResultError::IdxRevoked(revoked_idx));
+    assert_eq!(
+        err,
+        SdjwtVerifierResultError::IdxRevoked(revoked_idx).to_string()
+    );
 
     let verify_msg = AvidaVerifierExecuteMsg::Verify {
         presentation: Binary::from(valid_presentation.as_bytes()),
@@ -286,7 +289,10 @@ fn test_addition_requirements_with_revocation_list() {
     .unwrap();
     assert!(!res.success);
     let err = res.error.unwrap();
-    assert_eq!(err, SdjwtVerifierResultError::IdxRevoked(revoked_idx));
+    assert_eq!(
+        err,
+        SdjwtVerifierResultError::IdxRevoked(revoked_idx).to_string()
+    );
 
     // Additional requirements not present, revoked_claims is not checked and should ok
     let verify_msg = AvidaVerifierExecuteMsg::Verify {

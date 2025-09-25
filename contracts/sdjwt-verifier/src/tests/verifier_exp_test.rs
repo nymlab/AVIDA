@@ -213,7 +213,7 @@ fn verify_failed_on_expired_claim() {
 
     assert_eq!(
         res.error.unwrap(),
-        SdjwtVerifierResultError::PresentationExpired(exp)
+        SdjwtVerifierResultError::PresentationExpired(exp).to_string()
     );
 
     // Make a presentation with some claims that has expired
@@ -245,7 +245,7 @@ fn verify_failed_on_expired_claim() {
 
     assert_eq!(
         res.error.unwrap(),
-        SdjwtVerifierResultError::PresentationExpired(exp)
+        SdjwtVerifierResultError::PresentationExpired(exp).to_string()
     );
 }
 

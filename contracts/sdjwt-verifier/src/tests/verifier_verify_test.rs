@@ -53,7 +53,7 @@ fn verify_success_incorrect_claims_validate_fails() {
 
     assert_eq!(
         res.error.unwrap(),
-        SdjwtVerifierResultError::CriterionValueFailed("joined_at".to_string())
+        SdjwtVerifierResultError::CriterionValueFailed("joined_at".to_string()).to_string()
     );
 }
 
@@ -93,7 +93,7 @@ fn verify_required_claims_not_satisfied() {
         res.error.unwrap(),
         SdjwtVerifierResultError::DisclosedClaimNotFound(
             "Expects claim to be: Number(NumberCriterion { value: 30, operator: EqualTo }) for attr: age".to_string()
-        )
+        ).to_string()
     );
 }
 
@@ -130,6 +130,7 @@ fn verify_without_sdjwt() {
         SdjwtVerifierResultError::SdJwtRsError(
             "invalid input: Invalid SD-JWT length: 1".to_string()
         )
+        .to_string()
     );
 }
 
@@ -173,6 +174,6 @@ fn verify_presentation_too_large() {
 
     assert_eq!(
         res.error.unwrap(),
-        SdjwtVerifierResultError::PresentationTooLarge
+        SdjwtVerifierResultError::PresentationTooLarge.to_string()
     );
 }

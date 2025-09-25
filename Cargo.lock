@@ -205,28 +205,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "avida-example"
-version = "0.1.0"
-dependencies = [
- "avida-common",
- "avida-sdjwt-verifier",
- "avida-test-utils",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-multi-test",
- "cw-storage-plus",
- "cw-utils",
- "cw2",
- "josekit",
- "jsonwebtoken 9.3.1",
- "schemars 0.8.22",
- "sd-jwt-rs 0.7.1",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
-]
-
-[[package]]
 name = "avida-sdjwt-verifier"
 version = "0.1.0"
 dependencies = [

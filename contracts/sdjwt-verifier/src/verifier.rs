@@ -101,6 +101,7 @@ pub fn handle_register(
     )
 }
 
+/// Exec message handlers returns Response as data for verification
 pub fn handle_verify(
     deps: DepsMut,
     env: Env,
@@ -112,17 +113,19 @@ pub fn handle_verify(
 ) -> Result<Response, SdjwtVerifierError> {
     let app_addr = app_addr.unwrap_or_else(|| info.sender.to_string());
 
-    _handle_verify(
+    let res = _handle_verify(
         deps,
         env,
         app_addr,
         route_id,
         presentation,
         additional_requirements,
-    )
+    )?;
+
+    Ok(Response::new().set_data(to_json_binary(&res)?))
 }
 
-// Sudo message handlers
+/// Sudo message handlers returns error if verification fails
 pub fn handle_sudo_verify(
     deps: DepsMut,
     env: Env,
@@ -131,14 +134,23 @@ pub fn handle_sudo_verify(
     presentation: VerfiablePresentation,
     additional_requirements: Option<Binary>,
 ) -> Result<Response, SdjwtVerifierError> {
-    _handle_verify(
+    let res = _handle_verify(
         deps,
         env,
         app_addr,
         route_id,
         presentation,
         additional_requirements,
-    )
+    )?;
+
+    if res.success {
+        Ok(Response::new()
+            .add_attribute("action", "sudo_verify")
+            .add_attribute("success", "true")
+            .set_data(res.value.unwrap_or_default()))
+    } else {
+        Err(SdjwtVerifierError::VerifyResultError(res.error.unwrap()))
+    }
 }
 
 pub fn _handle_verify(
@@ -148,7 +160,7 @@ pub fn _handle_verify(
     route_id: RouteId,
     presentation: VerfiablePresentation,
     additional_requirements: Option<Binary>,
-) -> Result<Response, SdjwtVerifierError> {
+) -> Result<VerifyResult, SdjwtVerifierError> {
     let additional_requirements: Option<PresentationReq> =
         additional_requirements.map(from_json).transpose()?;
 
@@ -166,7 +178,27 @@ pub fn _handle_verify(
         additional_requirements,
     );
 
-    create_verify_response(res)
+    let verify_result = match res {
+        Ok(value) => {
+            let binary_value = Binary::from(serde_json::to_vec(&value).map_err(|e| {
+                SdjwtVerifierError::SdjwtVerifierResultError(
+                    SdjwtVerifierResultError::VerifiedClaimsToBinaryError(e.to_string()),
+                )
+            })?);
+
+            VerifyResult {
+                success: true,
+                value: Some(binary_value),
+                error: None,
+            }
+        }
+        Err(error) => VerifyResult {
+            success: false,
+            value: None,
+            error: Some(error.to_string()),
+        },
+    };
+    Ok(verify_result)
 }
 
 pub fn handle_update(
@@ -270,32 +302,6 @@ pub fn query_route_requirements(
         .load(deps.storage, (app_addr, route_id))
         .map_err(|_| SdjwtVerifierError::RouteNotRegistered)?;
     Ok(req)
-}
-
-fn create_verify_response(
-    res: Result<Value, SdjwtVerifierResultError>,
-) -> Result<Response, SdjwtVerifierError> {
-    let verify_result = match res {
-        Ok(value) => {
-            let binary_value = Binary::from(serde_json::to_vec(&value).map_err(|e| {
-                SdjwtVerifierError::SdjwtVerifierResultError(
-                    SdjwtVerifierResultError::VerifiedClaimsToBinaryError(e.to_string()),
-                )
-            })?);
-            VerifyResult {
-                success: true,
-                value: Some(binary_value),
-                error: None,
-            }
-        }
-        Err(error) => VerifyResult {
-            success: false,
-            value: None,
-            error: Some(error),
-        },
-    };
-    let data = to_json_binary(&verify_result)?;
-    Ok(Response::default().set_data(data))
 }
 
 /// Verify the provided presentation within the context of the given route

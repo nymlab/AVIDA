@@ -1,12 +1,13 @@
 [workspace]
-members = ["packages/cheqd", "packages/common", "contracts/sdjwt-verifier", "contracts/avida_example", "packages/avida_test_utils"]
+members = ["packages/cheqd", "packages/common", "contracts/sdjwt-verifier", "packages/avida_test_utils"]
+excludes = ["contracts/avida_example", "contracts/anoncreds-verifier" ]
 resolver = "2"
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/nymlab/avida"
-keywords = [ "Vectis", "CosmWasm", "zkp", "verifiableCredential", "sd-jwt" ]
+keywords = [ "Vectis", "CosmWasm", "zkp", "verifiableCredential", "sd-jwt", "PlatformD" ]
 
 [workspace.dependencies]
 
@@ -25,7 +26,6 @@ schemars = "0.8.16"
 serde = { version = "1.0.197", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.58" }
 sd-jwt-rs = { git = "https://github.com/nymlab/sd-jwt-rust", rev = "de9ccce7858e6e86f6a6e2f4dd23bcb4dc534421", default-features = false, features = ["no_rand"]}
-
 jsonwebtoken = { git = "https://github.com/nymlab/jsonwebtoken", rev = "98763b38713c54f", default-features = false, features = ["no_rand"] }
 serde_json = {version = "1.0.116", default-features = false, features = ["alloc"]}
 cw-utils = "3.0.0"

@@ -56,6 +56,8 @@ impl From<SdJwtRsError> for SdjwtVerifierResultError {
 pub enum SdjwtVerifierError {
     #[error("Verifier Result Error {0}")]
     SdjwtVerifierResultError(SdjwtVerifierResultError),
+    #[error("Verifier Result Error {0}")]
+    VerifyResultError(String),
     #[error("SudoValidationFailed")]
     SudoValidationFailed,
     #[error("IBC returned resource format unexpected {0}")]
