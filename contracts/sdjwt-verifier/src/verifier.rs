@@ -179,18 +179,11 @@ pub fn _handle_verify(
     );
 
     let verify_result = match res {
-        Ok(value) => {
-            let binary_value = Binary::from(
-                serde_json::to_vec(&value)
-                    .map_err(|e| SdjwtVerifierError::VerifyResultError(e.to_string()))?,
-            );
-
-            VerifyResult {
-                success: true,
-                value: Some(binary_value),
-                error: None,
-            }
-        }
+        Ok(value) => VerifyResult {
+            success: true,
+            value: Some(to_json_binary(&value)?),
+            error: None,
+        },
         Err(error) => VerifyResult {
             success: false,
             value: None,
