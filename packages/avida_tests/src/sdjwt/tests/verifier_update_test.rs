@@ -195,7 +195,7 @@ fn update_unauthorized() {
 
     assert!(err
         .to_string()
-        .contains(&SdjwtVerifierError::Unauthorised.to_string()));
+        .contains(&SdjwtVerifierError::UnauthorisedCaller.to_string()));
 }
 
 #[test]

@@ -76,8 +76,8 @@ pub enum SdjwtVerifierError {
     AppAlreadyRegistered,
     #[error("App Is Not Registered")]
     AppIsNotRegistered,
-    #[error("Unauthorised")]
-    Unauthorised,
+    #[error("Unauthorised Caller")]
+    UnauthorisedCaller,
     #[error("Unsupported Key Type")]
     UnsupportedKeyType,
     #[error("Route Not Registered")]
