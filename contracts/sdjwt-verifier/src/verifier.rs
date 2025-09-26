@@ -180,11 +180,10 @@ pub fn _handle_verify(
 
     let verify_result = match res {
         Ok(value) => {
-            let binary_value = Binary::from(serde_json::to_vec(&value).map_err(|e| {
-                SdjwtVerifierError::SdjwtVerifierResultError(
-                    SdjwtVerifierResultError::VerifiedClaimsToBinaryError(e.to_string()),
-                )
-            })?);
+            let binary_value = Binary::from(
+                serde_json::to_vec(&value)
+                    .map_err(|e| SdjwtVerifierError::VerifyResultError(e.to_string()))?,
+            );
 
             VerifyResult {
                 success: true,
