@@ -24,7 +24,6 @@ jobs:
           profile: minimal
           toolchain: stable
           target: wasm32-unknown-unknown
-          override: true
 
       - name: Run contract unit tests
         run: cargo test
@@ -45,7 +44,6 @@ jobs:
           profile: minimal
           toolchain: stable
           target: wasm32-unknown-unknown
-          override: true
 
       - name: Compile WASM contract
         run: make build
@@ -64,7 +62,6 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
-          override: true
           components: rustfmt, clippy
 
       - name: Run cargo fmt
