@@ -1,18 +1,18 @@
 use cosmwasm_std::{from_json, to_json_binary, Binary};
 use cw_multi_test::{App, Executor};
 
-use crate::errors::SdjwtVerifierResultError;
-use crate::types::{Criterion, ReqAttr, VerificationRequirements, VerifyResult};
+use avida_sdjwt_verifier::errors::SdjwtVerifierResultError;
+use avida_sdjwt_verifier::types::{Criterion, ReqAttr, VerificationRequirements, VerifyResult};
 use serde::{Deserialize, Serialize};
 
 use super::fixtures::default_instantiate_verifier_contract;
-use crate::msg::QueryMsg;
-use avida_common::types::AvidaVerifierExecuteMsg;
-use avida_common::types::UpdateRevocationListRequest;
-use avida_test_utils::sdjwt::fixtures::{
+use crate::sdjwt::fixtures::{
     claims_with_revocation_idx, get_route_requirement_with_empty_revocation_list,
     make_presentation, PresentationVerificationType, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID,
 };
+use avida_common::types::AvidaVerifierExecuteMsg;
+use avida_common::types::UpdateRevocationListRequest;
+use avida_sdjwt_verifier::msg::QueryMsg;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {

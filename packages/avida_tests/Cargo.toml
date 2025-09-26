@@ -1,6 +1,6 @@
 [package]
-name = "avida-test-utils"
-description = "Useful library for test suites for DApp interactions"
+name = "avida-tests"
+description = "Tests and useful library for test suites for DApp interactions"
 edition = "2021"
 version = { workspace = true }
 repository = { workspace = true }
@@ -9,7 +9,7 @@ keywords = { workspace = true }
 [features]
 sdjwt = []
 
-[dependencies]
+[dev-dependencies]
 # sd-jwt verifier contract
 avida-sdjwt-verifier = { path = "../../contracts/sdjwt-verifier/", features = ["library"]}
 avida-common = { path = "../../packages/common/"}

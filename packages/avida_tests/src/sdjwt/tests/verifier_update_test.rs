@@ -1,19 +1,19 @@
 use cosmwasm_std::{to_json_binary, Binary};
 use cw_multi_test::{App, Executor};
 
-use crate::{
-    errors::SdjwtVerifierError,
-    types::{Criterion, JwkInfo, ReqAttr, CW_EXPIRATION},
-};
 use avida_common::types::{
     AvidaVerifierExecuteMsg, IssuerSourceOrData, RegisterRouteRequest,
     RouteVerificationRequirements,
 };
+use avida_sdjwt_verifier::{
+    errors::SdjwtVerifierError,
+    msg::QueryMsg,
+    types::{Criterion, JwkInfo, ReqAttr, VerificationRequirements, CW_EXPIRATION},
+};
 use serde::{Deserialize, Serialize};
 
 use super::fixtures::default_instantiate_verifier_contract;
-use crate::msg::QueryMsg;
-use avida_test_utils::sdjwt::fixtures::{
+use crate::sdjwt::fixtures::{
     get_default_presentation_required, get_input_route_requirement,
     get_two_input_routes_requirements, issuer_jwk, make_route_verification_requirements,
     ExpirationCheck, KeyType, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID, OWNER_ADDR,
@@ -39,7 +39,7 @@ fn update_adding_new_jwk() {
     // Get existing route pubkeys
     let existing_registered_req = app
         .wrap()
-        .query_wasm_smart::<crate::types::VerificationRequirements>(
+        .query_wasm_smart::<VerificationRequirements>(
             contract_addr.clone(),
             &QueryMsg::GetRouteRequirements {
                 app_addr: app_admin.to_string(),
@@ -100,7 +100,7 @@ fn update_adding_new_jwk() {
     // Ensure that the route verification requirements are updated
     let updated_registered_req = app
         .wrap()
-        .query_wasm_smart::<crate::types::VerificationRequirements>(
+        .query_wasm_smart::<VerificationRequirements>(
             contract_addr.clone(),
             &QueryMsg::GetRouteRequirements {
                 app_addr: app_admin.to_string(),
@@ -347,7 +347,7 @@ fn update_adding_and_remove_extra_route() {
     // Ensure that the route verification requirements are updated
     let updated_registered_req = app
         .wrap()
-        .query_wasm_smart::<crate::types::VerificationRequirements>(
+        .query_wasm_smart::<VerificationRequirements>(
             contract_addr.clone(),
             &QueryMsg::GetRouteRequirements {
                 app_addr: second_caller_app_addr.to_string(),
@@ -385,7 +385,7 @@ fn update_adding_and_remove_extra_route() {
     // Verify route requirements are removed
     assert!(app
         .wrap()
-        .query_wasm_smart::<crate::types::VerificationRequirements>(
+        .query_wasm_smart::<VerificationRequirements>(
             contract_addr,
             &QueryMsg::GetRouteRequirements {
                 app_addr: second_caller_app_addr.to_string(),

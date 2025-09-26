@@ -1,19 +1,21 @@
 use cosmwasm_std::Binary;
 use cw_multi_test::{App, Executor};
 
-use crate::errors::SdjwtVerifierError;
+use avida_sdjwt_verifier::{
+    errors::SdjwtVerifierError, msg::QueryMsg, types::VerificationRequirements,
+};
+
 use serde::{Deserialize, Serialize};
 
 use josekit::{self};
 
 use super::fixtures::default_instantiate_verifier_contract;
-use crate::msg::QueryMsg;
-use avida_common::types::AvidaVerifierExecuteMsg;
-use avida_test_utils::sdjwt::fixtures::{
+use crate::sdjwt::fixtures::{
     claims, get_input_route_requirement, get_two_input_routes_requirements, issuer_jwk,
     make_presentation, KeyType, PresentationVerificationType, FIRST_CALLER_APP_ADDR, OWNER_ADDR,
     SECOND_CALLER_APP_ADDR, SECOND_ROUTE_ID, THIRD_ROUTE_ID,
 };
+use avida_common::types::AvidaVerifierExecuteMsg;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -95,7 +97,7 @@ fn register_success() {
     // Query the route requirements
     let second_registered_req = app
         .wrap()
-        .query_wasm_smart::<crate::types::VerificationRequirements>(
+        .query_wasm_smart::<VerificationRequirements>(
             contract_addr.clone(),
             &QueryMsg::GetRouteRequirements {
                 app_addr: second_caller_app_addr.to_string(),
@@ -125,7 +127,7 @@ fn register_success() {
 
     let third_registered_req = app
         .wrap()
-        .query_wasm_smart::<crate::types::VerificationRequirements>(
+        .query_wasm_smart::<VerificationRequirements>(
             contract_addr.clone(),
             &QueryMsg::GetRouteRequirements {
                 app_addr: second_caller_app_addr.to_string(),

@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use josekit::{self};
 
 use super::fixtures::default_instantiate_verifier_contract;
-use crate::msg::QueryMsg;
-use avida_test_utils::sdjwt::fixtures::{issuer_jwk, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID};
+use crate::sdjwt::fixtures::{issuer_jwk, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID};
+use avida_sdjwt_verifier::{msg::QueryMsg, types::VerificationRequirements};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -39,7 +39,7 @@ fn instantiate_success() {
 
     let registered_req = app
         .wrap()
-        .query_wasm_smart::<crate::types::VerificationRequirements>(
+        .query_wasm_smart::<VerificationRequirements>(
             contract_addr.clone(),
             &QueryMsg::GetRouteRequirements {
                 app_addr: first_caller_app_addr.to_string(),

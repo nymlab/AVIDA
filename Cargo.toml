@@ -1,5 +1,5 @@
 [workspace]
-members = ["packages/cheqd", "packages/common", "contracts/sdjwt-verifier", "packages/avida_test_utils"]
+members = ["packages/cheqd", "packages/common", "contracts/sdjwt-verifier", "packages/avida_tests"]
 exclude = ["contracts/avida_example", "contracts/anoncreds-verifier" ]
 resolver = "2"
 

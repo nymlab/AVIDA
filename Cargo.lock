@@ -210,14 +210,11 @@ version = "0.1.0"
 dependencies = [
  "avida-cheqd",
  "avida-common",
- "avida-test-utils",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
- "josekit",
  "jsonwebtoken 9.3.0",
  "schemars 0.8.22",
  "sd-jwt-rs 0.7.0",
@@ -227,7 +224,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "avida-test-utils"
+name = "avida-tests"
 version = "0.1.0"
 dependencies = [
  "avida-common",

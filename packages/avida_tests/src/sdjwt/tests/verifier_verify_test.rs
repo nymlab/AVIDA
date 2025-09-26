@@ -1,16 +1,16 @@
 use cosmwasm_std::{from_json, Binary};
 use cw_multi_test::{App, Executor};
 
-use crate::errors::SdjwtVerifierResultError;
-use crate::types::VerifyResult;
+use avida_sdjwt_verifier::errors::SdjwtVerifierResultError;
+use avida_sdjwt_verifier::types::VerifyResult;
 use serde::{Deserialize, Serialize};
 
 use super::fixtures::default_instantiate_verifier_contract;
-use avida_common::types::AvidaVerifierExecuteMsg;
-use avida_test_utils::sdjwt::fixtures::{
+use crate::sdjwt::fixtures::{
     claims, make_presentation, PresentationVerificationType, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID,
     MAX_PRESENTATION_LEN,
 };
+use avida_common::types::AvidaVerifierExecuteMsg;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {

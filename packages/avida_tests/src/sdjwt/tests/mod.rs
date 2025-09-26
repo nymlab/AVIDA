@@ -1,3 +1,4 @@
+#![cfg(test)]
 mod contract_test;
 mod fixtures;
 mod types;
