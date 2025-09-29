@@ -1,0 +1,10 @@
+{
+  "type": "v1",
+  "root": 0,
+  "definitions": [
+    {
+      "name": "String",
+      "type": "string"
+    }
+  ]
+}

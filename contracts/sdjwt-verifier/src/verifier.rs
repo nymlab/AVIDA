@@ -54,10 +54,7 @@ pub fn handle_update_revocation_list(
         .map_err(|_| SdjwtVerifierError::AppIsNotRegistered)?;
 
     if app_admin != info.sender {
-        return Err(SdjwtVerifierError::Unauthorised(
-            app_admin.to_string(),
-            info.sender.to_string(),
-        ));
+        return Err(SdjwtVerifierError::UnauthorisedCaller);
     }
 
     route_requirements
@@ -104,6 +101,7 @@ pub fn handle_register(
     )
 }
 
+/// Exec message handlers returns Response as data for verification
 pub fn handle_verify(
     deps: DepsMut,
     env: Env,
@@ -113,9 +111,58 @@ pub fn handle_verify(
     app_addr: Option<String>,
     additional_requirements: Option<Binary>,
 ) -> Result<Response, SdjwtVerifierError> {
+    let app_addr = app_addr.unwrap_or_else(|| info.sender.to_string());
+
+    let res = _handle_verify(
+        deps,
+        env,
+        app_addr,
+        route_id,
+        presentation,
+        additional_requirements,
+    )?;
+
+    Ok(Response::new().set_data(to_json_binary(&res)?))
+}
+
+/// Sudo message handlers returns error if verification fails
+pub fn handle_sudo_verify(
+    deps: DepsMut,
+    env: Env,
+    app_addr: String,
+    route_id: RouteId,
+    presentation: VerfiablePresentation,
+    additional_requirements: Option<Binary>,
+) -> Result<Response, SdjwtVerifierError> {
+    let res = _handle_verify(
+        deps,
+        env,
+        app_addr,
+        route_id,
+        presentation,
+        additional_requirements,
+    )?;
+
+    if res.success {
+        Ok(Response::new()
+            .add_attribute("action", "sudo_verify")
+            .add_attribute("success", "true")
+            .set_data(res.value.unwrap_or_default()))
+    } else {
+        Err(SdjwtVerifierError::VerifyResultError(res.error.unwrap()))
+    }
+}
+
+pub fn _handle_verify(
+    deps: DepsMut,
+    env: Env,
+    app_addr: String,
+    route_id: RouteId,
+    presentation: VerfiablePresentation,
+    additional_requirements: Option<Binary>,
+) -> Result<VerifyResult, SdjwtVerifierError> {
     let additional_requirements: Option<PresentationReq> =
         additional_requirements.map(from_json).transpose()?;
-    let app_addr = app_addr.unwrap_or_else(|| info.sender.to_string());
 
     let requirements = APP_ROUTES_REQUIREMENTS
         .load(deps.storage, (app_addr, route_id))
@@ -131,8 +178,19 @@ pub fn handle_verify(
         additional_requirements,
     );
 
-    let data = to_json_binary(&VerifyResult { result: res })?;
-    Ok(Response::default().set_data(data))
+    let verify_result = match res {
+        Ok(value) => VerifyResult {
+            success: true,
+            value: Some(to_json_binary(&value)?),
+            error: None,
+        },
+        Err(error) => VerifyResult {
+            success: false,
+            value: None,
+            error: Some(error.to_string()),
+        },
+    };
+    Ok(verify_result)
 }
 
 pub fn handle_update(
@@ -150,10 +208,7 @@ pub fn handle_update(
         .map_err(|_| SdjwtVerifierError::AppIsNotRegistered)?;
 
     if app_admin != info.sender {
-        return Err(SdjwtVerifierError::Unauthorised(
-            app_admin.to_string(),
-            info.sender.to_string(),
-        ));
+        return Err(SdjwtVerifierError::UnauthorisedCaller);
     }
 
     _update(
@@ -183,46 +238,11 @@ pub fn handle_deregister(
     let app_admin = APP_ADMINS.load(deps.storage, app_addr.as_str())?;
 
     if app_admin != info.sender {
-        return Err(SdjwtVerifierError::Unauthorised(
-            app_admin.to_string(),
-            info.sender.to_string(),
-        ));
+        return Err(SdjwtVerifierError::UnauthorisedCaller);
     }
 
     _deregister(deps.storage, app_addr.as_str())
 }
-
-// Sudo message handlers
-pub fn handle_sudo_verify(
-    deps: DepsMut,
-    env: Env,
-    app_addr: String,
-    route_id: RouteId,
-    presentation: VerfiablePresentation,
-    additional_requirements: Option<Binary>,
-) -> Result<Response, SdjwtVerifierError> {
-    let additional_requirements: Option<PresentationReq> =
-        additional_requirements.map(from_json).transpose()?;
-
-    let requirements = APP_ROUTES_REQUIREMENTS
-        .load(deps.storage, (app_addr, route_id))
-        .map_err(|_| SdjwtVerifierError::RouteNotRegistered)?
-        .clone();
-    let max_len = MAX_PRESENTATION_LENGTH.load(deps.storage)?;
-
-    let res = _verify(
-        presentation,
-        requirements,
-        max_len,
-        &env.block,
-        additional_requirements,
-    )
-    .map(|res| to_json_binary(&VerifyResult { result: Ok(res) }))
-    .map_err(SdjwtVerifierError::SdjwtVerifierResultError)??;
-
-    Ok(Response::default().set_data(res))
-}
-
 pub fn handle_sudo_update(
     deps: DepsMut,
     env: Env,
@@ -244,8 +264,8 @@ pub fn query_route_verification_keys(
         .map_err(|_| SdjwtVerifierError::RouteNotRegistered)?;
 
     let keys = route_req.issuer_pubkeys.as_ref().map(|jwks| {
-        jwks.iter()
-            .map(|(_, jwk)| serde_json::to_string(jwk).unwrap())
+        jwks.values()
+            .map(|jwk| serde_json::to_string(jwk).unwrap())
             .collect()
     });
 
@@ -341,6 +361,7 @@ pub fn _verify(
             sdjwt_verifier.verified_claims.clone(),
             block_info,
         )?;
+
         Ok(sdjwt_verifier.verified_claims)
     }
     // If the issuer is not in the requirements, we return an error

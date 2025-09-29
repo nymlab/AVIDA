@@ -5,7 +5,6 @@ use cosmwasm_std::{from_json, Binary, BlockInfo, SubMsg};
 use cw_utils::Expiration;
 use jsonwebtoken::jwk::Jwk;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::collections::HashMap;
 
 /// This is the key to be used in claims that specifies expiration using `cw_util::Expiration`
@@ -25,7 +24,9 @@ pub struct JwkInfo {
 
 #[cw_serde]
 pub struct VerifyResult {
-    pub result: Result<Value, SdjwtVerifierResultError>,
+    pub success: bool,
+    pub value: Option<Binary>,
+    pub error: Option<String>,
 }
 
 #[cw_serde]

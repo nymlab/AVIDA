@@ -1,4 +1,4 @@
-use avida_common::types::{RouteId, RouteVerificationRequirements};
+use avida_common::types::RouteId;
 use cosmwasm_schema::QueryResponses;
 
 use crate::types::InitRegistration;
@@ -20,6 +20,6 @@ pub enum QueryMsg {
     GetAppAdmin { app_addr: String },
     #[returns(Vec<RouteId>)]
     GetRoutes { app_addr: String },
-    #[returns(RouteVerificationRequirements)]
+    #[returns(avida_common::types::RouteVerificationRequirements)]
     GetRouteRequirements { app_addr: String, route_id: RouteId },
 }

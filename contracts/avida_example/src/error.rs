@@ -1,7 +1,7 @@
 use cosmwasm_std::StdError;
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
@@ -23,10 +23,4 @@ pub enum ContractError {
 
     #[error("Invalid RouteId")]
     InvalidRouteId,
-}
-
-impl From<ContractError> for cosmwasm_std::StdError {
-    fn from(e: ContractError) -> cosmwasm_std::StdError {
-        cosmwasm_std::StdError::generic_err(format!("{}", e))
-    }
 }

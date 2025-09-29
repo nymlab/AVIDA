@@ -1,18 +1,18 @@
 use cosmwasm_std::{from_json, to_json_binary, Binary};
 use cw_multi_test::{App, Executor};
 
-use crate::errors::SdjwtVerifierResultError;
-use crate::types::{Criterion, ReqAttr, VerificationRequirements, VerifyResult};
+use avida_sdjwt_verifier::errors::SdjwtVerifierResultError;
+use avida_sdjwt_verifier::types::{Criterion, ReqAttr, VerificationRequirements, VerifyResult};
 use serde::{Deserialize, Serialize};
 
 use super::fixtures::default_instantiate_verifier_contract;
-use crate::msg::QueryMsg;
-use avida_common::types::AvidaVerifierExecuteMsg;
-use avida_common::types::UpdateRevocationListRequest;
-use avida_test_utils::sdjwt::fixtures::{
+use crate::sdjwt::fixtures::{
     claims_with_revocation_idx, get_route_requirement_with_empty_revocation_list,
     make_presentation, PresentationVerificationType, FIRST_CALLER_APP_ADDR, FIRST_ROUTE_ID,
 };
+use avida_common::types::AvidaVerifierExecuteMsg;
+use avida_common::types::UpdateRevocationListRequest;
+use avida_sdjwt_verifier::msg::QueryMsg;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -219,9 +219,13 @@ fn test_revoked_presentation_cannot_be_used() {
         )
         .unwrap();
     let verify_res: VerifyResult = from_json(res.data.unwrap()).unwrap();
-    let err = verify_res.result.unwrap_err();
+    assert!(!verify_res.success);
+    let err = verify_res.error.unwrap();
 
-    assert_eq!(err, SdjwtVerifierResultError::IdxRevoked(revoked_idx));
+    assert_eq!(
+        err,
+        SdjwtVerifierResultError::IdxRevoked(revoked_idx).to_string()
+    );
 
     let verify_msg = AvidaVerifierExecuteMsg::Verify {
         presentation: Binary::from(valid_presentation.as_bytes()),
@@ -237,7 +241,7 @@ fn test_revoked_presentation_cannot_be_used() {
     )
     .unwrap();
 
-    assert!(res.result.is_ok());
+    assert!(res.success);
 }
 
 #[test]
@@ -283,8 +287,12 @@ fn test_addition_requirements_with_revocation_list() {
         .unwrap(),
     )
     .unwrap();
-    let err = res.result.unwrap_err();
-    assert_eq!(err, SdjwtVerifierResultError::IdxRevoked(revoked_idx));
+    assert!(!res.success);
+    let err = res.error.unwrap();
+    assert_eq!(
+        err,
+        SdjwtVerifierResultError::IdxRevoked(revoked_idx).to_string()
+    );
 
     // Additional requirements not present, revoked_claims is not checked and should ok
     let verify_msg = AvidaVerifierExecuteMsg::Verify {
@@ -306,5 +314,5 @@ fn test_addition_requirements_with_revocation_list() {
     )
     .unwrap();
 
-    assert!(res.result.is_ok());
+    assert!(res.success);
 }

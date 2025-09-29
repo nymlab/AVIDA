@@ -40,6 +40,8 @@ pub enum SdjwtVerifierResultError {
     IdxRevoked(u64),
     #[error("Issuer not found in Payload")]
     IssuerNotFound,
+    #[error("verified claims to binary error: {0}")]
+    VerifiedClaimsToBinaryError(String),
     #[error("SdJwtRsError: {0}")]
     SdJwtRsError(String),
 }
@@ -54,6 +56,8 @@ impl From<SdJwtRsError> for SdjwtVerifierResultError {
 pub enum SdjwtVerifierError {
     #[error("Verifier Result Error {0}")]
     SdjwtVerifierResultError(SdjwtVerifierResultError),
+    #[error("Verifier Result Error {0}")]
+    VerifyResultError(String),
     #[error("SudoValidationFailed")]
     SudoValidationFailed,
     #[error("IBC returned resource format unexpected {0}")]
@@ -72,8 +76,8 @@ pub enum SdjwtVerifierError {
     AppAlreadyRegistered,
     #[error("App Is Not Registered")]
     AppIsNotRegistered,
-    #[error("Unauthorised: expected {0}, got {1}")]
-    Unauthorised(String, String),
+    #[error("Unauthorised Caller")]
+    UnauthorisedCaller,
     #[error("Unsupported Key Type")]
     UnsupportedKeyType,
     #[error("Route Not Registered")]
@@ -84,10 +88,4 @@ pub enum SdjwtVerifierError {
     IDXNotInRequirement,
     #[error("Revocation List type")]
     RevocationListType,
-}
-
-impl From<SdjwtVerifierError> for StdError {
-    fn from(err: SdjwtVerifierError) -> StdError {
-        StdError::generic_err(err.to_string())
-    }
 }

@@ -31,8 +31,3 @@ sd-jwt-rs = { workspace = true }
 jsonwebtoken = { workspace = true }
 serde_json = { workspace = true, default-features = false, features = ["alloc"]}
 cw-utils = { workspace = true }
-
-[dev-dependencies]
-avida-test-utils = { path = "../../packages/avida_test_utils/", features = ["sdjwt"]}
-cw-multi-test = {version = "2", features = ["staking", "stargate", "cosmwasm_2_1"]}
-josekit = "0.8.6"

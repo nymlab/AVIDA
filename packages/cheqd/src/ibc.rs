@@ -24,12 +24,6 @@ pub enum ChannelError {
     InvalidPort,
 }
 
-impl From<ChannelError> for StdError {
-    fn from(err: ChannelError) -> StdError {
-        StdError::generic_err(err.to_string())
-    }
-}
-
 pub fn check_order(order: &IbcOrder) -> Result<(), ChannelError> {
     if order != &APP_ORDER {
         Err(ChannelError::InvalidChannelOrder)
@@ -84,7 +78,7 @@ pub fn ibc_channel_open_handler(msg: IbcChannelOpenMsg) -> StdResult<IbcChannelO
 
 /// Error on closing channel
 pub fn ibc_channel_close_handler() -> StdResult<IbcBasicResponse> {
-    Err(StdError::generic_err("Closing is not supported"))
+    Err(StdError::msg("Closing is not supported"))
 }
 
 /// Checks ack resource matching requested resource
@@ -98,17 +92,15 @@ pub fn ibc_packet_ack_resource_extractor(
             let original_packet: ResourceReqPacket = from_json(&msg.original_packet.data)?;
 
             if original_packet.resource_id != resource.linked_resource_metadata.resource_id {
-                Err(StdError::generic_err("Ack Returned Unmatched resource_id"))
+                Err(StdError::msg("Ack Returned Unmatched resource_id"))
             } else if original_packet.collection_id
                 != resource.linked_resource_metadata.resource_collection_id
             {
-                Err(StdError::generic_err(
-                    "Ack Returned Unmatched collection_id",
-                ))
+                Err(StdError::msg("Ack Returned Unmatched collection_id"))
             } else {
                 Ok((original_packet, resource))
             }
         }
-        StdAck::Error(err) => Err(StdError::generic_err(format!("Ack Returned Err: {}", err))),
+        StdAck::Error(err) => Err(StdError::msg(format!("Ack Returned Err: {}", err))),
     }
 }

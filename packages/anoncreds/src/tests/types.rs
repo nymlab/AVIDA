@@ -1,5 +1,5 @@
 use crate::types::{ResourceReceivePacket, ResourceReqPacket, StdAck};
-use cosmwasm_std::{from_binary, to_binary, Binary};
+use cosmwasm_std::{from_json, to_json_binary, Binary};
 
 #[test]
 fn it_serde_json_correctly() {
@@ -9,12 +9,12 @@ fn it_serde_json_correctly() {
         collection_id: "collection_id".into(),
     };
 
-    let bin = to_binary(&req).unwrap();
+    let bin = to_json_binary(&req).unwrap();
 
     let string = String::from_utf8(bin.0).unwrap();
     let expected = "{\"resourceId\":\"resuorce_id\",\"collectionId\":\"collection_id\"}";
 
-    let req_de = serde_json_wasm::from_str(expected).unwrap();
+    let req_de = serde_json::from_str(expected).unwrap();
     assert_eq!(&string, expected);
     assert_eq!(req, req_de)
 }
@@ -61,6 +61,6 @@ fn it_de_resource_ack_correctly() {
         61, 34, 125,
     ]);
 
-    let ack: StdAck = from_binary(&binary).unwrap();
-    from_binary::<ResourceReceivePacket>(&ack.unwrap()).unwrap();
+    let ack: StdAck = from_json(&binary).unwrap();
+    from_json::<ResourceReceivePacket>(&ack.unwrap()).unwrap();
 }
