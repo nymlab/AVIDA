@@ -55,7 +55,7 @@ codegen
   .default({
     contracts: CONTRACTS.map(({ path, name }) => ({
       name,
-      dir: join(CONTRACT_DIR, path),
+      dir: join(CONTRACT_DIR, path, "schema"),
     })),
     outPath: OUT_DIR,
     options: {
@@ -69,8 +69,31 @@ codegen
       messageBuilder: {
         enabled: false,
       },
+      types: {
+        enabled: true,
+      },
+      useInterchainJS: false,
     },
   })
   .then(() => {
+    // Remove baseClient.ts as we don't need it and it has unwanted dependencies
+    const baseClientPath = join(OUT_DIR, "baseClient.ts");
+    if (fs.existsSync(baseClientPath)) {
+      fs.unlinkSync(baseClientPath);
+      console.log("Removed baseClient.ts");
+    }
+
+    // Remove baseClient import from contracts.ts
+    const contractsPath = join(OUT_DIR, "contracts.ts");
+    if (fs.existsSync(contractsPath)) {
+      let contractsContent = fs.readFileSync(contractsPath, "utf-8");
+      // Remove the import line
+      contractsContent = contractsContent.replace(/import \* as _\d+ from "\.\/baseClient";\n/g, "");
+      // Remove the export in the namespace
+      contractsContent = contractsContent.replace(/export const baseClient = \{\n\s+\.\.\._\d+\n\s+\};\n/g, "");
+      fs.writeFileSync(contractsPath, contractsContent);
+      console.log("Removed baseClient from contracts.ts");
+    }
+
     console.log("Contract ts generation completed successfully!");
   });

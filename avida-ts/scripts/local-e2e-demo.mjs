@@ -1,11 +1,6 @@
 // @ts-check
 
-import {
-  contractExecTx,
-  deploy,
-  getSdJwt,
-  toWasmBinary,
-} from "@avida-ts/txutils";
+import { contractExecTx, deploy, getSdJwt, toWasmBinary } from "@avida-ts/txutils";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import * as avidaTypes from "@avida-ts/types";
@@ -17,14 +12,8 @@ const NEUTRON_DEPLOYER_MNEMONIC =
   "banner spread envelope side kite person disagree path silver will brother under couch edit food venture squirrel civil budget number acquire point work mass";
 const AVIDA_SDJWT_VERIFIER = process.env.CONTRACT_ADDRESS;
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const neutronChainConfig = join(
-  __dirname,
-  "../docker/local-chain-config/neutron.json",
-);
-const avidaExampleContract = join(
-  __dirname,
-  "../../artifacts/avida_example.wasm",
-);
+const neutronChainConfig = join(__dirname, "../docker/local-chain-config/neutron.json");
+const avidaExampleContract = join(__dirname, "../../artifacts/avida_example.wasm");
 
 /** @param {number} [milliseconds] */
 export const sleep = (milliseconds) => {
@@ -92,10 +81,7 @@ const registerRequirementMsg = {
   },
 };
 
-console.info(
-  "\n\n ---> Registering route requirements on sdjwt-verifier: ",
-  registerRequirementMsg,
-);
+console.info("\n\n ---> Registering route requirements on sdjwt-verifier: ", registerRequirementMsg);
 
 const registerRes = await contractExecTx(
   neutronChainConfig,
@@ -107,10 +93,7 @@ const registerRes = await contractExecTx(
 
 registerRes.match(
   (tx) => {
-    console.info(
-      "\n\n ---> Register Route successfully: ",
-      JSON.stringify(tx.events),
-    );
+    console.info("\n\n ---> Register Route successfully: ", JSON.stringify(tx.events));
   },
   (err) => {
     console.error("\n\n ---> Register Reout failed: ", err);
@@ -118,9 +101,7 @@ registerRes.match(
 );
 
 // ========= sleep to wait for relayer to relay the resource from cheqd ============
-console.log(
-  "\n\n ---> Sleeping for 30 seconds to wait for relayer to relay the resource from cheqd",
-);
+console.log("\n\n ---> Sleeping for 30 seconds to wait for relayer to relay the resource from cheqd");
 await sleep(30000);
 
 //Issue a signed JWT credential with the specified claims and disclosures
@@ -144,10 +125,7 @@ const claims = {
   age: 30,
 };
 
-console.info(
-  "\n\n --> Issuing credential with claims that satisfied example route: ",
-  claims,
-);
+console.info("\n\n --> Issuing credential with claims that satisfied example route: ", claims);
 
 const credential = await sdjwtInstance.issue(
   {
@@ -194,10 +172,7 @@ const validRes = await contractExecTx(
 
 validRes.match(
   (tx) => {
-    console.info(
-      "\n\n ---> Valid presentation succeeded: ",
-      JSON.stringify(tx.events),
-    );
+    console.info("\n\n ---> Valid presentation succeeded: ", JSON.stringify(tx.events));
   },
   (err) => {
     console.error("\n\n ---> Valid presentation failed: ", err);
@@ -212,10 +187,7 @@ const invalid_claims = {
   age: 10,
 };
 
-console.info(
-  "\n\n ---> Issuing invalid credential with AGE not satisfying example route requirements: ",
-  claims,
-);
+console.info("\n\n ---> Issuing invalid credential with AGE not satisfying example route requirements: ", claims);
 
 const invalid_credential = await sdjwtInstance.issue(
   {
@@ -228,10 +200,7 @@ const invalid_credential = await sdjwtInstance.issue(
   disclosureFrame,
 );
 
-const invalid_presentation = await sdjwtInstance.present(
-  invalid_credential,
-  presentationFrame,
-);
+const invalid_presentation = await sdjwtInstance.present(invalid_credential, presentationFrame);
 
 /** @type {avidaTypes.contracts.RestaurantContract} */
 const drinkMsg_with_invalid_credentials = {
